@@ -1,0 +1,122 @@
+{
+  "skill_name": "llm-optimized-rewrite",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Optimize /Users/jdp/.agents/skills/flesh-out/SKILL.md for lower token cost and LLM execution reliability. Use the default workflow: group repeated/low-risk edits, review semantic-risk edits individually, include token counts/deltas and rationale, and wait for confirmation before applying.",
+      "expected_output": "Reads the referenced file, generates candidates, groups them by pattern/risk/scope/savings/reliability impact, presents a compact review plan or first batch with tiktoken token counts/delta and rationale, asks for confirmation with Y/N plus E/O/S options when batching, and does not apply unconfirmed changes.",
+      "files": [],
+      "expectations": [
+        "The output indicates it read or is using the referenced file before proposing edits.",
+        "The output groups candidates by pattern, risk, scope, savings, or reliability impact, or presents a first batch when grouping is straightforward.",
+        "The output includes original/compressed token counts and token delta, or batch total delta with affected-snippet counts.",
+        "The output uses exact tiktoken counts and does not label counts approximate.",
+        "The output includes rationale covering compression, unchanged interpretation, and safety/compliance.",
+        "The confirmation prompt includes Y/N and the S stop option; batch prompts also include E expand and O one-by-one options.",
+        "The output does not claim it already applied unconfirmed changes."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Act as an LLM optimization editor. Here is a paragraph from our API spec: `The API MUST reject requests where the client_id field is missing, empty, or contains characters outside the lowercase ASCII alphanumeric set. Rejections MUST return HTTP 400 with error_code invalid_client_id and MUST NOT create an audit-log success event.` Reduce tokens where safe without changing any constraints, values, or relationships; preserve execution reliability; include token counts and rationale; and ask me before each change.",
+      "expected_output": "Treats the API-spec edit as semantic-risk, preserves every MUST/MUST NOT constraint, value, field name, error code, HTTP status, and relationship, and uses individual review or a clearly semantic-risk review with exact tiktoken counts, token delta, rationale, and confirmation before applying.",
+      "files": [],
+      "expectations": [
+        "The output presents no more than one semantic-risk change unless it first asks to batch or expand.",
+        "The compressed text preserves client_id, lowercase ASCII alphanumeric, HTTP 400, invalid_client_id, and audit-log success event semantics.",
+        "The compressed text preserves the MUST reject and MUST NOT create constraints.",
+        "The output includes original/compressed token counts and token delta.",
+        "The output uses exact tiktoken counts and does not label counts approximate.",
+        "The output includes rationale for compression, unchanged interpretation, and safety/compliance.",
+        "The confirmation prompt includes Y/N and the S stop option."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Tighten this README section for brevity: `## Local setup\n\nBefore you start, make sure that Node.js 22 or newer is installed on your machine. Then install dependencies with npm install, copy .env.example to .env, and run npm run dev to start the development server on port 3000.` If a heading or list structure carries meaning, keep it; otherwise compress it. Include token counts and rationale. Make changes only after I confirm.",
+      "expected_output": "Preserves meaningful structure and functional role, proposes either one safe individual edit or a compact low-risk batch/review plan, includes exact tiktoken counts, token delta, and rationale, and applies only accepted changes.",
+      "files": [],
+      "expectations": [
+        "The output preserves the Local setup heading if treating it as meaningful structure.",
+        "The compressed text preserves Node.js 22 or newer, npm install, .env.example to .env, npm run dev, and port 3000.",
+        "The output includes original/compressed token counts and token delta, or batch total delta with affected-snippet counts.",
+        "The output uses exact tiktoken counts and does not label counts approximate.",
+        "The output includes rationale for compression, unchanged interpretation, and safety/compliance.",
+        "The confirmation prompt includes Y/N and the S stop option.",
+        "The output does not claim it already applied unconfirmed changes."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Optimize this Markdown command file for token cost and LLM execution reliability. Because it is a command file, ignore the leading YAML frontmatter unless I explicitly ask to edit metadata. Use default batch-first review: group repeated/mechanical body edits if safe, otherwise review individually.\n\n```md\n---\ndescription: \"Rewrite a target file to be efficient and reliable for LLM execution while preserving meaning\"\nargument-hint: \"<file-path>\"\n---\n\nUse `llm-optimized-rewrite` skill.\n\nTarget file path: $ARGUMENTS\n\nThe user must provide exactly one target file path.\nIf no file path is provided, ask for it and stop.\nIf the path is ambiguous, resolve possible options, present them, and ask a concise clarification before editing.\n\nTask:\n1. Read the target file.\n2. Rewrite it for token efficiency and execution reliability while strictly following the skill instructions.\n```",
+      "expected_output": "Ignores YAML frontmatter as harness metadata, proposes only body edits via batch or individual review, does not shorten/count description or argument-hint, includes exact tiktoken counts/delta and rationale, and asks for confirmation before applying.",
+      "files": [],
+      "expectations": [
+        "The proposed diff block does not include the YAML frontmatter description or argument-hint lines.",
+        "The output does not propose editing command metadata/frontmatter.",
+        "The output does not count frontmatter as part of optimized snippets.",
+        "The output includes original/compressed token counts and token delta, or batch total delta with affected-snippet counts.",
+        "The output uses exact tiktoken counts and does not label counts approximate.",
+        "The output includes rationale for compression, unchanged interpretation, and safety/compliance.",
+        "The confirmation prompt includes Y/N and the S stop option; batch prompts also include E expand and O one-by-one options."
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Continue this llm-optimized-rewrite session. Original text was:\n\n```md\nUse `llm-optimized-rewrite` skill.\n\nTarget file path: $ARGUMENTS\n\nThe user must provide exactly one target file path.\nIf no file path is provided, ask for it and stop.\nIf the path is ambiguous, resolve possible options, present them, and ask a concise clarification before editing.\n\nTask:\n1. Read the target file.\n2. Rewrite it for token efficiency and execution reliability while strictly following the skill instructions.\n```\n\nAccepted changes already applied produced this current text:\n\n```md\nUse `llm-optimized-rewrite` skill.\n\nTarget: $ARGUMENTS\n\nRequire one target path.\nIf absent, ask and stop.\nIf ambiguous, list matches; ask concise clarification before editing.\n\nRead target; optimize for token cost and execution reliability; strictly follow skill.\n```\n\nRejected or unfinished opportunities that must not be applied:\n- 'Use `llm-optimized-rewrite` skill.' -> 'Use `llm-optimized-rewrite`.'\n- 'If absent, ask and stop.' -> 'If absent, request and stop.'\n- 'Require one target path.' -> 'Need one target path.'\n\nUser input is now: S",
+      "expected_output": "Stops optimization and presents a final summary rather than another opportunity or batch. The response includes a unified diff from original text to current text, concise summary bullets for accepted changes, and a rejected/unfinished section listing edits not applied.",
+      "files": [],
+      "expectations": [
+        "The output does not present a new compression opportunity or batch.",
+        "The output includes a unified diff fenced as diff or otherwise clearly marked as a diff.",
+        "The diff shows Target file path changed to Target, path validation compressed, and the Task list merged into one compact reliability-preserving instruction.",
+        "The summary lists accepted changes.",
+        "The summary lists rejected or unfinished edits not applied.",
+        "The output does not apply or recommend the rejected edits."
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Optimize this prompt text using the default tiktoken model/encoding mapping (gpt-5 -> o200k_base); do not estimate counts: `Please make sure to carefully review every single listed requirement before you begin implementing the requested change, because missing any one of them can cause the deployment checklist to fail.` Use default review flow and wait for confirmation before applying.",
+      "expected_output": "Uses the real tiktoken tokenizer with the default gpt-5 model mapped to o200k_base, presents either an individual opportunity or compact review plan as appropriate, includes exact original/compressed counts and token delta, and asks for confirmation before applying.",
+      "files": [],
+      "expectations": [
+        "The output uses tiktoken with the default gpt-5 model mapped to o200k_base.",
+        "The output includes original/compressed token counts and token delta.",
+        "The output does not label token counts approximate or estimated.",
+        "The output includes rationale for compression, unchanged interpretation, and safety/compliance.",
+        "The confirmation prompt includes Y/N and the S stop option.",
+        "The output does not claim it already applied unconfirmed changes."
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Optimize this checklist. It has many repeated low-risk phrases, so use the default batch-first flow rather than walking me through each micro-edit one-by-one.\n\n```md\n- Please make sure to save the API token before continuing.\n- Please make sure to save the webhook secret before continuing.\n- Please make sure to save the database password before continuing.\n- Please make sure to save the signing key before continuing.\n- Please make sure to save the recovery codes before continuing.\n```",
+      "expected_output": "Recognizes repeated low-risk wording, presents a batch review with scope/count, risk, total token delta, representative or exact multi-hunk diff, concise rationale, and Y/N/E/O/S options before applying.",
+      "files": [],
+      "expectations": [
+        "The output uses batch format or clearly groups repeated low-risk edits instead of presenting five separate one-by-one opportunities.",
+        "The output states the occurrence count or scope of the repeated pattern.",
+        "The output labels risk or otherwise indicates the edits are low-risk/mechanical.",
+        "The output includes a total token delta and exact tiktoken counts or affected-snippet counts.",
+        "The proposed compression preserves API token, webhook secret, database password, signing key, and recovery codes.",
+        "The batch confirmation prompt includes Y/N, E expand, O one-by-one, and S stop options.",
+        "The output does not claim it already applied unconfirmed changes."
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Tighten this style-guide excerpt, but do not make it awkward or telegraphic just to save one token: `When the user provides a file path, the assistant should read the file before proposing edits. If the file is missing, the assistant should ask a concise clarification question.` Use the default workflow.",
+      "expected_output": "Preserves readability by default, avoids or batches low-value 1-2 token micro-edits that would worsen style, proposes only safe worthwhile compression or asks whether to batch/continue micro-edits, includes exact counts/delta and rationale, and waits for confirmation.",
+      "files": [],
+      "expectations": [
+        "The output does not make grammar telegraphic solely for 1-token savings unless it asks first or labels it as a micro-edit choice.",
+        "The output preserves the read-before-proposing requirement and missing-file clarification behavior.",
+        "The output either proposes a readable compression or explains remaining edits are low-value micro-edits and asks whether to batch/continue/stop.",
+        "The output includes exact tiktoken counts and token delta for proposed edits, or states no safe worthwhile edit remains without estimating counts.",
+        "The output includes rationale for compression, unchanged interpretation, and readability/safety.",
+        "The output does not apply unconfirmed changes."
+      ]
+    }
+  ]
+}
