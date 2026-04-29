@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "flesh-out",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "first-decision-question",
+          "prompt": "I want to flesh out a plan for a small CLI that helps roommates track chores. Start the interview and ask the first decision question.",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            },
+            {
+              "id": "tracks-agreed-decisions",
+              "type": "required_content",
+              "value": "Agreed decisions:"
+            },
+            {
+              "id": "asks-numbered-question",
+              "type": "regex",
+              "pattern": "(?m)^## Question\\b"
+            },
+            {
+              "id": "offers-options",
+              "type": "regex",
+              "pattern": "(?s)Options:\\s*\\n\\s*A\\."
+            },
+            {
+              "id": "recommends-default",
+              "type": "required_content",
+              "value": "## Recommendation"
+            },
+            {
+              "id": "asks-for-agreement",
+              "type": "regex",
+              "pattern": "Agree\\?"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false
+    }
+  }
+}

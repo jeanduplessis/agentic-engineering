@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "beads",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "legacy_evals": "evals.json"
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true
+    }
+  }
+}
