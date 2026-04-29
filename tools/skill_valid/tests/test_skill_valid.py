@@ -221,6 +221,27 @@ class SkillValidTests(unittest.TestCase):
             self.assertEqual(result["gates"]["eval_manifest"]["status"], "passed")
             self.assertEqual([call["suite_name"] for call in calls["eval"]], ["workflow", "regression"])
 
+    def test_deterministic_validation_reports_multiple_missing_requirements_before_live_work(self):
+        with self.make_repo() as (tmp, root):
+            target = root / "skills" / "demo"
+            target.mkdir(parents=True)
+            (target / "SKILL.md").write_text("---\nname: demo\ndescription: demo\n---\n")
+            deps, calls = self.passing_deps()
+
+            code, result = validate_skill(ValidationOptions(target, repo_root=root, allow_live_pi=True), deps=deps)
+
+            self.assertEqual(code, 1)
+            self.assertEqual(result["gates"]["target"]["status"], "passed")
+            self.assertEqual(result["gates"]["eval_manifest"]["status"], "failed")
+            self.assertIn("evals/manifest.json", result["gates"]["eval_manifest"]["message"])
+            self.assertEqual(result["gates"]["agents_md"]["status"], "failed")
+            self.assertIn("AGENTS.md", result["gates"]["agents_md"]["message"])
+            self.assertEqual(result["gates"]["live_opt_in"]["status"], "passed")
+            self.assertEqual(result["gates"]["validate_skills"]["status"], "not_run")
+            self.assertEqual(result["gates"]["live_eval"]["status"], "not_run")
+            self.assertEqual(calls["pi"], [])
+            self.assertEqual(calls["eval"], [])
+
     def test_eval_manifest_structural_failures_fail_before_live_work(self):
         cases = []
 

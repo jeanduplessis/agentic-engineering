@@ -6,7 +6,7 @@
 
 ## How the tool works
 
-The module implements a fail-fast sequence of Validation Gate functions in `tools/skill_valid/__init__.py`. Cheap gates validate target shape, `evals/manifest.json`, and skill-local `AGENTS.md` before the live-run safety gate allows model calls. Live gates then run the validate-skills wrapper prompt and the existing `tools.skill_eval.runner.run_suite` API.
+The module implements Validation Gate functions in `tools/skill_valid/__init__.py`. The target gate runs first because later gates need a real skill directory. Deterministic prerequisite gates then accumulate results for `evals/manifest.json`, skill-local `AGENTS.md`, and live opt-in so users see multiple missing requirements in one JSON response. Live gates run only after those prerequisites pass, then execute the validate-skills wrapper prompt and the existing `tools.skill_eval.runner.run_suite` API.
 
 Terminology is defined in `tools/skill_valid/UBIQUITOUS_LANGUAGE.md`. The validate-skills sentinel contract is documented in `tools/skill_valid/WRAPPER_PROMPT.md`.
 

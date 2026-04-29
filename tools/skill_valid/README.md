@@ -18,26 +18,28 @@ python3 -m tools.skill_valid skills/<skill-name> \
   --thinking low
 ```
 
-`--allow-live-pi` or `SKILL_EVAL_ALLOW_LIVE_PI=1` is required before any live Pi/model work runs. Cheap deterministic failures do not create live-run artifacts or call Pi.
+`--allow-live-pi` or `SKILL_EVAL_ALLOW_LIVE_PI=1` is required before any live Pi/model work runs. Deterministic failures are accumulated so the JSON reports multiple missing requirements at once; those failures do not create live-run artifacts or call Pi.
 
 ## stdout JSON contract
 
 The only machine contract is one compact stdout JSON object. Progress and diagnostics go to stderr.
 
 ```json
-{"valid":false,"target":"skills/example","gates":{"target":{"status":"passed","message":"..."},"eval_manifest":{"status":"failed","message":"..."},"agents_md":{"status":"not_run","message":"..."},"live_opt_in":{"status":"not_run","message":"..."},"validate_skills":{"status":"not_run","message":"..."},"live_eval":{"status":"not_run","message":"..."}}}
+{"valid":false,"target":"skills/example","gates":{"target":{"status":"passed","message":"..."},"eval_manifest":{"status":"failed","message":"..."},"agents_md":{"status":"failed","message":"..."},"live_opt_in":{"status":"passed","message":"..."},"validate_skills":{"status":"not_run","message":"..."},"live_eval":{"status":"not_run","message":"..."}}}
 ```
 
 Exit code is `0` only when `valid` is `true`.
 
 ## Gate order
 
-1. `target` — target must be one direct directory under `skills/` with `SKILL.md`.
+1. `target` — target must be one direct directory under `skills/` with `SKILL.md`. If this fails, the target cannot be inspected further.
 2. `eval_manifest` — `evals/manifest.json` must load through `tools.skill_eval`, declare a non-empty `workflow` suite, align skill name/path with the target, define a Pi `with_skill` configuration with force-skill enabled, and reference existing eval assets.
-3. `agents_md` — skill-local `AGENTS.md` must include Purpose, How the skill works, Eval and validation, Change guidelines, plus concrete references to `SKILL.md`, `evals/manifest.json`, and manifest-declared eval assets.
+3. `agents_md` — skill-local `AGENTS.md` must include Purpose, How the skill works, Eval and validation, Change guidelines, plus concrete references to `SKILL.md`, `evals/manifest.json`, and manifest-declared eval assets when a manifest could be loaded.
 4. `live_opt_in` — requires `--allow-live-pi` or `SKILL_EVAL_ALLOW_LIVE_PI=1`.
 5. `validate_skills` — runs Pi with only the validate-skills skill and read-only tools. The wrapper prompt in `WRAPPER_PROMPT.md` requires a final `SKILL_VALID_RESULT=<json>` sentinel.
 6. `live_eval` — runs `tools.skill_eval.runner.run_suite` in-process for `workflow` and optional `regression`, using only a generated live `with_skill` configuration and `require_real=True`.
+
+`eval_manifest`, `agents_md`, and `live_opt_in` are all checked before live gates so the result reports the missing deterministic prerequisites together. The live gates run only when those prerequisite gates pass.
 
 ## Failure artifacts
 

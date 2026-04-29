@@ -160,33 +160,20 @@ def validate_skill(
         artifacts=ArtifactManager(Path(options.artifact_base).expanduser().resolve() if options.artifact_base else None),
     )
 
-    try:
-        _gate_target(ctx)
-        _gate_eval_manifest(ctx)
-        _gate_agents_md(ctx)
-        _gate_live_opt_in(ctx)
-        _gate_validate_skills(ctx)
-        _gate_live_eval(ctx)
-    except GateFailure as exc:
-        _set_gate(ctx.result, exc.gate, "failed", exc.message, exc.details)
-        _mark_remaining_not_run(ctx.result, exc.gate)
-        failure_artifacts = ctx.artifacts.failure_path() if ctx.artifacts else None
-        if failure_artifacts:
-            ctx.result["failure_artifacts"] = failure_artifacts
-        ctx.result["valid"] = False
-        ctx.log(f"gate {exc.gate} failed: {exc.message}")
-        return 1, ctx.result
-    except Exception as exc:  # Fail closed; callers still receive the compact JSON contract.
-        gate = _first_not_passed_gate(ctx.result)
-        message = f"Unexpected {gate} gate error: {exc}"
-        _set_gate(ctx.result, gate, "failed", message, {"exception_type": type(exc).__name__})
-        _mark_remaining_not_run(ctx.result, gate)
-        failure_artifacts = ctx.artifacts.failure_path() if ctx.artifacts else None
-        if failure_artifacts:
-            ctx.result["failure_artifacts"] = failure_artifacts
-        ctx.result["valid"] = False
-        ctx.log(f"gate {gate} failed unexpectedly: {exc}")
-        return 1, ctx.result
+    if not _run_required_gate(ctx, _gate_target, stop_after_failure=True):
+        return _failed_result(ctx)
+
+    cheap_gates_passed = True
+    for gate in (_gate_eval_manifest, _gate_agents_md, _gate_live_opt_in):
+        cheap_gates_passed = _run_required_gate(ctx, gate, stop_after_failure=False) and cheap_gates_passed
+
+    if not cheap_gates_passed:
+        _mark_live_gates_not_run(ctx.result, "deterministic prerequisite gates failed")
+        return _failed_result(ctx)
+
+    for gate in (_gate_validate_skills, _gate_live_eval):
+        if not _run_required_gate(ctx, gate, stop_after_failure=True):
+            return _failed_result(ctx)
 
     ctx.result["valid"] = True
     if ctx.artifacts:
@@ -226,6 +213,39 @@ def _pass_gate(ctx: ValidationContext, gate: str, message: str, details: dict[st
     ctx.log(f"gate {gate} passed")
 
 
+def _run_required_gate(ctx: ValidationContext, gate_func: Callable[[ValidationContext], None], *, stop_after_failure: bool) -> bool:
+    gate = _gate_name(gate_func)
+    try:
+        gate_func(ctx)
+        return True
+    except GateFailure as exc:
+        _set_gate(ctx.result, exc.gate, "failed", exc.message, exc.details)
+        if stop_after_failure:
+            _mark_remaining_not_run(ctx.result, exc.gate)
+        ctx.log(f"gate {exc.gate} failed: {exc.message}")
+        return False
+    except Exception as exc:  # Fail closed; callers still receive the compact JSON contract.
+        message = f"Unexpected {gate} gate error: {exc}"
+        _set_gate(ctx.result, gate, "failed", message, {"exception_type": type(exc).__name__})
+        if stop_after_failure:
+            _mark_remaining_not_run(ctx.result, gate)
+        ctx.log(f"gate {gate} failed unexpectedly: {exc}")
+        return False
+
+
+def _gate_name(gate_func: Callable[[ValidationContext], None]) -> str:
+    name = gate_func.__name__
+    return name.removeprefix("_gate_")
+
+
+def _failed_result(ctx: ValidationContext) -> tuple[int, dict[str, Any]]:
+    failure_artifacts = ctx.artifacts.failure_path() if ctx.artifacts else None
+    if failure_artifacts:
+        ctx.result["failure_artifacts"] = failure_artifacts
+    ctx.result["valid"] = False
+    return 1, ctx.result
+
+
 def _mark_remaining_not_run(result: dict[str, Any], failed_gate: str) -> None:
     seen_failed = False
     for gate in GATE_ORDER:
@@ -236,11 +256,10 @@ def _mark_remaining_not_run(result: dict[str, Any], failed_gate: str) -> None:
             result["gates"][gate] = {"status": "not_run", "message": f"not run because {failed_gate} failed"}
 
 
-def _first_not_passed_gate(result: dict[str, Any]) -> str:
-    for gate in GATE_ORDER:
-        if result["gates"][gate]["status"] != "passed":
-            return gate
-    return GATE_ORDER[-1]
+def _mark_live_gates_not_run(result: dict[str, Any], reason: str) -> None:
+    for gate in ("validate_skills", "live_eval"):
+        if result["gates"][gate]["status"] == "not_run":
+            result["gates"][gate] = {"status": "not_run", "message": f"not run because {reason}"}
 
 
 def _gate_target(ctx: ValidationContext) -> None:
@@ -367,7 +386,6 @@ def _resolve_manifest_path(manifest_path: Path, relative_or_absolute: str | None
 
 def _gate_agents_md(ctx: ValidationContext) -> None:
     assert ctx.target_dir is not None
-    assert ctx.manifest_info is not None
     path = ctx.target_dir / "AGENTS.md"
     if not path.exists():
         raise GateFailure("agents_md", f"Missing skill-local AGENTS.md: {path.relative_to(ctx.repo_root).as_posix()}")
@@ -378,7 +396,8 @@ def _gate_agents_md(ctx: ValidationContext) -> None:
     for required in REQUIRED_AGENT_HEADINGS:
         if required.lower() not in headings:
             raise GateFailure("agents_md", f"Skill-local AGENTS.md is missing required heading: {required}")
-    required_refs = ["SKILL.md", "evals/manifest.json", *ctx.manifest_info.asset_refs]
+    manifest_asset_refs = ctx.manifest_info.asset_refs if ctx.manifest_info else []
+    required_refs = ["SKILL.md", "evals/manifest.json", *manifest_asset_refs]
     for ref in sorted(dict.fromkeys(required_refs)):
         if ref not in text:
             raise GateFailure("agents_md", f"Skill-local AGENTS.md is missing concrete reference: {ref}")

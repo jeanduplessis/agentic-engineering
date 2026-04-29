@@ -10,7 +10,8 @@
 | **Validation Gate** | A required check that must pass before the **Target Skill** can be considered valid. | Step, phase, check |
 | **Cheap Gate** | A deterministic **Validation Gate** that does not call live Pi. | Local check, static check |
 | **Live Gate** | A **Validation Gate** that depends on a live Pi invocation. | Model check, online check |
-| **Fail Fast** | The validation policy of stopping at the first failed required gate. | Short-circuit, early exit |
+| **Prerequisite Accumulation** | The validation policy of checking all deterministic prerequisite gates before live work so one result can report multiple missing requirements. | Bulk lint, exhaustive validation |
+| **Live Gate Short-Circuit** | The validation policy of skipping live gates when prerequisite gates fail, and stopping after the first failed live gate to avoid unnecessary model cost. | Fail fast, early exit |
 
 ## Validate-skills gate
 
@@ -56,6 +57,7 @@
 - A **Target Skill** has exactly one **Eval Manifest** for `skill_valid` v1.
 - A **Target Skill** must have exactly one **Skill AGENTS.md** that satisfies all required **Maintenance Sections**.
 - A **Skill Validity** result is true only when every required **Validation Gate** passes.
+- **Prerequisite Accumulation** reports deterministic missing requirements together before any live Pi/model call.
 - The **Validate-Skills Gate** uses exactly one **Wrapper Prompt** and expects exactly one authoritative **Sentinel Line**.
 - The **Live Eval Gate** always runs the **Workflow Suite** and also runs the **Regression Suite** when present.
 - The **Live Eval Gate** executes only the **With-Skill Configuration** in v1.
