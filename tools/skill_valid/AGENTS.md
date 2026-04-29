@@ -6,7 +6,7 @@
 
 ## How the tool works
 
-The module implements Validation Gate functions in `tools/skill_valid/__init__.py`. The target gate runs first because later gates need a real skill directory. Deterministic prerequisite gates then accumulate results for `evals/manifest.json`, skill-local `AGENTS.md`, and live opt-in so users see multiple missing requirements in one JSON response. Live gates run only after those prerequisites pass, then execute the validate-skills wrapper prompt and the existing `tools.skill_eval.runner.run_suite` API.
+The module implements Validation Gate functions in `tools/skill_valid/__init__.py`. The target gate runs first because later gates need a real skill directory. Deterministic prerequisite gates then accumulate results for `evals/manifest.json`, skill-local `AGENTS.md`, `llm_optimal_check`, and live opt-in so users see multiple missing requirements in one JSON response. Live gates run only after those prerequisites pass or warn, then execute the validate-skills wrapper prompt and the existing `tools.skill_eval.runner.run_suite` API.
 
 Terminology is defined in `tools/skill_valid/UBIQUITOUS_LANGUAGE.md`. The validate-skills sentinel contract is documented in `tools/skill_valid/WRAPPER_PROMPT.md`.
 
@@ -18,12 +18,13 @@ Run deterministic tests with:
 python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
 ```
 
-Tests use fake Pi and fake skill_eval runners; do not add live Pi unit tests unless explicitly requested. When changing gate order, result fields, wrapper prompt requirements, or artifact behavior, update tests and `tools/skill_valid/README.md` together.
+Tests use fake Pi, fake skill_eval runners, and fake LLM Optimal Check injectables; do not add live Pi unit tests unless explicitly requested. When changing gate order, result fields, wrapper prompt requirements, or artifact behavior, update tests and `tools/skill_valid/README.md` together.
 
 ## Change guidelines
 
-- Preserve live-run safety: no Pi/model call before cheap gates pass and live opt-in is present.
+- Preserve live-run safety: no Pi/model call before cheap gates pass or warn and live opt-in is present.
 - Keep stdout machine-readable and compact; write diagnostics only to stderr.
 - Use `tools.skill_eval.manifest.load_manifest` and `tools.skill_eval.runner.run_suite` instead of duplicating the eval framework.
 - Preserve failure artifacts only for failed runs after artifact creation; delete successful temporary artifacts.
+- Keep `llm_optimal_check` injectable for pass/warn/fail/tool-error tests.
 - Treat skipped, synthetic, process-failed, missing, and not-graded eval runs as invalid.

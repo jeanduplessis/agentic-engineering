@@ -12,10 +12,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, TextIO
 
+from tools.llm_optimal_check import check_path as default_llm_optimal_check
 from tools.skill_eval.manifest import EvalManifest, load_manifest
 from tools.skill_eval.runner import run_suite
 
-GATE_ORDER = ("target", "eval_manifest", "agents_md", "live_opt_in", "validate_skills", "live_eval")
+GATE_ORDER = ("target", "eval_manifest", "agents_md", "llm_optimal_check", "live_opt_in", "validate_skills", "live_eval")
 REQUIRED_AGENT_HEADINGS = ("Purpose", "How the skill works", "Eval and validation", "Change guidelines")
 SENTINEL_PREFIX = "SKILL_VALID_RESULT="
 
@@ -43,12 +44,14 @@ class CompletedProcessLike:
 
 PiRunner = Callable[..., CompletedProcessLike]
 EvalRunner = Callable[..., dict[str, Any]]
+LlmOptimalChecker = Callable[[Path], dict[str, Any]]
 
 
 @dataclass(frozen=True)
 class ValidationDependencies:
     pi_runner: PiRunner | None = None
     eval_runner: EvalRunner = run_suite
+    llm_optimal_checker: LlmOptimalChecker = default_llm_optimal_check
 
     def run_pi(self, command: list[str], *, cwd: Path, env: dict[str, str], timeout: float) -> CompletedProcessLike:
         if self.pi_runner is not None:
@@ -164,7 +167,7 @@ def validate_skill(
         return _failed_result(ctx)
 
     cheap_gates_passed = True
-    for gate in (_gate_eval_manifest, _gate_agents_md, _gate_live_opt_in):
+    for gate in (_gate_eval_manifest, _gate_agents_md, _gate_llm_optimal_check, _gate_live_opt_in):
         cheap_gates_passed = _run_required_gate(ctx, gate, stop_after_failure=False) and cheap_gates_passed
 
     if not cheap_gates_passed:
@@ -211,6 +214,11 @@ def _set_gate(result: dict[str, Any], gate: str, status: str, message: str, deta
 def _pass_gate(ctx: ValidationContext, gate: str, message: str, details: dict[str, Any] | None = None) -> None:
     _set_gate(ctx.result, gate, "passed", message, details)
     ctx.log(f"gate {gate} passed")
+
+
+def _warn_gate(ctx: ValidationContext, gate: str, message: str, details: dict[str, Any] | None = None) -> None:
+    _set_gate(ctx.result, gate, "warn", message, details)
+    ctx.log(f"gate {gate} warned: {message}")
 
 
 def _run_required_gate(ctx: ValidationContext, gate_func: Callable[[ValidationContext], None], *, stop_after_failure: bool) -> bool:
@@ -410,6 +418,60 @@ def _normalize_heading(line: str) -> str | None:
         return None
     text = stripped.lstrip("#").strip().rstrip("#").strip()
     return text.lower() if text else None
+
+
+def _gate_llm_optimal_check(ctx: ValidationContext) -> None:
+    assert ctx.target_dir is not None
+    skill_path = ctx.target_dir / "SKILL.md"
+    try:
+        report = ctx.deps.llm_optimal_checker(skill_path)
+    except Exception as exc:
+        raise GateFailure(
+            "llm_optimal_check",
+            f"LLM Optimal Check tool error: {exc}",
+            {"exception_type": type(exc).__name__},
+        ) from exc
+
+    if not isinstance(report, dict):
+        raise GateFailure("llm_optimal_check", "LLM Optimal Check returned a non-object report.")
+    status = report.get("status")
+    details = {"report": _compact_llm_optimal_report(report)}
+    score = report.get("score")
+    finding_count = len(report.get("findings") or []) if isinstance(report.get("findings"), list) else 0
+    if status == "pass":
+        _pass_gate(ctx, "llm_optimal_check", f"LLM Optimal Check passed with score {score}.", details)
+        return
+    if status == "warn":
+        _warn_gate(
+            ctx,
+            "llm_optimal_check",
+            f"LLM Optimal Check returned warnings with score {score} and {finding_count} finding(s).",
+            details,
+        )
+        return
+    if status == "fail":
+        raise GateFailure(
+            "llm_optimal_check",
+            f"LLM Optimal Check failed with score {score} and {finding_count} finding(s).",
+            details,
+        )
+    raise GateFailure("llm_optimal_check", f"LLM Optimal Check returned unknown status: {status!r}", details)
+
+
+def _compact_llm_optimal_report(report: dict[str, Any]) -> dict[str, Any]:
+    metrics = report.get("metrics") if isinstance(report.get("metrics"), dict) else {}
+    compact_metrics = {
+        key: value
+        for key, value in metrics.items()
+        if key not in {"analyzed_preview", "body", "preview"}
+    }
+    findings = report.get("findings") if isinstance(report.get("findings"), list) else []
+    return {
+        "status": report.get("status"),
+        "score": report.get("score"),
+        "metrics": compact_metrics,
+        "findings": findings,
+    }
 
 
 def _gate_live_opt_in(ctx: ValidationContext) -> None:

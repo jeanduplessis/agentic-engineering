@@ -87,8 +87,8 @@ class SkillValidTests(unittest.TestCase):
         )
         return skill_dir
 
-    def passing_deps(self, *, pi_stdout: str = VALID_SENTINEL, pi_returncode: int = 0, eval_run=None):
-        calls = {"pi": [], "eval": []}
+    def passing_deps(self, *, pi_stdout: str = VALID_SENTINEL, pi_returncode: int = 0, eval_run=None, llm_check=None):
+        calls = {"pi": [], "eval": [], "llm": []}
 
         def pi_runner(command, *, cwd, env, timeout):
             calls["pi"].append({"command": command, "cwd": cwd, "env": env, "timeout": timeout})
@@ -131,7 +131,13 @@ class SkillValidTests(unittest.TestCase):
                 ]
             return {"suite": suite_name, "suite_type": suite_name, "status": "completed", "runs": runs}
 
-        return ValidationDependencies(pi_runner=pi_runner, eval_runner=eval_run or default_eval_run), calls
+        def default_llm_check(path):
+            calls["llm"].append(Path(path))
+            if llm_check is not None:
+                return llm_check(Path(path))
+            return {"status": "pass", "score": 100, "metrics": {"path": str(path), "tokens": 1, "analyzed_preview": "hidden"}, "findings": []}
+
+        return ValidationDependencies(pi_runner=pi_runner, eval_runner=eval_run or default_eval_run, llm_optimal_checker=default_llm_check), calls
 
     def validate(self, root: Path, target: Path, **kwargs):
         deps, calls = self.passing_deps(**kwargs.pop("deps_kwargs", {}))
@@ -158,7 +164,7 @@ class SkillValidTests(unittest.TestCase):
             self.assertEqual(result["gates"]["target"]["status"], "failed")
             self.assertIn("SKILL.md", result["gates"]["target"]["message"])
             self.assertIn("skill_valid:", stderr.getvalue())
-            self.assertEqual(set(result["gates"]), {"target", "eval_manifest", "agents_md", "live_opt_in", "validate_skills", "live_eval"})
+            self.assertEqual(set(result["gates"]), {"target", "eval_manifest", "agents_md", "llm_optimal_check", "live_opt_in", "validate_skills", "live_eval"})
 
     def test_rejects_targets_outside_repo_local_skills_collection_before_live_work(self):
         with self.make_repo() as (tmp, root):
@@ -190,6 +196,7 @@ class SkillValidTests(unittest.TestCase):
             self.assertEqual(result["gates"]["target"]["status"], "passed")
             self.assertEqual(result["gates"]["eval_manifest"]["status"], "passed")
             self.assertEqual(result["gates"]["agents_md"]["status"], "passed")
+            self.assertEqual(result["gates"]["llm_optimal_check"]["status"], "passed")
             self.assertEqual(result["gates"]["live_opt_in"]["status"], "failed")
             self.assertEqual(result["gates"]["validate_skills"]["status"], "not_run")
             self.assertEqual(calls["pi"], [])
@@ -236,6 +243,7 @@ class SkillValidTests(unittest.TestCase):
             self.assertIn("evals/manifest.json", result["gates"]["eval_manifest"]["message"])
             self.assertEqual(result["gates"]["agents_md"]["status"], "failed")
             self.assertIn("AGENTS.md", result["gates"]["agents_md"]["message"])
+            self.assertEqual(result["gates"]["llm_optimal_check"]["status"], "passed")
             self.assertEqual(result["gates"]["live_opt_in"]["status"], "passed")
             self.assertEqual(result["gates"]["validate_skills"]["status"], "not_run")
             self.assertEqual(result["gates"]["live_eval"]["status"], "not_run")
@@ -382,6 +390,64 @@ class SkillValidTests(unittest.TestCase):
                 self.assertIn(expected, result["gates"]["agents_md"]["message"])
                 self.assertEqual(calls["pi"], [])
                 self.assertEqual(calls["eval"], [])
+
+    def test_llm_optimal_check_gate_maps_pass_warn_fail_and_compacts_report(self):
+        def report(status):
+            return {
+                "status": status,
+                "score": {"pass": 100, "warn": 85, "fail": 60}[status],
+                "metrics": {"path": "SKILL.md", "tokens": 12, "characters": 44, "analyzed_preview": "do not embed"},
+                "findings": [
+                    {
+                        "rule_id": "REL002",
+                        "severity": "major",
+                        "category": "reliability",
+                        "location": {"line": 3},
+                        "message": "Overlong workflow step.",
+                        "suggestion": "Split it.",
+                    }
+                ] if status != "pass" else [],
+            }
+
+        cases = [("pass", 0, True, "passed"), ("warn", 0, True, "warn"), ("fail", 1, False, "failed")]
+        for check_status, expected_code, expected_valid, gate_status in cases:
+            with self.subTest(check_status=check_status), self.make_repo() as (tmp, root):
+                target = self.write_valid_skill(root)
+                deps, calls = self.passing_deps(llm_check=lambda path, s=check_status: report(s))
+
+                code, result = validate_skill(ValidationOptions(target, repo_root=root, allow_live_pi=True), deps=deps)
+
+                self.assertEqual(code, expected_code)
+                self.assertEqual(result["valid"], expected_valid)
+                gate = result["gates"]["llm_optimal_check"]
+                self.assertEqual(gate["status"], gate_status)
+                compact = gate["details"]["report"]
+                self.assertEqual(compact["status"], check_status)
+                self.assertNotIn("analyzed_preview", compact["metrics"])
+                if check_status == "fail":
+                    self.assertEqual(calls["pi"], [])
+                    self.assertEqual(calls["eval"], [])
+                    self.assertEqual(result["gates"]["validate_skills"]["status"], "not_run")
+
+    def test_llm_optimal_check_tool_error_fails_closed_before_live_gates(self):
+        with self.make_repo() as (tmp, root):
+            target = self.write_valid_skill(root)
+
+            def broken_checker(path):
+                raise RuntimeError("missing tokenizer")
+
+            deps, calls = self.passing_deps(llm_check=broken_checker)
+
+            code, result = validate_skill(ValidationOptions(target, repo_root=root, allow_live_pi=True), deps=deps)
+
+            self.assertEqual(code, 1)
+            self.assertFalse(result["valid"])
+            self.assertEqual(result["gates"]["llm_optimal_check"]["status"], "failed")
+            self.assertIn("tool error", result["gates"]["llm_optimal_check"]["message"])
+            self.assertEqual(calls["pi"], [])
+            self.assertEqual(calls["eval"], [])
+            self.assertEqual(result["gates"]["validate_skills"]["status"], "not_run")
+            self.assertEqual(result["gates"]["live_eval"]["status"], "not_run")
 
     def test_validate_skills_pi_command_uses_wrapper_prompt_read_only_tools_and_overrides(self):
         with self.make_repo() as (tmp, root):

@@ -29,6 +29,10 @@ Act as an LLM optimization editor. Improve text for token efficiency and model e
 11. When only low-value micro-edits remain, ask whether to batch, continue, or stop.
 12. Stop when the user says done, chooses **S**, or no safe opportunities remain; then present the final summary.
 
+## Optional smell test
+
+For file-backed Markdown, prompt, command, or skill rewrites, `python3 -m tools.llm_optimal_check <path>` is an optional candidate-discovery aid. The legacy `scripts/smell_test.py <path>` wrapper remains compatible. It emits JSON-only token-cost and reliability heuristics with exact token metrics and excludes leading YAML frontmatter. Use it to spot likely opportunities before planning; it does not replace semantic verification, exact token counts for proposed edits, or user confirmation before applying changes.
+
 ## Rewrite rules
 
 - Preserve exact meaning.
@@ -54,7 +58,15 @@ Act as an LLM optimization editor. Improve text for token efficiency and model e
 
 ## Token counting
 
-Use the bundled script; do not estimate when tools are available.
+Use the repo-level token tool or the bundled compatibility wrapper; do not estimate when tools are available.
+
+```bash
+python3 -m tools.llm_token_count <<'TEXT'
+<exact snippet text>
+TEXT
+```
+
+Compatibility wrapper:
 
 ```bash
 python <skill-dir>/scripts/count_tokens.py <<'TEXT'
@@ -68,7 +80,7 @@ TEXT
 - Count exact fenced snippet content, preserving whitespace and newlines.
 - Delta = `rewritten_tokens - original_tokens`; savings are negative.
 - Omit tokenizer/model/encoding in headings by default; mention it once when non-default, requested, or needed for debugging.
-- If `tiktoken` is missing, use the script bootstrap venv. Do not install system-wide.
+- If `tiktoken` is missing, use the tool bootstrap venv. Do not install system-wide.
 - If counting fails or command execution is unavailable, stop and ask how to proceed; do not provide approximate counts.
 
 ## Review formats

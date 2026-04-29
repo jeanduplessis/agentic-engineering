@@ -7,7 +7,7 @@ Usage:
   ./tools/skill_eval/skill_eval.sh <skill-dir>
 
 Runs full real skill validation for the target skill by invoking tools.skill_valid:
-  - validates target shape, eval manifest, and skill-local AGENTS.md
+  - validates target shape, eval manifest, skill-local AGENTS.md, and LLM optimization readiness
   - runs the live validate-skills gate
   - runs live skill_eval workflow/regression suites with the target skill force-loaded
   - requires strict real-run success
@@ -148,6 +148,7 @@ RESET = c("0")
 
 status_style = {
     "passed": (GREEN, "✓"),
+    "warn": (YELLOW, "!"),
     "failed": (RED, "✗"),
     "not_run": (YELLOW, "-"),
 }
@@ -156,12 +157,13 @@ gate_labels = {
     "target": "Target shape",
     "eval_manifest": "Eval manifest",
     "agents_md": "Maintenance docs",
+    "llm_optimal_check": "LLM optimal check",
     "live_opt_in": "Live opt-in",
     "validate_skills": "validate-skills review",
     "live_eval": "Live behavior evals",
 }
 
-gate_order = ["target", "eval_manifest", "agents_md", "live_opt_in", "validate_skills", "live_eval"]
+gate_order = ["target", "eval_manifest", "agents_md", "llm_optimal_check", "live_opt_in", "validate_skills", "live_eval"]
 
 target = result.get("target", "<unknown>")
 valid = result.get("valid") is True
@@ -193,6 +195,35 @@ for gate_name in gate_order:
             print(f"      {DIM}manifest:{RESET} {manifest}")
         if asset_refs:
             print(f"      {DIM}assets:{RESET} {', '.join(asset_refs)}")
+
+    if gate_name == "llm_optimal_check" and details:
+        report = details.get("report") if isinstance(details.get("report"), dict) else {}
+        if report:
+            print(f"      {DIM}optimization:{RESET} status={report.get('status')} score={report.get('score')}/100")
+            findings = report.get("findings") if isinstance(report.get("findings"), list) else []
+            if findings:
+                print(f"      {DIM}optimization findings:{RESET}")
+                for item in findings:
+                    if not isinstance(item, dict):
+                        print(f"        {YELLOW}?{RESET} {item}")
+                        continue
+                    severity = item.get("severity", "unknown")
+                    sev_color, sev_icon = status_style.get("failed" if severity == "major" else "warn", (YELLOW, "?"))
+                    rule_id = item.get("rule_id", "<rule>")
+                    location = item.get("location") if isinstance(item.get("location"), dict) else {}
+                    line = location.get("line")
+                    end_line = location.get("end_line")
+                    if line and end_line:
+                        loc = f"line {line}-{end_line}"
+                    elif line:
+                        loc = f"line {line}"
+                    else:
+                        loc = "unknown location"
+                    message = item.get("message", "")
+                    suggestion = item.get("suggestion", "")
+                    print(f"        {sev_color}{sev_icon}{RESET} {rule_id} [{severity}] {loc}: {message}")
+                    if suggestion:
+                        print(f"          {DIM}suggestion:{RESET} {suggestion}")
 
     sentinel = details.get("sentinel") if isinstance(details, dict) else None
     checks = sentinel.get("checks") if isinstance(sentinel, dict) else None

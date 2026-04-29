@@ -133,6 +133,10 @@ A result is trustworthy enough to compare skill versions only when all of these 
 
 Regression suites run through the same case runner as workflow suites. After triage and skill fixes, run the `regression` suite with real harness configs to guard against backslides.
 
+## Friendly skill validation wrapper
+
+`tools/skill_eval/skill_eval.sh <skill-dir>` invokes `python3 -m tools.skill_valid <skill-dir> --allow-live-pi` and renders the compact JSON as a human summary. It shows the `llm_optimal_check` gate inline, renders `warn` in yellow as non-blocking, and prints optimization findings with rule, severity, location, message, and suggestion. Set `SKILL_EVAL_RAW_JSON=1` to append the underlying JSON and `SKILL_EVAL_VERBOSE=1` to show `skill_valid` stderr logs.
+
 ## Development notes
 
 - Keep generic framework behavior in `tools/skill_eval/*`.

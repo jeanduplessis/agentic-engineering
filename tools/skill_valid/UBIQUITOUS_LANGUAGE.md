@@ -7,11 +7,12 @@
 | **Skill** | A repo-local agent capability packaged as a directory under the skills collection. | Plugin, command, prompt |
 | **Target Skill** | The single **Skill** being validated in one `skill_valid` run. | Subject, candidate, target directory |
 | **Skill Validity** | The final boolean judgment that a **Target Skill** satisfies every required **Validation Gate**. | Quality, compliance, certification |
-| **Validation Gate** | A required check that must pass before the **Target Skill** can be considered valid. | Step, phase, check |
+| **Validation Gate** | A required check that must pass or emit an allowed warning before the **Target Skill** can be considered valid. | Step, phase, check |
 | **Cheap Gate** | A deterministic **Validation Gate** that does not call live Pi. | Local check, static check |
 | **Live Gate** | A **Validation Gate** that depends on a live Pi invocation. | Model check, online check |
 | **Prerequisite Accumulation** | The validation policy of checking all deterministic prerequisite gates before live work so one result can report multiple missing requirements. | Bulk lint, exhaustive validation |
 | **Live Gate Short-Circuit** | The validation policy of skipping live gates when prerequisite gates fail, and stopping after the first failed live gate to avoid unnecessary model cost. | Fail fast, early exit |
+| **Warn Gate Status** | A non-blocking gate status for deterministic advisory findings that remain visible while allowing **Skill Validity** if no blocking gate fails. | Soft pass, pass with warnings |
 
 ## Validate-skills gate
 
@@ -51,13 +52,16 @@
 | **Gate-Level Result** | The compact JSON object printed by `skill_valid` to stdout describing overall validity and each gate status. | Summary, report |
 | **Failure Artifacts** | Temporary child-run files preserved only when validation fails so failures can be debugged. | Results, report bundle |
 | **Live Opt-In** | The explicit user permission required before `skill_valid` may spend live Pi/model calls. | Enable flag, allow live |
+| **LLM Optimal Check Gate** | The deterministic gate keyed `llm_optimal_check` that runs `tools.llm_optimal_check` on the **Target Skill**'s `SKILL.md`. | Smell-test gate, prompt lint |
+| **Compact Optimization Report** | The `llm_optimal_check` gate details containing checker status, score, useful metrics, and all findings while excluding bulky preview/body fields. | Embedded report, optimization summary |
 
 ## Relationships
 
 - A **Target Skill** has exactly one **Eval Manifest** for `skill_valid` v1.
 - A **Target Skill** must have exactly one **Skill AGENTS.md** that satisfies all required **Maintenance Sections**.
-- A **Skill Validity** result is true only when every required **Validation Gate** passes.
+- A **Skill Validity** result is true only when every required **Validation Gate** passes or emits an allowed **Warn Gate Status**.
 - **Prerequisite Accumulation** reports deterministic missing requirements together before any live Pi/model call.
+- The **LLM Optimal Check Gate** analyzes only `SKILL.md` in v1; `warn` is non-blocking, while `fail` and tool errors block live gates.
 - The **Validate-Skills Gate** uses exactly one **Wrapper Prompt** and expects exactly one authoritative **Sentinel Line**.
 - The **Live Eval Gate** always runs the **Workflow Suite** and also runs the **Regression Suite** when present.
 - The **Live Eval Gate** executes only the **With-Skill Configuration** in v1.
