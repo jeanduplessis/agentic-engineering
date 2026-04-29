@@ -1,0 +1,208 @@
+# AGENTS.md — skills directory context
+
+This directory contains agent skills. Each skill should be self-contained, easy for agents to discover, and optionally measurable through the repo-level skill eval framework in `tools/skill_eval`.
+
+## Skill structure
+
+A skill should normally live in its own directory:
+
+```text
+skills/<skill-name>/
+  SKILL.md
+  evals/
+    manifest.json        # optional but recommended
+    evals.json           # optional legacy/simple case data
+    grader.py            # optional skill-local deterministic grader
+```
+
+`SKILL.md` is required for an installable skill. It should include frontmatter with at least:
+
+```yaml
+---
+name: skill-name
+description: Clear trigger description for when this skill should be used.
+---
+```
+
+Then provide concise, actionable instructions. Include references, scripts, examples, or templates only when they materially improve execution reliability.
+
+## Skill eval framework
+
+Use `tools.skill_eval` for behavioral skill evaluation. It runs skill-owned manifests, creates isolated sandboxes, captures trace bundles, grades deterministic checks, compares configurations, and writes reports.
+
+Primary commands:
+
+```bash
+python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
+```
+
+```bash
+python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
+  --results /tmp/<skill-name>-eval \
+  --require-real
+```
+
+Live Pi execution is gated. Only run live evals when explicitly requested or approved:
+
+```bash
+SKILL_EVAL_ALLOW_LIVE_PI=1 \
+python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
+  --results /tmp/<skill-name>-live-eval \
+  --require-real
+```
+
+See `tools/skill_eval/README.md` and `tools/skill_eval/AGENTS.md` for the runner contract.
+
+## Eval-ready skill requirements
+
+To be runnable by `tools.skill_eval`, add `skills/<skill-name>/evals/manifest.json` with:
+
+- `schema_version`
+- `skill.name`
+- `skill.path` pointing to `../SKILL.md`
+- at least one executable suite, normally `workflow`
+- named configurations, normally `with_skill` and `without_skill`
+
+Minimal manifest:
+
+```json
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "skill-name",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {"type": "empty"},
+      "cases": [
+        {
+          "id": "basic",
+          "prompt": "Ask for behavior this skill should improve.",
+          "checks": [
+            {"id": "non-empty", "type": "non_empty_response"}
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false
+    }
+  }
+}
+```
+
+Relative paths in manifests are resolved from the manifest directory. This includes `skill.path`, `legacy_evals`, `custom_grader`, and copy fixtures.
+
+## Suites
+
+Current runner support:
+
+- `workflow`: executable; tests behavior when the skill is intentionally available.
+- `regression`: executable; known-fixed real failures that should stay passing.
+- `trigger`: representable but not executed by the current runner.
+- `capability`: representable but not executed by the current runner.
+
+For workflow suites, compare:
+
+- `with_skill`: Pi runs with `--skill <path-to-SKILL.md>`.
+- `without_skill`: Pi runs with `--no-skills` and omits the target skill.
+
+## Checks and graders
+
+Prefer deterministic checks. Built-in check types include:
+
+- `required_content`
+- `forbidden_content`
+- `regex`
+- `json_field_equals`
+- `non_empty_response`
+
+Use a skill-local `evals/grader.py` only when generic checks cannot express the domain contract. A custom grader should expose:
+
+```python
+def grade(response, case=None, context=None):
+    return [
+        {
+            "id": "skill.contract",
+            "type": "custom_contract",
+            "status": "passed",
+            "passed": True,
+            "evidence": "what was checked",
+            "details": None,
+        }
+    ]
+```
+
+The `context` may include:
+
+- `configuration`
+- `sandbox_path`
+- `run_dir`
+- `artifact_manifest`
+- `workspace_diff`
+
+Use these to grade generated files/artifacts, not just response prose.
+
+## Fixtures and artifacts
+
+Supported fixture types:
+
+- `empty`: fresh isolated sandbox.
+- `copy`: copy a fixture directory into the sandbox before the run.
+
+Example:
+
+```json
+"fixture": {"type": "copy", "path": "fixtures/project"}
+```
+
+Each run writes a trace bundle under the results directory, including:
+
+- `raw_output.json`
+- `events.jsonl`
+- `response.md`
+- `timing.json`
+- `usage.json`
+- `metadata.json`
+- `artifact_manifest.json`
+- `workspace_diff.txt`
+- `grade.json`
+
+Process failures are not graded as content failures. Timeouts and nonzero harness exits produce `status: "process_failed"`, `grade.status: "not_graded"`, and `passed: null`.
+
+## Regression workflow
+
+When a real, graded failure is confirmed, promote it before changing the skill:
+
+```bash
+python3 -m tools.skill_eval promote-regressions \
+  skills/<skill-name>/evals/manifest.json \
+  --results /tmp/<skill-name>-live-eval \
+  --output skills/<skill-name>/evals/manifest.json \
+  --source-bead <bead-id>
+```
+
+Only promote failed, non-skipped, real runs that represent actual skill behavior problems. Do not promote synthetic smoke failures, skipped runs, process timeouts, or grader false positives as canonical regressions.
+
+## Expectations for new or changed skills
+
+When adding or substantially changing a skill:
+
+1. Keep `SKILL.md` trigger description precise.
+2. Add or update workflow eval cases for core behavior.
+3. Add deterministic checks or a skill-local grader for important contracts.
+4. Run unit tests for `tools.skill_eval` after changing framework-facing eval files.
+5. Run no-live `--require-real` validation to ensure the manifest uses real configs and skips honestly without live Pi.
+6. Run live Pi eval only with explicit approval.
+7. Treat static/replay results as synthetic plumbing checks, not skill-quality evidence.

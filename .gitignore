@@ -1,6 +1,8 @@
 .firecrawl/
 .venvs/
 *.local
+__pycache__/
+*.py[cod]
 
 # Beads / Dolt files (added by bd init)
 .dolt/
