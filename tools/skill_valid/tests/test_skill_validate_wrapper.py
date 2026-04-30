@@ -8,10 +8,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-WRAPPER = ROOT / "tools" / "skill_eval" / "skill_eval.sh"
+WRAPPER = ROOT / "tools" / "skill_valid" / "skill_validate.sh"
 
 
-class SkillEvalWrapperTests(unittest.TestCase):
+class SkillValidateWrapperTests(unittest.TestCase):
     def run_wrapper_with_fake_skill_valid(self, payload: dict, *, exit_code: int = 0):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -53,6 +53,7 @@ class SkillEvalWrapperTests(unittest.TestCase):
             "target": "skills/demo",
             "gates": {
                 "target": {"status": "passed", "message": "ok"},
+                "skill_spec": {"status": "passed", "message": "spec ok"},
                 "eval_manifest": {"status": "passed", "message": "ok"},
                 "agents_md": {"status": "passed", "message": "ok"},
                 "llm_optimal_check": {
@@ -86,6 +87,8 @@ class SkillEvalWrapperTests(unittest.TestCase):
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("Skill validation passed", completed.stdout)
+        self.assertIn("Skill spec", completed.stdout)
+        self.assertIn("(skill_spec)", completed.stdout)
         self.assertIn("LLM optimal check", completed.stdout)
         self.assertIn("(llm_optimal_check)", completed.stdout)
         self.assertIn("optimization: status=warn score=85/100", completed.stdout)
@@ -100,6 +103,7 @@ class SkillEvalWrapperTests(unittest.TestCase):
             "target": "skills/demo",
             "gates": {
                 "target": {"status": "passed", "message": "ok"},
+                "skill_spec": {"status": "passed", "message": "spec ok"},
                 "eval_manifest": {"status": "passed", "message": "ok"},
                 "agents_md": {"status": "passed", "message": "ok"},
                 "llm_optimal_check": {"status": "failed", "message": "LLM Optimal Check failed.", "details": {"report": {"status": "fail", "score": 60, "metrics": {}, "findings": []}}},

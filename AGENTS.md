@@ -36,14 +36,10 @@ For tool changes:
 python3 -m unittest discover -v
 ```
 
-For skill changes, start with the deterministic repo-local gate:
+For skill validation, use the repo-local validation tool:
 
 ```sh
-./tools/skill_eval/skill_eval.sh skills/<skill-name>
+./tools/skill_valid/skill_validate.sh skills/<skill-name>
 ```
 
-Run live gates only with explicit approval, for example:
-
-```sh
-./tools/skill_eval/skill_eval.sh skills/<skill-name> --allow-live-pi
-```
+Run live validation gates only with explicit approval; the wrapper passes `--allow-live-pi` to `tools.skill_valid`.

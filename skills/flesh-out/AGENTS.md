@@ -17,7 +17,7 @@ When editing the skill, preserve the core behavior: one focused decision questio
 Run the deterministic validation wrapper before handing off changes:
 
 ```sh
-./tools/skill_eval/skill_eval.sh skills/flesh-out
+./tools/skill_valid/skill_validate.sh skills/flesh-out
 ```
 
 The manifest has no copy fixtures, custom grader, or legacy eval assets.

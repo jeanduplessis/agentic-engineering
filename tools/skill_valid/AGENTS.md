@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`tools.skill_valid` orchestrates the Skill Validity decision for one repo-local skill. Keep the public command `python3 -m tools.skill_valid skills/<skill-name> --allow-live-pi` and the compact stdout JSON contract stable.
+`tools.skill_valid` orchestrates the Skill Validity decision for one repo-local skill. Keep the public command `python3 -m tools.skill_valid skills/<skill-name> --allow-live-pi`, the friendly wrapper `./tools/skill_valid/skill_validate.sh skills/<skill-name>`, and the compact stdout JSON contract stable.
 
 ## How the tool works
 
@@ -16,6 +16,7 @@ Run deterministic tests with:
 
 ```sh
 python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
+python3 -m unittest tools.skill_valid.tests.test_skill_validate_wrapper -v
 ```
 
 Tests use fake Pi, fake skill_eval runners, and fake LLM Optimal Check injectables; do not add live Pi unit tests unless explicitly requested. When changing gate order, result fields, wrapper prompt requirements, or artifact behavior, update tests and `tools/skill_valid/README.md` together.

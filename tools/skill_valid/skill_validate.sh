@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat >&2 <<'USAGE'
 Usage:
-  ./tools/skill_eval/skill_eval.sh <skill-dir>
+  ./tools/skill_valid/skill_validate.sh <skill-dir>
 
 Runs full real skill validation for the target skill by invoking tools.skill_valid:
   - validates target shape, eval manifest, skill-local AGENTS.md, and LLM optimization readiness
@@ -17,12 +17,12 @@ Environment overrides:
   SKILL_VALID_MODEL=<model>
   SKILL_VALID_THINKING=<off|minimal|low|medium|high|xhigh>
   SKILL_VALID_ARTIFACT_BASE=<dir>
-  SKILL_EVAL_VERBOSE=1       Show raw skill_valid progress logs
-  SKILL_EVAL_RAW_JSON=1      Print the raw skill_valid JSON after the friendly summary
+  SKILL_VALIDATE_VERBOSE=1   Show raw skill_valid progress logs
+  SKILL_VALIDATE_RAW_JSON=1  Print the raw skill_valid JSON after the friendly summary
   NO_COLOR=1                 Disable color output
 
 Example:
-  ./tools/skill_eval/skill_eval.sh skills/beads
+  ./tools/skill_valid/skill_validate.sh skills/beads
 USAGE
 }
 
@@ -103,7 +103,7 @@ python3 -m tools.skill_valid "${args[@]}" >"$stdout_file" 2>"$stderr_file"
 code=$?
 set -e
 
-if [[ "${SKILL_EVAL_VERBOSE:-}" == "1" && -s "$stderr_file" ]]; then
+if [[ "${SKILL_VALIDATE_VERBOSE:-}" == "1" && -s "$stderr_file" ]]; then
   printf '\n%sRaw skill_valid logs%s\n' "$bold" "$reset" >&2
   sed 's/^/  /' "$stderr_file" >&2
 fi
@@ -119,7 +119,7 @@ fi
 
 set +e
 format_status=$(
-  SKILL_EVAL_COLOR="$enable_color" python3 - "$stdout_file" <<'PY'
+  SKILL_VALIDATE_COLOR="$enable_color" python3 - "$stdout_file" <<'PY'
 import json
 import os
 import sys
@@ -132,7 +132,7 @@ except Exception as exc:
     print(f"Could not parse skill_valid JSON: {exc}", file=sys.stderr)
     sys.exit(2)
 
-use_color = os.environ.get("SKILL_EVAL_COLOR") == "1"
+use_color = os.environ.get("SKILL_VALIDATE_COLOR") == "1"
 
 def c(code: str) -> str:
     return f"\033[{code}m" if use_color else ""
@@ -155,6 +155,7 @@ status_style = {
 
 gate_labels = {
     "target": "Target shape",
+    "skill_spec": "Skill spec",
     "eval_manifest": "Eval manifest",
     "agents_md": "Maintenance docs",
     "llm_optimal_check": "LLM optimal check",
@@ -163,7 +164,7 @@ gate_labels = {
     "live_eval": "Live behavior evals",
 }
 
-gate_order = ["target", "eval_manifest", "agents_md", "llm_optimal_check", "live_opt_in", "validate_skills", "live_eval"]
+gate_order = ["target", "skill_spec", "eval_manifest", "agents_md", "llm_optimal_check", "live_opt_in", "validate_skills", "live_eval"]
 
 target = result.get("target", "<unknown>")
 valid = result.get("valid") is True
@@ -257,7 +258,7 @@ fi
 
 printf '%s\n' "$format_status"
 
-if [[ "${SKILL_EVAL_RAW_JSON:-}" == "1" ]]; then
+if [[ "${SKILL_VALIDATE_RAW_JSON:-}" == "1" ]]; then
   printf '\n%sRaw JSON%s\n' "$bold" "$reset"
   cat "$stdout_file"
   printf '\n'

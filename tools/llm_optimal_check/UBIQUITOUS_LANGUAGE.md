@@ -28,7 +28,7 @@
 | **LLM Optimal Check Gate** | The `skill_valid` validation gate keyed as `llm_optimal_check` that runs the **LLM Optimal Check** on the target skill's `SKILL.md`. | Smell-test gate, optimization gate |
 | **Warn Gate Status** | A non-blocking `skill_valid` gate status that reports advisory issues while allowing overall validity if no blocking gates fail. | Warning pass, soft pass |
 | **Compact Optimization Report** | The `skill_valid` gate details containing check status, score, useful metrics, and all findings while excluding bulky preview/body fields. | Embedded report, summarized report |
-| **Friendly Validation Summary** | The human-readable `skill_eval.sh` output that renders gate statuses and all optimization findings inline. | Pretty output, wrapper report |
+| **Friendly Validation Summary** | The human-readable `tools/skill_valid/skill_validate.sh` output that renders gate statuses and all optimization findings inline. | Pretty output, wrapper report |
 | **Primary Skill Instructions** | The target skill's `SKILL.md`, which is the only file analyzed by the v1 **LLM Optimal Check Gate**. | Skill prompt, skill file |
 
 ## Compatibility

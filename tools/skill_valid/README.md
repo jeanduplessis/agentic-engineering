@@ -4,9 +4,19 @@
 
 ## Usage
 
+Machine-readable JSON:
+
 ```sh
 python3 -m tools.skill_valid skills/<skill-name> --allow-live-pi
 ```
+
+Friendly human summary:
+
+```sh
+./tools/skill_valid/skill_validate.sh skills/<skill-name>
+```
+
+The wrapper invokes `python3 -m tools.skill_valid <skill-dir> --allow-live-pi`, renders gate statuses, prints `llm_optimal_check` findings inline, and preserves the underlying exit code. Set `SKILL_VALIDATE_RAW_JSON=1` to append raw JSON or `SKILL_VALIDATE_VERBOSE=1` to show `skill_valid` stderr logs.
 
 Optional live execution overrides are applied to both live gates:
 
