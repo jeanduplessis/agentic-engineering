@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "pr-create",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "create-preview-structured-description",
+          "prompt": "Create a ready-for-review PR preview, but do not run commands, push, or contact GitHub. Use only this supplied context and show the title and body you would ask me to confirm. Branch: add-email-verification. Commits: feat(auth): add email verification token flow; test(auth): cover expired verification tokens. Changed behavior: new signups must verify email before accessing the dashboard, expired tokens show a resend path, and verified users continue normally. Verification completed in this session: python3 -m unittest tests/test_email_verification.py; manual browser check that signup shows the verify-email banner. Reviewer flag: token expiry is 24 hours by product decision.",
+          "checks": [
+            {
+              "id": "has-summary-heading",
+              "type": "required_content",
+              "value": "## Summary"
+            },
+            {
+              "id": "has-why-heading",
+              "type": "required_content",
+              "value": "### Why this change is needed"
+            },
+            {
+              "id": "has-how-heading",
+              "type": "required_content",
+              "value": "### How this is addressed"
+            },
+            {
+              "id": "has-human-verification-heading",
+              "type": "required_content",
+              "value": "## Human Verification"
+            },
+            {
+              "id": "has-reviewer-notes-heading",
+              "type": "required_content",
+              "value": "## Reviewer Notes"
+            },
+            {
+              "id": "mentions-confirmation",
+              "type": "regex",
+              "pattern": "(?i)(confirm|confirmation|approve|look good)"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}
