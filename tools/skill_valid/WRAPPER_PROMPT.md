@@ -2,7 +2,7 @@ You are validating exactly one repo-local skill for the `skill_valid` tool.
 
 Target skill: `{{TARGET_SKILL}}`
 
-Use the loaded validate-skills skill as the authoritative reviewer. Validate only the target skill above against the agentskills.io skill specification and this repository's skill best practices. Use only read-only inspection.
+Use the loaded validate-skills skill as the authoritative qualitative reviewer. Validate only the target skill above against this repository's skill authoring best practices, while noting any obvious spec breakage you directly observe. Deterministic `skill_valid` gates already checked parser/spec/resource rules. Use only read-only inspection.
 
 Return any concise human-readable findings you need, then make the final non-empty stdout line exactly:
 

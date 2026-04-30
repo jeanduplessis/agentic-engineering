@@ -6,7 +6,7 @@
 
 ## How the tool works
 
-The module implements Validation Gate functions in `tools/skill_valid/__init__.py`. The target gate runs first because later gates need a real skill directory. Deterministic prerequisite gates then accumulate results for `evals/manifest.json`, skill-local `AGENTS.md`, `llm_optimal_check`, and live opt-in so users see multiple missing requirements in one JSON response. Live gates run only after those prerequisites pass or warn, then execute the validate-skills wrapper prompt and the existing `tools.skill_eval.runner.run_suite` API.
+The module implements Validation Gate functions in `tools/skill_valid/__init__.py`; deterministic SKILL.md spec/resource checks live in `tools/skill_valid/spec_checks.py`. The target gate runs first because later gates need a real skill directory. Deterministic prerequisite gates then accumulate results for `skill_spec`, `evals/manifest.json`, skill-local `AGENTS.md`, `llm_optimal_check`, and live opt-in so users see multiple missing requirements in one JSON response. Live gates run only after those prerequisites pass or warn, then execute the validate-skills wrapper prompt and the existing `tools.skill_eval.runner.run_suite` API.
 
 Terminology is defined in `tools/skill_valid/UBIQUITOUS_LANGUAGE.md`. The validate-skills sentinel contract is documented in `tools/skill_valid/WRAPPER_PROMPT.md`.
 
@@ -23,6 +23,7 @@ Tests use fake Pi, fake skill_eval runners, and fake LLM Optimal Check injectabl
 ## Change guidelines
 
 - Preserve live-run safety: no Pi/model call before cheap gates pass or warn and live opt-in is present.
+- Keep deterministic spec/resource rules in `spec_checks.py`; keep the validate-skills skill focused on qualitative, judgment-based review.
 - Keep stdout machine-readable and compact; write diagnostics only to stderr.
 - Use `tools.skill_eval.manifest.load_manifest` and `tools.skill_eval.runner.run_suite` instead of duplicating the eval framework.
 - Preserve failure artifacts only for failed runs after artifact creation; delete successful temporary artifacts.

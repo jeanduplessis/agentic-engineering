@@ -15,8 +15,9 @@ from typing import Any, Callable, TextIO
 from tools.llm_optimal_check import check_path as default_llm_optimal_check
 from tools.skill_eval.manifest import EvalManifest, load_manifest
 from tools.skill_eval.runner import run_suite
+from tools.skill_valid.spec_checks import run_skill_spec_checks, summarize_checks
 
-GATE_ORDER = ("target", "eval_manifest", "agents_md", "llm_optimal_check", "live_opt_in", "validate_skills", "live_eval")
+GATE_ORDER = ("target", "skill_spec", "eval_manifest", "agents_md", "llm_optimal_check", "live_opt_in", "validate_skills", "live_eval")
 REQUIRED_AGENT_HEADINGS = ("Purpose", "How the skill works", "Eval and validation", "Change guidelines")
 SENTINEL_PREFIX = "SKILL_VALID_RESULT="
 
@@ -167,7 +168,7 @@ def validate_skill(
         return _failed_result(ctx)
 
     cheap_gates_passed = True
-    for gate in (_gate_eval_manifest, _gate_agents_md, _gate_llm_optimal_check, _gate_live_opt_in):
+    for gate in (_gate_skill_spec, _gate_eval_manifest, _gate_agents_md, _gate_llm_optimal_check, _gate_live_opt_in):
         cheap_gates_passed = _run_required_gate(ctx, gate, stop_after_failure=False) and cheap_gates_passed
 
     if not cheap_gates_passed:
@@ -291,6 +292,19 @@ def _gate_target(ctx: ValidationContext) -> None:
     ctx.target_dir = target
     ctx.target_rel = target.relative_to(ctx.repo_root).as_posix()
     _pass_gate(ctx, "target", "Target skill directory and SKILL.md exist.")
+
+
+def _gate_skill_spec(ctx: ValidationContext) -> None:
+    assert ctx.target_dir is not None
+    checks = run_skill_spec_checks(ctx.target_dir)
+    status, message = summarize_checks(checks)
+    details = {"checks": [check.as_dict() for check in checks]}
+    if status == "failed":
+        raise GateFailure("skill_spec", message, details)
+    if status == "warn":
+        _warn_gate(ctx, "skill_spec", message, details)
+        return
+    _pass_gate(ctx, "skill_spec", message, details)
 
 
 def _gate_eval_manifest(ctx: ValidationContext) -> None:

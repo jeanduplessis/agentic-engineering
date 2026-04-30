@@ -10,6 +10,7 @@
 | **Validation Gate** | A required check that must pass or emit an allowed warning before the **Target Skill** can be considered valid. | Step, phase, check |
 | **Cheap Gate** | A deterministic **Validation Gate** that does not call live Pi. | Local check, static check |
 | **Live Gate** | A **Validation Gate** that depends on a live Pi invocation. | Model check, online check |
+| **Skill Spec Gate** | The deterministic **Cheap Gate** keyed `skill_spec` that parses `SKILL.md` and checks exact Agent Skills spec, Claude compatibility, resource-reference, and portability rules before live review. | Static skill lint, spec validator |
 | **Prerequisite Accumulation** | The validation policy of checking all deterministic prerequisite gates before live work so one result can report multiple missing requirements. | Bulk lint, exhaustive validation |
 | **Live Gate Short-Circuit** | The validation policy of skipping live gates when prerequisite gates fail, and stopping after the first failed live gate to avoid unnecessary model cost. | Fail fast, early exit |
 | **Warn Gate Status** | A non-blocking gate status for deterministic advisory findings that remain visible while allowing **Skill Validity** if no blocking gate fails. | Soft pass, pass with warnings |
@@ -61,6 +62,7 @@
 - A **Target Skill** must have exactly one **Skill AGENTS.md** that satisfies all required **Maintenance Sections**.
 - A **Skill Validity** result is true only when every required **Validation Gate** passes or emits an allowed **Warn Gate Status**.
 - **Prerequisite Accumulation** reports deterministic missing requirements together before any live Pi/model call.
+- The **Skill Spec Gate** owns deterministic SKILL.md spec/resource validation; the **Validate-Skills Gate** owns qualitative judgment after live opt-in.
 - The **LLM Optimal Check Gate** analyzes only `SKILL.md` in v1; `warn` is non-blocking, while `fail` and tool errors block live gates.
 - The **Validate-Skills Gate** uses exactly one **Wrapper Prompt** and expects exactly one authoritative **Sentinel Line**.
 - The **Live Eval Gate** always runs the **Workflow Suite** and also runs the **Regression Suite** when present.
@@ -83,7 +85,7 @@
 
 ## Flagged ambiguities
 
-- "validate-skills" and "skill_valid" are distinct: **Validate-Skills Skill** is the existing review skill, while `skill_valid` is the orchestrating validation tool.
+- "validate-skills" and "skill_valid" are distinct: **Validate-Skills Skill** is the qualitative review skill, while `skill_valid` is the orchestrating validation tool and owns the **Skill Spec Gate**.
 - "Evals" should mean **Eval Manifest** when discussing specification and **Live Eval Gate** when discussing execution.
 - "With skill" should mean **With-Skill Configuration**, not all manifest configurations.
 - "Report" should be avoided for `skill_valid` output; use **Gate-Level Result** for stdout JSON and **Failure Artifacts** for preserved debug files.

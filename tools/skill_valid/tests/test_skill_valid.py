@@ -164,7 +164,7 @@ class SkillValidTests(unittest.TestCase):
             self.assertEqual(result["gates"]["target"]["status"], "failed")
             self.assertIn("SKILL.md", result["gates"]["target"]["message"])
             self.assertIn("skill_valid:", stderr.getvalue())
-            self.assertEqual(set(result["gates"]), {"target", "eval_manifest", "agents_md", "llm_optimal_check", "live_opt_in", "validate_skills", "live_eval"})
+            self.assertEqual(set(result["gates"]), {"target", "skill_spec", "eval_manifest", "agents_md", "llm_optimal_check", "live_opt_in", "validate_skills", "live_eval"})
 
     def test_rejects_targets_outside_repo_local_skills_collection_before_live_work(self):
         with self.make_repo() as (tmp, root):
@@ -239,6 +239,7 @@ class SkillValidTests(unittest.TestCase):
 
             self.assertEqual(code, 1)
             self.assertEqual(result["gates"]["target"]["status"], "passed")
+            self.assertIn(result["gates"]["skill_spec"]["status"], {"passed", "warn"})
             self.assertEqual(result["gates"]["eval_manifest"]["status"], "failed")
             self.assertIn("evals/manifest.json", result["gates"]["eval_manifest"]["message"])
             self.assertEqual(result["gates"]["agents_md"]["status"], "failed")
@@ -249,6 +250,43 @@ class SkillValidTests(unittest.TestCase):
             self.assertEqual(result["gates"]["live_eval"]["status"], "not_run")
             self.assertEqual(calls["pi"], [])
             self.assertEqual(calls["eval"], [])
+
+    def test_skill_spec_gate_reports_deterministic_spec_failures_before_live_work(self):
+        with self.make_repo() as (tmp, root):
+            target = self.write_valid_skill(root)
+            (target / "SKILL.md").write_text("---\nname: other\ndescription: <bad>\nunknown: nope\n---\nSee [missing](references/missing.md).\n")
+            deps, calls = self.passing_deps()
+
+            code, result = validate_skill(ValidationOptions(target, repo_root=root, allow_live_pi=True), deps=deps)
+
+            self.assertEqual(code, 1)
+            self.assertEqual(result["gates"]["target"]["status"], "passed")
+            self.assertEqual(result["gates"]["skill_spec"]["status"], "failed")
+            checks = result["gates"]["skill_spec"]["details"]["checks"]
+            failed_ids = {check["id"] for check in checks if check["status"] == "failed"}
+            self.assertIn("frontmatter.allowed-fields", failed_ids)
+            self.assertIn("name.directory-match", failed_ids)
+            self.assertIn("description.no-xml", failed_ids)
+            self.assertIn("references.paths-exist", failed_ids)
+            self.assertEqual(calls["pi"], [])
+            self.assertEqual(calls["eval"], [])
+
+    def test_skill_spec_warnings_do_not_block_live_gates(self):
+        with self.make_repo() as (tmp, root):
+            target = self.write_valid_skill(root)
+            # This is spec-valid but short and lacks trigger context, so it should warn only.
+            (target / "SKILL.md").write_text("---\nname: demo\ndescription: demo skill\n---\n# Demo\n")
+            deps, calls = self.passing_deps()
+
+            code, result = validate_skill(ValidationOptions(target, repo_root=root, allow_live_pi=True), deps=deps)
+
+            self.assertEqual(code, 0)
+            self.assertTrue(result["valid"])
+            self.assertEqual(result["gates"]["skill_spec"]["status"], "warn")
+            warning_ids = {check["id"] for check in result["gates"]["skill_spec"]["details"]["checks"] if check["status"] == "warn"}
+            self.assertIn("description.trigger-context", warning_ids)
+            self.assertEqual(len(calls["pi"]), 1)
+            self.assertTrue(calls["eval"])
 
     def test_eval_manifest_structural_failures_fail_before_live_work(self):
         cases = []
