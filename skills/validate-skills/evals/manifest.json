@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "validate-skills",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "copy",
+        "path": "fixtures/valid-skill-repo"
+      },
+      "custom_grader": "grader.py",
+      "cases": [
+        {
+          "id": "valid-skill-sentinel",
+          "prompt": "Validate exactly one repo-local skill in the current workspace: skills/example-good. Use read-only inspection and the loaded validate-skills checklist. Return concise findings, then make the final non-empty line exactly SKILL_VALID_RESULT=<json>. The JSON object must have status, target, and checks fields; target must be \"skills/example-good\"; status is \"passed\" only if every check passed; checks must be a non-empty array of objects with id, status, and message.",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    }
+  }
+}
