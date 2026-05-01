@@ -15,7 +15,7 @@
       "id": "tiny-same-session-work",
       "prompt": "A user asks for a tiny same-session code formatting change with no blockers or durable handoff value. Should you create a beads task? Explain the recommended tracking approach.",
       "checks": [
-        {"id": "prefers-session-local", "type": "required_content", "value": "session-local"},
+        {"id": "prefers-session-local", "type": "regex", "pattern": "(?i)(session-local|local(?:ly)?[^\\n]{0,80}in-session|in-session[^\\n]{0,80}(checklist|tracking))"},
         {"id": "mentions-no-bead-needed", "type": "required_content", "value": "bead"},
         {"id": "no-automatic-create", "type": "forbidden_content", "value": "bd create"}
       ]

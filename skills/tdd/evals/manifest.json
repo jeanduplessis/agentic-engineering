@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "tdd",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "legacy_evals": "evals.json"
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false
+    }
+  }
+}

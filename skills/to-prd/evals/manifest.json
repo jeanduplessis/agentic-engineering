@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "to-prd",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "draft-prd-with-approved-scope",
+          "prompt": "Turn this already-agreed feature context into a PRD. Draft the PRD only; do not run commands, create files, or create a beads task. Assume I approve this implementation shape and testing focus, so do not interview me before drafting. Context: Users of a note-taking app need saved search alerts. They can save a search query, choose daily or weekly email alerts, pause or delete alerts, and see why an alert matched a note. Implementation shape: add an alert scheduling module, an email notification module, and UI/API changes for managing saved-search alerts. Testing focus: scheduler behavior, notification content, and pause/delete behavior. Out of scope: mobile push notifications, team-shared alerts, and complex boolean query syntax.",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            },
+            {
+              "id": "has-problem-statement",
+              "type": "required_content",
+              "value": "## Problem Statement"
+            },
+            {
+              "id": "has-solution",
+              "type": "required_content",
+              "value": "## Solution"
+            },
+            {
+              "id": "has-user-stories",
+              "type": "required_content",
+              "value": "## User Stories"
+            },
+            {
+              "id": "has-implementation-decisions",
+              "type": "required_content",
+              "value": "## Implementation Decisions"
+            },
+            {
+              "id": "has-testing-decisions",
+              "type": "required_content",
+              "value": "## Testing Decisions"
+            },
+            {
+              "id": "has-out-of-scope",
+              "type": "required_content",
+              "value": "## Out of Scope"
+            },
+            {
+              "id": "uses-user-story-format",
+              "type": "regex",
+              "pattern": "As an? [^,]+, I want .+, so that .+"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}
