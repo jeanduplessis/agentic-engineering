@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "custom-command",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "legacy_evals": "evals.json",
+      "custom_grader": "grader.py"
+    },
+    {
+      "name": "trigger",
+      "type": "trigger",
+      "mode": "natural",
+      "fixture": {
+        "type": "empty"
+      },
+      "unsupported_reason": "Trigger execution is represented but not implemented in the current runner.",
+      "cases": [
+        {
+          "id": "trigger-positive-create-command",
+          "prompt": "Create a shared OpenCode/Pi slash command for fixing tests.",
+          "should_trigger": true,
+          "expected_skill": "custom-command"
+        },
+        {
+          "id": "trigger-negative-ordinary-tests",
+          "prompt": "Fix the failing unit tests in this repository.",
+          "should_trigger": false,
+          "expected_skill": null
+        }
+      ]
+    },
+    {
+      "name": "capability",
+      "type": "capability",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "unsupported_reason": "Capability suite execution is represented but not implemented in the current runner.",
+      "cases": [
+        {
+          "id": "capability-port-command",
+          "prompt": "Port an agent-specific command to the shared OpenCode/Pi subset.",
+          "capability": "portable-command-authoring"
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false
+    }
+  }
+}
