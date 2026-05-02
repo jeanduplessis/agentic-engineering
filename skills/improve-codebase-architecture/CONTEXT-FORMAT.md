@@ -39,11 +39,19 @@ _Avoid_: Client, buyer, account
 ## Rules
 
 - **Be opinionated.** For competing words for the same concept, pick the best and list aliases to avoid.
+
 - **Flag conflicts explicitly.** If a term is ambiguous, call it out in "Flagged ambiguities" with a clear resolution.
+
 - **Keep definitions tight.** Max one sentence. Define what it IS, not what it does.
+
 - **Show relationships.** Use bold term names and express cardinality where obvious.
-- **Only include context-specific terms.** General programming concepts (timeouts, error types, utility patterns) don't belong, even if heavily used. Before adding a term, ask: is this unique to this context, or general programming? Only unique terms belong.
+
+- **Only include context-specific terms.** General programming concepts (timeouts, error types, utility
+  patterns) don't belong, even if heavily used. Before adding a term, ask: is this unique to this context, or
+  general programming? Only unique terms belong.
+
 - **Group terms under subheadings** when natural clusters emerge; use a flat list if all terms share one cohesive area.
+
 - **Write an example dialogue** between dev and domain expert that shows terms interacting naturally and clarifies boundaries between related concepts.
 
 ## Single vs multi-context repos
@@ -71,7 +79,9 @@ _Avoid_: Client, buyer, account
 The skill infers which structure applies:
 
 - If `CONTEXT-MAP.md` exists, read it to find contexts
+
 - If only a root `CONTEXT.md` exists, single context
+
 - If neither exists, create a root `CONTEXT.md` lazily when the first term is resolved
 
 When multiple contexts exist, infer which one the current topic relates to. If unclear, ask.
