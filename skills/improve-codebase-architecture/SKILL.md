@@ -5,7 +5,8 @@ description: Find deepening opportunities in a codebase, informed by the domain 
 
 # Improve Codebase Architecture
 
-Surface architectural friction and propose **deepening opportunities**: refactors that turn shallow modules into deep ones. Optimize for testability and AI-navigability.
+Surface architectural friction and propose **deepening opportunities**: refactors that turn shallow modules into deep ones.
+Optimize for testability and AI-navigability.
 
 ## Glossary
 
@@ -17,7 +18,8 @@ Use these terms exactly in every suggestion. Don't drift into "component," "serv
 
 **Implementation** — code inside.
 
-**Depth** — leverage at the interface: much behaviour behind a small interface. **Deep** = high leverage; **Shallow** = interface nearly as complex as implementation.
+**Depth** — leverage at the interface: much behaviour behind a small interface.
+**Deep** = high leverage; **Shallow** = interface nearly as complex as implementation.
 
 **Seam** — where an interface lives; a place behaviour can be altered without editing there. Use this, not "boundary."
 
@@ -33,7 +35,9 @@ Key principles (see [LANGUAGE.md](LANGUAGE.md) for the full list):
 - **The interface is the test surface.**
 - **One adapter = hypothetical seam. Two adapters = real seam.**
 
-This skill is _informed_ by the project's domain model: `CONTEXT.md` and any `docs/adr/`. Domain language names good seams; ADRs record decisions not to re-litigate. See [CONTEXT-FORMAT.md](CONTEXT-FORMAT.md) and [ADR-FORMAT.md](ADR-FORMAT.md).
+This skill is _informed_ by the project's domain context: `CONTEXT.md` and any `docs/adr/`.
+Domain language names good seams; ADRs record decisions not to re-litigate.
+See [CONTEXT-FORMAT.md](CONTEXT-FORMAT.md) and [ADR-FORMAT.md](ADR-FORMAT.md).
 
 ## Process
 
@@ -41,12 +45,14 @@ This skill is _informed_ by the project's domain model: `CONTEXT.md` and any `do
 
 Read existing documentation first:
 
-- `CONTEXT.md` (or `CONTEXT-MAP.md` + each `CONTEXT.md` in a multi-context repo)
+- `CONTEXT.md`
+- Legacy/upstream `CONTEXT-MAP.md` only if present
 - Relevant ADRs in `docs/adr/` and any context-scoped `docs/adr/` directories
 
 If any files don't exist, proceed silently: don't flag absence or suggest creating them upfront.
 
-Then use the Agent tool with `subagent_type=Explore` to walk the codebase. Don't follow rigid heuristics; explore organically and note where you experience friction:
+Then use the Agent tool with `subagent_type=Explore` to walk the codebase.
+Don't follow rigid heuristics; explore organically and note where you experience friction:
 
 - Where does understanding one concept require bouncing between many small modules?
 - Where are modules **shallow**: interface nearly as complex as implementation?
@@ -54,7 +60,9 @@ Then use the Agent tool with `subagent_type=Explore` to walk the codebase. Don't
 - Where do tightly-coupled modules leak across seams?
 - Which parts are untested, or hard to test through their current interface?
 
-Apply the **deletion test** to anything you suspect is shallow. Would deleting it concentrate complexity, or just move it? A "yes, concentrates" is the signal you want.
+Apply the **deletion test** to anything you suspect is shallow.
+Would deleting it concentrate complexity, or just move it?
+A "yes, concentrates" is the signal you want.
 
 ### 2. Present candidates
 
@@ -65,7 +73,8 @@ Present a numbered list of deepening opportunities. For each candidate:
 - **Solution** — plain-English change description
 - **Benefits** — locality, leverage, and test improvement
 
-**Use CONTEXT.md vocabulary for the domain, and [LANGUAGE.md](LANGUAGE.md) vocabulary for architecture.** If `CONTEXT.md` defines "Order," say "the Order intake module" — not "the FooBarHandler," and not "the Order service."
+**Use CONTEXT.md vocabulary for the domain, and [LANGUAGE.md](LANGUAGE.md) vocabulary for architecture.**
+If `CONTEXT.md` defines "Order," say "the Order intake module" — not "the FooBarHandler," and not "the Order service."
 
 **ADR conflicts**: if a candidate contradicts an existing ADR, surface it only when friction warrants revisiting the ADR. Mark it clearly, e.g. _"contradicts ADR-0007 — but worth reopening because…"_. Don't list every theoretical refactor an ADR forbids.
 
@@ -77,7 +86,7 @@ Once the user picks a candidate, start a grilling conversation. Walk the design 
 
 Side effects happen inline as decisions crystallize:
 
-- **Naming a deepened module after a concept not in `CONTEXT.md`?** Add the term to `CONTEXT.md`. Use `/domain-model` discipline; see [CONTEXT-FORMAT.md](CONTEXT-FORMAT.md). Create the file lazily.
+- **Naming a deepened module after a concept not in `CONTEXT.md`?** Add the term to `CONTEXT.md` using the local context contract; see [CONTEXT-FORMAT.md](CONTEXT-FORMAT.md). Create the file lazily.
 
 - **Sharpening a fuzzy term during the conversation?** Update `CONTEXT.md` immediately.
 

@@ -128,6 +128,10 @@ RIGHT (vertical):
 
 ### 1. Planning
 
+When exploring the codebase, read `CONTEXT.md` if present.
+Use its canonical terms in test names and interface vocabulary, and respect relevant ADRs in `docs/adr/`.
+If docs are absent, proceed silently.
+
 Before writing code:
 
 - [ ] Load or create the relevant beads task, then claim it when starting durable work

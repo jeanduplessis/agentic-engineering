@@ -15,6 +15,8 @@ You may ask for confirmation on architecture/test choices before creating the be
 
 Use the existing conversation context first. If needed, explore the repo to understand current architecture, similar features, and test patterns.
 
+Use project domain vocabulary from `CONTEXT.md` throughout the PRD, and respect relevant ADRs in `docs/adr/`. If docs are absent, proceed silently.
+
 ### 2. Identify implementation shape
 
 Sketch the major modules that would need to be built or modified. Actively look for opportunities to extract deep modules that can be tested in isolation.

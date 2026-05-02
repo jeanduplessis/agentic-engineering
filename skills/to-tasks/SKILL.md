@@ -33,6 +33,10 @@ If the source is a local file or PRD in the repo, read it directly. If the sourc
 
 If you have not already explored the codebase, do so enough to understand the current state, likely integration points, and testing patterns.
 
+Task titles and descriptions should use project domain vocabulary from `CONTEXT.md`.
+Respect relevant ADRs in `docs/adr/`.
+If docs are absent, proceed silently.
+
 ### 3. Draft vertical slices
 
 Break the plan into **tracer bullet** tasks.

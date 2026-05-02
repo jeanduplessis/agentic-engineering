@@ -1,11 +1,12 @@
 ---
 name: llm-optimized-rewrite
-description: Rewrites technical text for lower token cost and higher LLM execution reliability while
-preserving exact meaning, constraints, compliance, schemas, APIs, ambiguity, and trigger behavior. Use when
-the user asks to compress, shorten, tighten, reduce tokens, make concise, optimize for LLMs, improve
-prompt/skill reliability, or edit prompts, docs, specs, or skills for brevity and reliable execution;
-especially when token counts, diffs, staged review, one-by-one review, confirmation, or safe file-backed edits
-are needed.
+description: >-
+  Rewrites technical text for lower token cost and higher LLM execution reliability while
+  preserving exact meaning, constraints, compliance, schemas, APIs, ambiguity, and trigger behavior. Use when
+  the user asks to compress, shorten, tighten, reduce tokens, make concise, optimize for LLMs, improve
+  prompt/skill reliability, or edit prompts, docs, specs, or skills for brevity and reliable execution;
+  especially when token counts, diffs, staged review, one-by-one review, confirmation, or safe file-backed edits
+  are needed.
 ---
 
 Act as an LLM optimization editor. Improve text for token efficiency and model execution reliability without
