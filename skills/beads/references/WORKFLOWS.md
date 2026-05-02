@@ -1,91 +1,88 @@
-# Advanced runtime workflows: formulas, molecules, wisps, and gates
+# Advanced runtime workflows with br
 
-Use this file when the user asks for reusable workflows, multi-step templates, temporary operational plans, or async waits. Command names and flags vary across releases; run `bd <command> --help` before invoking.
+Use this file when the user asks for reusable workflows, multi-step templates, temporary operational plans, or async waits. Command names and flags vary across releases; run `br <command> --help` before invoking unfamiliar commands.
 
-## Formulas and molecules
+## Epics as reusable work graphs
 
-Current CLI families to inspect:
-
-```bash
-bd formula --help
-bd cook --help
-bd mol --help
-bd mol pour --help
-```
-
-Concepts:
-
-- **Formula** — workflow definition/template source.
-- **Cook/proto** — compiled template form.
-- **Molecule** — instantiated persistent work graph with parent-child/dependency relationships.
-- **Pour** — instantiate a persistent molecule from a proto/template.
-
-Typical flow:
+Use epics when a workflow should persist as a graph of implementation slices:
 
 ```bash
-bd formula list --json
-bd formula show <formula-name> --json
-bd cook <formula-name> --dry-run
-bd mol pour <proto-id> --var name=value --json
-bd mol show <molecule-id> --json
+br create "Release checkout v2" -t epic -p 1 --description "Goal, constraints, and acceptance summary" --json
+br create "Tracer bullet checkout path" --parent <epic-id> -t task -p 1 --json
+br create "Payment failure path" --parent <epic-id> -t task -p 2 --json
+br dep add <payment-failure-id> <tracer-bullet-id> --json
+br ready --parent <epic-id> --recursive --json
 ```
 
-Use molecules when the same workflow recurs and the resulting work graph should persist, such as feature implementation checklists or review pipelines.
+Prefer several thin, independently verifiable child tasks over one large opaque task.
 
-## Wisps
+## Temporary operational plans
 
-Wisps are ephemeral molecules for operational workflows that do not need durable long-term history.
+For same-session orchestration that has no future value, use a local checklist. Promote to br only when the workflow needs handoff, dependencies, blockers, or durable audit context.
+
+When promoting, capture current state:
 
 ```bash
-bd mol wisp --help
-bd mol wisp <proto-id> --var name=value --json
-bd mol wisp list --json
+br create "Operational follow-up: stabilize import" \
+  -t task -p 2 \
+  --description "CURRENT: import repro captured. NEXT: isolate failure and add regression test. VALIDATE: cargo test import_repro." \
+  --json
 ```
 
-Use a wisp when:
+## External waits
 
-- the workflow is exploratory or operational;
-- the user does not want it preserved as normal durable issue history;
-- the plan is useful now but not part of long-term project memory.
+br has no gate command. Represent external waits explicitly:
 
-Promote or recreate useful follow-up as normal beads before ending the session.
-
-## Gates
-
-Gates represent external waits such as human approval, timers, PR merges, CI runs, or cross-project conditions. They prevent downstream work from appearing ready until the condition is resolved.
-
-Discover supported syntax:
+- Create a blocking task for human approval, CI, PR review, credentials, or timer waits.
+- Add labels such as `needs-review`, `waiting-ci`, or `needs-credentials`.
+- Add a comment with owner, expected condition, and next step.
+- Use `br defer` if the task should be hidden from ready work until a later date.
 
 ```bash
-bd gate --help
-bd gate create --help
-bd gate list --json
+br create "Human approval: checkout copy" -t task -p 1 --parent <epic-id> --json
+br dep add <implementation-id> <approval-id> --json
+br comments add <approval-id> --message "Needs product approval before implementation continues." --json
+br update <implementation-id> --add-label waiting-approval --json
 ```
 
-Typical examples:
+## Defer and undefer
+
+Use defer/undefer for time-based readiness, not for dependency semantics:
 
 ```bash
-bd gate create --type=human --blocks bd-deploy --reason="Need release approval" --json
-bd gate create --type=timer --blocks bd-deploy --timeout=30m --json
-bd gate create --type=gh:pr --blocks bd-deploy --await-id=42 --json
-bd gate resolve <gate-id> --json
+br defer <id> --until tomorrow --json
+br undefer <id> --json
+br ready --include-deferred --json
 ```
 
-Use gates for real blocking waits, not as labels.
+Check installed syntax with `br defer --help` and `br undefer --help`.
 
-## Choosing the right advanced tool
+## Saved queries
+
+Use saved queries when a project repeatedly needs the same filtered work view:
+
+```bash
+br query --help
+br query list --json
+```
+
+Do not invent query schemas from memory; inspect `br query --help` first.
+
+## Choosing a workflow tool
 
 | Need | Use |
-| --- | --- |
-| Repeatable persistent workflow | Formula/cook + `bd mol pour` |
-| Track an instantiated workflow graph | `bd mol` commands |
-| Temporary operational workflow | `bd mol wisp` |
-| Wait for external condition | `bd gate` |
-| Assign work across agents | Claim/assign/comments/dependencies |
+|---|---|
+| Durable multi-task feature plan | Epic + child tasks + dependencies |
+| One-off same-session plan | Session-local checklist |
+| External wait | Blocking task/comment/label/defer |
+| Repeated filtered work view | Saved query if supported |
+| Assign work across agents | Claim/assignment/comments/dependencies |
 
-## Agent cautions
+## Cleanup
 
-- Do not invent formula schemas from memory; inspect formulas and help first.
-- Ask before adding shared workflow template files.
-- Use persistent molecules only when the graph has future value.
-- When a wisp produces durable follow-up, create normal beads with `discovered-from` or comments that explain the provenance.
+Before ending a durable workflow session:
+
+- leave notes/comments with current state and next action;
+- create normal beads for deferred follow-up using `discovered-from` or `--parent`;
+- do not close incomplete work;
+- run `br sync --flush-only` only when the user/project asked for a final JSONL export before committing `.beads/`.

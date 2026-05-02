@@ -1,6 +1,6 @@
 ---
 name: to-prd
-description: Turns the current conversation context into a PRD and records it as a beads (bd) task. Use when the user wants to create a PRD, product requirements document, feature spec, or implementation brief from the current context.
+description: Turns the current conversation context into a PRD and records it as a beads_rust (`br`) task. Use when the user wants to create a PRD, product requirements document, feature spec, or implementation brief from the current context.
 ---
 
 # To PRD
@@ -88,16 +88,16 @@ Any further notes about the feature.
 
 After the user approves the PRD, create a beads task with the PRD as the task description.
 
-Use `bd` rather than GitHub. Do not create a GitHub tracker entry unless the user explicitly asks for GitHub instead of beads.
+Use `br` rather than GitHub. Do not create a GitHub tracker entry unless the user explicitly asks for GitHub instead of beads.
 
 First verify beads is available and initialized:
 
 ```bash
-bd --version
-bd info
+br --version
+br info
 ```
 
-If `bd` is not installed or no beads database exists, ask the user how they want to proceed. Do not silently initialize beads unless the user asked for setup.
+If `br` is not installed or no beads database exists, ask the user how they want to proceed. Do not silently initialize beads unless the user asked for setup.
 
 Recommended task shape:
 
@@ -106,18 +106,16 @@ Recommended task shape:
 - **Priority**: infer from context; default to `2` when unclear
 - **Labels**: include `prd` if labels are supported/desired in the project
 
-Prefer writing the PRD to a temporary file and using `--body-file` to avoid shell quoting problems:
+Prefer writing the PRD to a temporary file, then passing its contents as the issue description to avoid shell quoting problems:
 
 ```bash
-bd create "PRD: <short feature name>" -t epic -p 2 --body-file /tmp/prd.md --json
+br create "PRD: <short feature name>" -t epic -p 2 -l prd \
+  --description "$(cat /tmp/prd.md)" \
+  --json
 ```
 
-If the installed `bd` version does not support `--body-file`, use stdin if supported:
-
-```bash
-bd create "PRD: <short feature name>" -t epic -p 2 --stdin --json < /tmp/prd.md
-```
+Current `br create` does not support `--body-file` or `--stdin` for one issue.
 
 Then report the created epic bead ID and title to the user.
 Explicitly mention that follow-up implementation tasks should use this bead as their parent/source epic.
-Do not run generic session-end storage/sync commands unless project guidance or the user explicitly asks.
+Do not run bare `br sync` or generic session-end storage commands. Run `br sync --flush-only` only when project guidance or the user explicitly asks for a final JSONL export before committing `.beads/`.

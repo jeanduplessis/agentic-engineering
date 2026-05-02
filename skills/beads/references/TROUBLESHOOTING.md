@@ -1,82 +1,93 @@
-# Troubleshooting and recovery
+# Troubleshooting br
 
-Prefer diagnosis and reversible actions. Ask before destructive repairs, setup changes, database
-reinitialization, migration, deletion, or low-level storage operations.
+Prefer diagnosis and reversible actions. Ask before destructive repairs, setup changes, database rebuilds, imports, merges, or deletes.
 
-## First diagnostics
+## First checks
 
 ```bash
-bd --version
-bd info
-bd status --json
-bd doctor --agent --json
+br --version
+br info
+br where
+br sync --status --json
+br status --json
+br doctor --json
 ```
 
-If a command fails, rerun `bd <command> --help` to confirm the installed version supports the command and flags you planned to use.
+If a command fails, rerun `br <command> --help` to confirm the installed version supports the command and flags you planned to use.
 
-## Common problems
+## Common failures
 
-- `bd: command not found`: Tell the user bd is not installed; ask before installing.
+Availability/setup:
 
-- No beads database: If the user requested setup, initialize carefully; otherwise ask before changing the
-  project.
+- `br: command not found`: tell the user br is not installed; ask before installing.
+- No beads database: if setup was requested, initialize carefully; otherwise ask before changing the repo.
+- Unknown flag/command: use `br <command> --help`; br CLI changes across versions.
 
-- Unknown flag/command: Use `bd <command> --help`; beads CLI changes across versions.
+Input/queue state:
 
-- Interactive editor opens: Avoid `bd edit`; cancel if possible and use `bd update` flags.
+- Shell quoting breaks text:
+  - long issue descriptions: temp file plus `--description "$(cat file.md)"`;
+  - long comments: `br comments add <id> --file file.md --json`.
+- Ready queue looks wrong: inspect blockers, dependency trees, dependency cycles, and deferred state.
 
-- Shell quoting breaks text: Use comments, `--body-file`, `--stdin`, or a temporary file where the command
-  supports it.
+Health/sync:
 
-- Ready queue looks wrong: Inspect `bd blocked --json`, `bd dep tree <id> --json`, and `bd dep cycles --json`.
-
-- Database health is unclear: Run `bd doctor --agent --json` and summarize only the relevant findings.
+- Database health is unclear: run `br doctor --json` and summarize only relevant findings.
+- Sync state is unclear: run `br sync --status --json`; do not run import/merge/rebuild without approval.
 
 ## Doctor and repair
 
-`bd doctor` is the health-check entry point:
+`br doctor` is the health-check entry point:
 
 ```bash
-bd doctor --agent --json
-bd doctor --deep --json
-bd doctor --perf --json
+br doctor --json
+br doctor --repair --json
 ```
 
-Repair modes can mutate project state. Ask the user before running commands with flags such as `--fix`,
-`--clean`, `--yes`, `--force`, or migration-specific options. Prefer `--dry-run` when available.
+Run repair only when the user approves or when the requested task cannot continue without it and the user confirms the risk.
 
 ## Setup or initialization problems
 
 If the user asked to set up beads and no database exists:
 
-1. Run `bd init --help` and pick flags supported by the installed CLI.
-
-2. Explain whether setup may write project instruction files, git hook files, or local excludes.
-
-3. Use non-interactive flags only when the user has approved the setup approach.
+1. Run `br init --help` and pick flags supported by the installed CLI.
+2. Explain that setup writes `.beads/` and that `br` does not run git.
+3. Initialize only after approval.
+4. Use `br agents --check` / `br agents --add --dry-run` only if the user asked for agent instruction integration.
 
 For existing projects, do not overwrite or reinitialize beads data without explicit confirmation.
 
-## Collaboration/storage problems
+## Sync and storage issues
 
-Most agent task tracking does not require inspecting storage internals. Only investigate backend or
-collaboration state when the user asks or when bd itself reports a storage error that blocks the requested
-task.
+Most agent task tracking does not require storage-internal checks.
+Investigate sync/storage only when the user asks or br reports a storage error that blocks the task.
 
-When reporting such an error, include:
+Safe/read-only checks:
 
-- command run;
+```bash
+br where
+br sync --status --json
+br doctor --json
+```
 
-- exact error;
+Potentially mutating commands require approval:
 
-- bd version;
+```bash
+br sync --flush-only
+br sync --import-only
+br sync --merge
+br sync --import-only --rebuild
+br doctor --repair
+```
 
-- project/database path from `bd info`;
+Do not run bare `br sync`; choose an explicit mode.
 
+## Handoff unresolved problems
+
+If you cannot resolve a beads problem in-session, leave a useful comment or note when a current issue ID is known and br writes still work. Include:
+
+- br version;
+- workspace path from `br where`;
+- failing command and exact error;
+- relevant `br doctor --json` or `br sync --status --json` findings;
 - what you did not try because it might mutate data or setup.
-
-## Handoff after an error
-
-If you cannot resolve a beads problem in-session, leave a useful comment or note in the current issue if
-writes still work. If writes do not work, report the diagnostics above in the conversation and avoid
-speculative repair.

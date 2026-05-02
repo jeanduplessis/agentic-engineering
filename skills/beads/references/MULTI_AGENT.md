@@ -1,98 +1,95 @@
-# Multi-agent coordination
+# Multi-agent coordination with br
 
-Use these patterns when more than one agent, branch, or human may touch the same work. Always check installed syntax with `bd <command> --help` before using unfamiliar coordination commands.
+Use these patterns when more than one agent, branch, or human may touch the same work. Always check installed syntax with `br <command> --help` before unfamiliar coordination commands.
 
 ## Claiming and assignment
 
-Claim the issue you are about to work on:
+Claim before editing:
 
 ```bash
-bd update bd-42 --claim --json
+br update br-42 --claim --json
 ```
 
 Assign or unassign when coordinating with a named human or agent:
 
 ```bash
-bd update bd-42 --assignee agent-a --json
-bd assign bd-42 agent-a --json
-bd assign bd-42 "" --json
+br update br-42 --assignee agent-a --json
+br update br-42 --assignee "" --json
 ```
 
 Prefer claiming before editing. Assignment communicates ownership; dependencies communicate ordering.
 
-## Handoffs
+## Handoff to another agent
 
-Sequential handoff:
+Leave a durable comment and, when appropriate, assign the issue:
 
 ```bash
-# Agent A
-bd comment bd-42 "Backend API complete. Needs frontend wiring; see auth/api.go and TestLoginAPI." --json
-bd update bd-42 --add-label needs-frontend --json
-bd assign bd-42 agent-b --json
+br comments add br-42 --message "Backend API complete. Needs frontend wiring; see auth/api.go and TestLoginAPI." --json
+br update br-42 --add-label needs-frontend --assignee agent-b --json
+```
 
-# Agent B
-bd show bd-42 --json
-bd update bd-42 --claim --json
+The receiver should inspect and claim before editing:
+
+```bash
+br show br-42 --json
+br comments list br-42 --json
+br update br-42 --claim --json
 ```
 
 If the work is actually complete, close it and create/assign a separate follow-up issue rather than reusing a closed issue.
 
-## Parallel work
+## Parallel epic work
 
-Split an epic into child issues or dependency layers:
+Create a parent epic and child tasks:
 
 ```bash
-bd create "Auth System" -t epic -p 1 --json
-bd create "Backend auth" --parent bd-auth -p 1 --json
-bd create "Frontend auth" --parent bd-auth -p 1 --json
-bd create "Integration tests" --parent bd-auth -p 1 --json
+br create "Auth System" -t epic -p 1 --json
+br create "Backend auth" --parent br-auth -p 1 --json
+br create "Frontend auth" --parent br-auth -p 1 --json
+br create "Integration tests" --parent br-auth -p 1 --json
 
-bd assign bd-auth.1 agent-a --json
-bd assign bd-auth.2 agent-b --json
-bd assign bd-auth.3 agent-c --json
-bd list --status in_progress --json
+br update br-auth.1 --assignee agent-a --json
+br update br-auth.2 --assignee agent-b --json
+br update br-auth.3 --assignee agent-c --json
+br list --status in_progress --json
 ```
-
-## Fan-out / fan-in
 
 Create a merge/integration bead that depends on all parallel parts:
 
 ```bash
-bd create "Integrate auth parts" -t task -p 1 --json
-bd dep add bd-integrate bd-auth.1 --json
-bd dep add bd-integrate bd-auth.2 --json
-bd dep add bd-integrate bd-auth.3 --json
-bd ready --json
+br create "Integrate auth parts" -t task -p 1 --parent br-auth --json
+br dep add br-integrate br-auth.1 --json
+br dep add br-integrate br-auth.2 --json
+br dep add br-integrate br-auth.3 --json
+br ready --json
 ```
 
 Only the integration bead becomes ready when all blockers close.
 
 ## External waits
 
-For waits on human approval, PRs, CI, or timers, use gates if supported by the installed version:
+For waits on human approval, PRs, CI, credentials, or timers, make the wait explicit instead of pretending work is complete:
+
+- Create a blocking task such as "Human design review for checkout copy".
+- Add a comment with the external condition and owner.
+- Defer the blocked work if it should not appear ready until later.
+- Use labels such as `needs-review`, `waiting-ci`, or `needs-credentials` when helpful.
+
+Example:
 
 ```bash
-bd gate --help
-bd gate create --help
-bd gate create --type=human --blocks bd-42 --reason="Need design review" --json
-bd gate resolve <gate-id> --json
+br create "Design review for checkout copy" -t task -p 1 --parent br-checkout --json
+br dep add br-checkout-impl br-design-review --json
+br comments add br-design-review --message "Needs human approval of checkout copy before implementation proceeds." --json
 ```
 
-Use gates for real external waits rather than pretending work is complete.
+## Collision-avoidance checklist
 
-## Communication channels
+Before editing shared files:
 
-- **Comments** for handoff narratives and review notes.
-- **Notes** for compact current-state summaries.
-- **Labels** for lightweight states (`needs-review`, `blocked`, `frontend`, `urgent`).
-- **Dependencies** for true ordering constraints.
-- **Claim/assignment state** for ownership.
-
-## Coordination hygiene
-
-1. Load context with `bd show <id> --json` before acting.
-2. Claim before editing.
-3. Write a handoff comment before stopping or reassigning.
-4. Link discovered work with `discovered-from`.
-5. Do not silently close or supersede another agent's work; comment and link the replacement.
-6. Avoid unsupported coordination commands from memory; verify with help before use.
+1. Load context with `br show <id> --json` before acting.
+2. Check active claims with `br list --status in_progress --json`.
+3. Claim or assign the bead before substantial edits.
+4. Write a handoff comment before stopping or reassigning.
+5. Create blockers/dependencies for real ordering constraints; do not rely on prose alone.
+6. If the tree has unrelated dirty changes, ask before proceeding or document the safe file scope in a comment.

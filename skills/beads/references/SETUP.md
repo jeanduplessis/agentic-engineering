@@ -2,52 +2,61 @@
 
 This skill is runtime-focused. Only initialize beads or change integration files when the user asks, when a project clearly already uses beads and needs recovery, or when setup is necessary to complete the requested task.
 
-## Check before changing anything
+## Before setup
+
+Check installed syntax and current workspace state:
 
 ```bash
-bd --version
-bd info
-bd init --help
+br --version
+br info
+br where
+br init --help
 ```
 
-If `bd` is missing, tell the user and ask before installing. Do not run installer scripts without approval.
+If `br` is missing, tell the user and ask before installing. Do not run installer scripts without approval.
 
-## Initialize a project when requested
+If no database exists and the user did not ask for setup, ask how to proceed instead of initializing silently.
 
-Use the installed help to choose supported flags. Common current patterns:
+## Initialize
+
+After explicit approval:
 
 ```bash
-bd init --quiet
-bd init --quiet --skip-agents
-bd init --quiet --skip-hooks
-bd init --quiet --stealth
+br init
+br init --prefix <prefix>
 ```
 
 Explain side effects before setup:
 
-- normal setup may create `.beads/` and project integration files;
-- hook setup may change git hook files;
-- stealth setup keeps beads usage local/private where supported;
-- reinitialization or force flags may risk existing data.
+- normal setup creates or updates `.beads/`;
+- `br` does not install hooks or run git;
+- the user remains responsible for staging/committing `.beads/` when they want tracker state in git.
 
-For non-interactive agent runs, prefer quiet/non-interactive setup only after the user confirms the desired mode.
+For non-interactive agent runs, use only flags supported by `br init --help`.
 
-## Integration recipes
+## Agent instruction files
 
-`bd setup` writes agent/editor instructions. Use it only when the user asks to configure an integration.
+`br agents` writes workflow instructions. Use it only when the user asks to configure an integration.
 
 ```bash
-bd setup --list
-bd setup <recipe> --check
-bd setup <recipe>
-bd setup <recipe> --remove
+br agents --check
+br agents --add --dry-run
+br agents --add --force
+br agents --update --dry-run
+br agents --remove --dry-run
 ```
 
-Use `bd setup --help` first because recipes and flags vary by version.
+Use `--dry-run` first when practical. Do not add or update project instruction files unless setup requires them and the user agrees.
 
-## What not to do by default
+## Import existing JSONL
 
-- Do not initialize silently just because a task could use durable tracking.
-- Do not run reinitialization, migration, cleanup, or repair commands without explicit approval.
-- Do not install hooks or editor integrations unless requested.
-- Do not add project instruction files unless setup requires them and the user agrees.
+If migrating a project that already has classic beads JSONL, ask before importing. Typical sequence after backup:
+
+```bash
+br init --prefix <prefix>
+br sync --import-only
+br info
+br ready --json
+```
+
+Use `br sync --import-only --help` and recovery docs before adding flags such as `--rebuild`, `--merge`, or `--force`.

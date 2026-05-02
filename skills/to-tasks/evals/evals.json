@@ -2,7 +2,7 @@
   "evals": [
     {
       "id": "draft-vertical-slice-breakdown",
-      "prompt": "Use the to-tasks workflow on this implementation brief, but stop after the quiz step; do not create beads or run bd commands yet. Brief: Add saved search alerts to an existing issue tracker. Users can save a query, choose daily or immediate email alerts, receive notifications when new matching issues appear, and disable alerts from settings. Constraints: reuse the existing issue search UI and email job framework; include a design-review checkpoint only if needed before implementation. Draft the proposed beads task breakdown and ask for approval before creation.",
+      "prompt": "Use the to-tasks workflow on this implementation brief, but stop after the quiz step; do not create beads or run br commands yet. Brief: Add saved search alerts to an existing issue tracker. Users can save a query, choose daily or immediate email alerts, receive notifications when new matching issues appear, and disable alerts from settings. Constraints: reuse the existing issue search UI and email job framework; include a design-review checkpoint only if needed before implementation. Draft the proposed beads task breakdown and ask for approval before creation.",
       "checks": [
         {
           "id": "non-empty-response",

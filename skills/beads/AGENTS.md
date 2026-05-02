@@ -1,6 +1,6 @@
 # Purpose
 
-The beads skill teaches agents when and how to use `bd` as durable, dependency-aware task memory. Future changes should preserve the boundary between durable beads tracking and simple session-local tracking. The implementation lives in `SKILL.md`.
+The beads skill teaches agents when and how to use `br` as durable, dependency-aware task memory. Future changes should preserve the boundary between durable beads tracking and simple session-local tracking. The implementation lives in `SKILL.md`.
 
 # How the skill works
 
@@ -8,7 +8,7 @@ The beads skill teaches agents when and how to use `bd` as durable, dependency-a
 
 # Eval and validation
 
-Behavior evals are declared in `evals/manifest.json` and the workflow cases live in `evals/evals.json`. The evals check that the skill tells agents to inspect and claim durable beads work, avoid beads for tiny same-session work, and avoid silent `bd init` setup changes.
+Behavior evals are declared in `evals/manifest.json` and the workflow cases live in `evals/evals.json`. The evals check that the skill tells agents to inspect and claim durable beads work, avoid beads for tiny same-session work, and avoid silent `br init` setup changes.
 
 Run full real validation from the repository root with:
 
@@ -18,4 +18,4 @@ Run full real validation from the repository root with:
 
 # Change guidelines
 
-When changing `SKILL.md`, update `evals/evals.json` if the expected public behavior changes. Keep command examples aligned with current `bd --help` guidance. Do not add instructions that silently initialize, repair, push, pull, or otherwise mutate beads storage unless the user explicitly asked for that setup or recovery operation.
+When changing `SKILL.md`, update `evals/evals.json` if the expected public behavior changes. Keep command examples aligned with current `br --help` guidance. Do not add instructions that silently initialize, repair, push, pull, or otherwise mutate beads storage unless the user explicitly asked for that setup or recovery operation.

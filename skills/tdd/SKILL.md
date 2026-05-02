@@ -1,7 +1,7 @@
 ---
 name: tdd
 description: >
-  Guides test-driven development with a red-green-refactor loop and beads (bd) task tracking.
+  Guides test-driven development with a red-green-refactor loop and beads_rust (`br`) task tracking.
   Use when the user wants to build features or fix bugs using TDD, mentions red-green-refactor,
   wants integration tests, asks for test-first development, or wants TDD progress recorded in beads tasks.
 ---
@@ -9,7 +9,7 @@ description: >
 # Test-Driven Development
 
 Build behavior in thin TDD vertical slices.
-Use beads (`bd`) for durable context, progress, blockers, and follow-up work.
+Use beads_rust (`br`) for durable context, progress, blockers, and follow-up work.
 Do not create GitHub tracker entries unless explicitly asked for GitHub; record durable TDD work in beads tasks.
 
 ## Beads task protocol
@@ -18,67 +18,68 @@ Before planning or coding, connect TDD work to a beads task when it is substanti
 
 1. **Verify the beads CLI**
    ```bash
-   bd --version
+   br --version
    ```
-   If `bd` is unavailable, ask the user how to proceed.
+   If `br` is unavailable, ask the user how to proceed.
 
 2. **Verify the beads database**
    ```bash
-   bd info
+   br info
    ```
    If no database exists, ask the user how to proceed. Do not silently initialize beads unless the user asks for setup.
 
 3. **Inspect existing work**
-   Given a bead ID, inspect it first: `bd show <id> --json`.
+   Given a bead ID, inspect it first: `br show <id> --json`.
    Do not create a duplicate bead when an existing bead already covers the work.
 
 4. **Select ready work only when asked**
-   To pick ready work at the user's request, run: `bd ready --json`.
+   To pick ready work at the user's request, run: `br ready --json`.
 
 5. **Create one task for new durable work**
    ```bash
-   bd create "TDD: <short behavior/feature>" -t task -p 2 \
+   br create "TDD: <short behavior/feature>" -t task -p 2 \
      --description "Goal, public behavior to deliver, and initial test focus." --json
    ```
 
 6. **Claim before implementation**
    ```bash
-   bd update <id> --claim --json
+   br update <id> --claim --json
    ```
 
 7. **Update compact current-state notes**
    Capture current red/green state, behavior covered, failing test name, decisions, blockers, and next test.
    ```bash
-   bd update <id> --notes "CURRENT: ... TEST: ... NEXT: ..." --json
+   br update <id> --notes "CURRENT: ... TEST: ... NEXT: ..." --json
    ```
 
 8. **Add handoff comments when useful**
    Use comments for longer narrative context a future agent needs after compaction.
    ```bash
-   bd comment <id> "TDD handoff: ..." --json
+   br comments add <id> --message "TDD handoff: ..." --json
    ```
 
 9. **Stay on the current TDD loop**
    Do not derail the current TDD loop for side quests.
 
 10. **Create beads for discovered follow-up work**
-   Use `bd create "Found while TDD: <follow-up>" -t task -p 2 --deps discovered-from:<id> --json`.
+   Use `br create "Found while TDD: <follow-up>" -t task -p 2 --deps discovered-from:<id> --json`.
    Add a description with the discovery context and expected behavior.
 
 11. **Close when done**
-   Run `bd close <id> --reason "Delivered behavior with tests: ..." --json`.
+   Run `br close <id> --reason "Delivered behavior with tests: ..." --json`.
 
 12. **Avoid generic storage steps**
-   Do not run `bd sync` as a generic session-end step.
-   Use storage/sync commands only when current project guidance or the user asks for them.
+   Do not run bare `br sync`.
+   Do not add session-end sync by default.
+   Run `br sync --flush-only` only when asked to export JSONL before committing `.beads/`.
 
 For tiny same-session changes, use a local checklist. Promote to a beads task once work branches, blocks, or needs durable handoff context.
 
 ### Beads command guardrails
 
-- Prefer `--json` for reads/writes that support it, but keep `bd info` as the setup diagnostic.
-- Use `bd comment <id> ...` or `bd comments add <id> ...`; do not write `bd comment add ...`.
-- If a `bd` command fails, check `bd <command> --help` and adapt to the installed CLI before proceeding.
+- Prefer `--json` for reads/writes that support it, but keep `br info` as the setup diagnostic.
+- Use `br comments add <id> --message ... --json` for handoff comments; do not use legacy singular comment forms.
+- If a `br` command fails, check `br <command> --help` and adapt to the installed CLI before proceeding.
 
 ## Philosophy
 

@@ -1,40 +1,48 @@
 # Beads Agent Skill
 
-Runtime guidance for using [beads](https://github.com/gastownhall/beads) (`bd`) as persistent, dependency-aware task memory from coding agents.
+Runtime guidance for using [beads_rust](https://github.com/Dicklesworthstone/beads_rust) (`br`) as persistent, dependency-aware task memory from coding agents.
 
-## What this skill helps agents do
+Use this skill to:
 
-- find ready work and blockers;
-- create durable issues with useful context;
-- claim, update, hand off, and close work;
-- preserve state across session boundaries or context compaction;
-- coordinate multi-agent work with dependencies, assignment, comments, and gates;
-- decide when a session-local checklist is enough instead of durable issue tracking.
+- decide when durable beads tracking is worth it;
+- inspect and claim ready work;
+- write resumable task notes and comments;
+- create follow-up tasks and dependency edges;
+- coordinate multi-agent work with dependencies, assignment, comments, and labels;
+- avoid unsafe setup, sync, or recovery operations unless the user explicitly asks.
 
 ## Requirements
 
-- `bd` CLI installed and in `PATH`.
+- `br` CLI installed and in `PATH`.
 - A beads database initialized in the target project, unless the user explicitly asks to set one up.
-- A coding-agent runtime that can run shell commands and read files.
 
-## Current runtime loop
+## Essential commands
 
 ```bash
-bd ready --json                  # find unblocked work
-bd show <id> --json              # load context
-bd update <id> --claim --json    # start atomically
-bd update <id> --notes "CURRENT: ... NEXT: ..." --json
-bd comment <id> "handoff/review context" --json
-bd close <id> --reason "..." --json
+br ready --json                         # find unblocked work
+br show <id> --json                     # load context
+br update <id> --claim --json           # start atomically
+br update <id> --notes "CURRENT: ... NEXT: ..." --json
+br comments add <id> --message "handoff/review context" --json
+br close <id> --reason "..." --json
+br sync --flush-only                    # explicit final JSONL export when committing .beads/
 ```
 
-Use `bd <command> --help` as the final authority for the installed version. Avoid low-level storage commands unless the user explicitly asks for setup, recovery, or collaboration troubleshooting.
+Use `br <command> --help` as the final authority for the installed version. Avoid setup, import, repair, merge, and delete commands unless the user explicitly asks for setup, recovery, or collaboration troubleshooting.
 
 ## Files
 
 ```text
 beads/
-├── SKILL.md              # Required metadata + runtime instructions
-├── README.md             # This runtime overview
-└── references/           # Optional runtime references loaded on demand
+  SKILL.md
+  README.md
+  references/
+    CLI_REFERENCE.md
+    BOUNDARIES.md
+    DEPENDENCIES.md
+    MULTI_AGENT.md
+    RESUMABILITY.md
+    SETUP.md
+    TROUBLESHOOTING.md
+    WORKFLOWS.md
 ```

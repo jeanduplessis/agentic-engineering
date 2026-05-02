@@ -1,88 +1,96 @@
 # Dependencies and ready work
 
-Dependencies order work. The key semantic is:
+## Blocking semantics
 
 ```bash
-bd dep add <dependent> <dependency>
+br dep add <dependent> <dependency>
 ```
 
-`<dependent>` cannot start until `<dependency>` closes.
-
-## Common patterns
+`<dependent>` waits on `<dependency>`. The dependency blocks the dependent until closed.
 
 ```bash
-# Auth depends on API; API blocks auth
-bd dep add bd-auth bd-api --json
+# Auth work waits for API setup:
+br dep add br-auth br-api --json
+```
 
-# Create and link discovered work in one command
-bd create "Found auth edge case" \
-  -t bug -p 1 \
-  --description "Discovered while working on bd-auth; details..." \
-  --deps discovered-from:bd-auth --json
+Use real blocking edges only when ordering matters. Do not use blocker edges just to express "related" or "belongs to epic".
 
-# Soft relationship, does not block ready queue
-bd dep add bd-frontend bd-api --type related --json
-bd dep relate bd-frontend bd-api --json
+## Common relationship patterns
+
+Discovered follow-up:
+
+```bash
+br create "Found auth edge case" \
+  -t bug -p 2 \
+  --description "Discovered while working on br-auth; details..." \
+  --deps discovered-from:br-auth --json
+```
+
+Parent/epic hierarchy:
+
+```bash
+br create "Auth System" -t epic -p 1 --json
+br create "Design login UI" --parent br-auth -t task -p 1 --json
+br create "Backend validation" --parent br-auth -t task -p 1 --json
+```
+
+Soft/non-blocking relation:
+
+```bash
+br dep add br-frontend br-api --type related --json
 ```
 
 ## Dependency types
 
-Common types include:
+| Type | Blocks `br ready`? | Use |
+|---|---:|---|
+| `blocks` / default | Yes | Real ordering constraints |
+| `parent-child` | Yes for parent/epic closure semantics | Epic/source hierarchy |
+| `discovered-from` | No by convention unless project config differs | Provenance for follow-up work |
+| `related` | No | Loose association |
 
-| Type | Blocks `bd ready`? | Use |
-| --- | --- | --- |
-| `blocks` | Yes | Normal prerequisite ordering |
-| `parent-child` | Usually hierarchical | Epic/task structure |
-| `discovered-from` | No/annotation | Follow-up found while doing another issue |
-| `related` / `relates-to` | No | Informational connection |
+Installed versions may support extra relationship types. Check `br dep add --help`.
 
-Installed versions may include extra graph links such as `tracks`, `supersedes`, `caused-by`, `validates`, or `until`. Check `bd dep add --help` and related command help for exact support.
-
-## Finding what can run
+## Inspect blockers
 
 ```bash
-bd ready --json                 # Issues with no open blockers
-bd ready --priority 1 --json
-bd ready --type bug --json
-bd blocked --json               # Issues and their blockers
-bd dep tree <id> --json         # Dependency tree
-bd dep list <id> --json         # Dependencies/dependents
-bd dep cycles --json            # Circular dependency detection
+br ready --json                         # Issues with no open blockers
+br ready --priority 1 --json
+br ready --type bug --json
+br ready --parent <epic-id> --recursive --json
+br blocked --json                       # Issues and their blockers
+br dep tree <id> --json                 # Dependencies this issue waits on
+br dep tree <id> --direction up --json  # Dependents / descendants
+br dep list <id> --json                 # Dependencies
+br dep list <id> --direction up --json  # Dependents
+br dep cycles --json                    # Circular dependency detection
 ```
 
-`bd ready` is the default queue for agents. Prefer it over scanning all open issues manually.
+`br ready` is the default queue for agents. Prefer it over scanning all open issues manually.
 
-## Direction trap
+## Modeling guidelines
 
-If you want **setup before implementation**:
+Blocking setup:
 
 ```bash
-bd dep add bd-implementation bd-setup --json
+br dep add br-implementation br-setup --json
 ```
 
-Do not reverse it. The first argument is the blocked/dependent issue; the second argument is the blocker/prerequisite.
+- Use a blocker when implementation cannot safely start until setup completes.
+- Conceptually related tasks: use `--type related` or a comment.
+- PRD/epic membership: create with `--parent <epic-id>`.
+- Human approval, CI, PR review, credentials, or external waits:
+  - create an explicit blocking task, or defer the waiting task;
+  - explain the condition in notes/comments.
+- Avoid cycles. If `br dep cycles --json` reports one, ask before restructuring existing project data.
 
-## Parent/child epics
-
-Hierarchical issues can be created with `--parent`:
+## Epic completion
 
 ```bash
-bd create "Auth System" -t epic -p 1 --json
-bd create "Design login UI" --parent bd-auth -p 1 --json
-bd create "Backend validation" --parent bd-auth -p 1 --json
-bd dep tree bd-auth --json
+br dep list <epic-id> --direction up --type parent-child --json
+br ready --parent <epic-id> --recursive --json
+br epic status --json
+br epic close-eligible --dry-run --json
 ```
 
-Use parent/child structure for decomposition; use blocking dependencies only for actual order constraints.
-
-## External waits
-
-For waits on PRs, CI, timers, or human approval, use gates if supported by the installed version:
-
-```bash
-bd gate --help
-bd gate create --help
-bd gate create --type=human --blocks bd-deploy --reason="Need approval" --json
-```
-
-For gate patterns, use the workflows reference from the SKILL.md reference index.
+Close an epic only when all children are complete or `br epic close-eligible --dry-run --json` reports it eligible.

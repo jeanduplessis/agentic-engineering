@@ -1,144 +1,170 @@
-# Beads CLI reference for coding agents
+# Beads Rust CLI reference for coding agents
 
-This is a compact runtime reminder. Use `bd <command> --help` for the installed syntax before advanced or unfamiliar commands.
+Compact runtime reminder. Use `br <command> --help` for installed syntax before advanced or unfamiliar commands.
 
-## Global conventions
+## Table of contents
+
+- [Global habits](#global-habits)
+- [Core workflow](#core-workflow)
+- [Create work](#create-work)
+- [Find work](#find-work)
+- [Update, comment, close](#update-comment-close)
+- [Dependencies](#dependencies)
+- [Epics and children](#epics-and-children)
+- [Assignment and labels](#assignment-and-labels)
+- [Sync and diagnostics](#sync-and-diagnostics)
+- [Setup hooks for agents](#setup-hooks-for-agents)
+
+## Global habits
 
 ```bash
-bd [global-flags] <command> [command-flags] [arguments]
+br [global-flags] <command> [command-flags] [arguments]
 ```
 
 Useful global flags:
 
 | Flag | Use |
-| --- | --- |
-| `--json` | Machine-readable output; use this for agent workflows when supported |
-| `--quiet` | Suppress non-essential output |
-| `--verbose` | More diagnostic output |
-| `--help` | Command-specific help |
-| `--version` / `bd version` | Version information |
+|---|---|
+| `--json` | Machine-readable output |
+| `--actor <name>` | Attribute mutations to an agent/human |
+| `--db <path>` | Explicit DB path when autodiscovery is wrong |
+| `--no-auto-flush` | Skip automatic JSONL export for one mutation |
+| `--allow-stale` | Bypass freshness warning only when you understand it |
+| `--version` / `br version` | Version information |
 
-## Essential runtime loop
-
-```bash
-bd ready --json                  # Unblocked work
-bd list --status in_progress --json
-bd show <id> --json              # Issue details
-bd update <id> --claim --json    # Atomically claim/start
-bd update <id> --notes "CURRENT: ... NEXT: ..." --json
-bd comment <id> "Handoff or review context" --json
-bd close <id> --reason "Completed: ..." --json
-```
-
-Do not add backend/session-finalization commands to this loop unless the user explicitly asks for storage or collaboration operations.
-
-## Create issues
+## Core workflow
 
 ```bash
-bd create "Title" -t task -p 2 --description "Details" --json
-bd create "Fix login" -t bug -p 1 --description "Repro and expected behavior" --json
-bd create "Subtask" --parent bd-a3f8e9 -p 2 --json
-bd create "Found during work" --deps discovered-from:bd-42 --description "Context" --json
+br ready --json                         # Unblocked open work
+br list --status in_progress --json     # Claimed work
+br show <id> --json                     # Issue details; returns an array
+br update <id> --claim --json           # Atomically claim/start
+br update <id> --notes "CURRENT: ... NEXT: ..." --json
+br comments add <id> --message "Handoff or review context" --json
+br close <id> --reason "Completed: ..." --json
 ```
 
-Common types: `bug`, `feature`, `task`, `epic`, `chore`, `decision`. Priorities: `0` / `P0` critical through `4` / `P4` backlog.
-
-For long descriptions, prefer a file or stdin when supported by the installed command:
+## Create work
 
 ```bash
-bd create "Title" --body-file notes.md --json
-cat notes.md | bd create "Title" --stdin --json
+br create "Title" -t task -p 2 --description "Details" --json
+br create "Fix login" -t bug -p 1 --description "Repro and expected behavior" --json
+br create "Subtask" --parent br-abc123 -t task -p 2 --json
+br create "Found during work" --deps discovered-from:br-42 --description "Context" --json
+br q "Quick capture"                         # Prints only the new ID
 ```
 
-Avoid `bd edit`; it opens an editor and can hang agent runs.
-
-## List and query
+For long descriptions, write a temp file and pass its contents:
 
 ```bash
-bd ready --json
-bd ready --priority 1 --json
-bd blocked --json
-bd list --status open --json
-bd list --status in_progress --json
-bd list --priority 0,1 --type bug --json
-bd list --label-any urgent,critical --json
-bd search "keyword" --json
-bd status --json
-bd info
+br create "Title" --description "$(cat /tmp/notes.md)" --json
 ```
 
-Prefer `bd ready` over scanning all open issues manually; it applies blocker-aware semantics.
+Current `br create` supports markdown bulk import with `--file`, but not `--body-file` or `--stdin` for one issue.
 
-## Update, comment, and close
+## Find work
 
 ```bash
-bd update bd-42 --claim --json
-bd update bd-42 --priority 0 --add-label urgent --json
-bd update bd-42 --title "Updated title" --json
-bd update bd-42 --description "New description" --json
-bd update bd-42 --notes "CURRENT: ... NEXT: ..." --json
-bd comment bd-42 "Handoff: backend done; frontend remains" --json
-bd comments bd-42 --json
-bd close bd-42 --reason "Fixed in PR #123" --json
-bd reopen bd-42 --reason "Regression found" --json
+br ready --json
+br ready --priority 1 --json
+br ready --parent <epic-id> --recursive --json
+br blocked --json
+br list --status open --json
+br list --status in_progress --json
+br list --priority 0 --priority 1 --type bug --json
+br list --label-any urgent --label-any critical --json
+br search "keyword" --json
+br status --json
+br info
+br where
 ```
 
-Use `bd comment <id> ...` or `bd comments add <id> ...`; do not insert an `add` subcommand after singular `comment`.
+Prefer `br ready` over scanning all open issues manually; it applies blocker-aware semantics.
+
+## Update, comment, close
+
+```bash
+br update br-42 --claim --json
+br update br-42 --priority 0 --add-label urgent --json
+br update br-42 --title "Updated title" --json
+br update br-42 --description "New description" --json
+br update br-42 --notes "CURRENT: ... NEXT: ..." --json
+br comments add br-42 --message "Handoff: backend done; frontend remains" --json
+br comments add br-42 --file handoff.md --json
+br comments list br-42 --json
+br close br-42 --reason "Fixed in PR #123" --json
+br reopen br-42 --reason "Regression found" --json
+```
+
+Use canonical `br comments add/list`. Avoid legacy singular comment forms in migrated docs.
 
 ## Dependencies
 
 ```bash
-# bd-2 depends on bd-1; bd-1 blocks bd-2
-bd dep add bd-2 bd-1 --json
+# br-2 depends on br-1; br-1 blocks br-2
+br dep add br-2 br-1 --json
 
-# Soft relationship
-bd dep add bd-2 bd-1 --type related --json
-bd dep relate bd-42 bd-43 --json
+# Non-blocking relation where supported by project convention
+br dep add br-2 br-1 --type related --json
 
-# Inspect graph
-bd dep tree bd-2 --json
-bd dep list bd-2 --json
-bd dep cycles --json
-bd blocked --json
-bd ready --json
+br dep tree br-2 --json
+br dep list br-2 --json
+br dep list br-2 --direction up --json       # Dependents
+br dep cycles --json
+br blocked --json
+br ready --json
 ```
 
-Direction trap: the first argument is the blocked/dependent issue; the second is the prerequisite.
+Use default `blocks` edges only for real ordering constraints. Use `--parent <epic-id>` or `--type parent-child` for hierarchy/provenance, not blocker ordering.
+
+## Epics and children
+
+```bash
+br create "PRD: Feature" -t epic -p 2 --json
+br create "Implement first slice" --parent <epic-id> -t task -p 2 --json
+br dep list <epic-id> --direction up --type parent-child --json   # Direct children
+br dep tree <epic-id> --direction up --json                       # Descendants
+br ready --parent <epic-id> --recursive --json
+br epic status --json
+br epic close-eligible --dry-run --json
+```
+
+`br blocked` has no `--parent` flag; get descendants, run `br blocked --json`, then intersect IDs if you need blocked children under one epic.
 
 ## Assignment and labels
 
 ```bash
-bd update bd-42 --assignee alice --json
-bd assign bd-42 alice --json
-bd assign bd-42 "" --json                 # unassign
-bd update bd-42 --add-label needs-review --json
-bd label add bd-42 needs-review --json
-bd label remove bd-42 needs-review --json
-bd label list bd-42 --json
-bd label list-all --json
+br update br-42 --assignee alice --json
+br update br-42 --assignee "" --json              # Unassign
+br update br-42 --add-label needs-review --json
+br label add br-42 -l needs-review --json
+br label remove br-42 -l needs-review --json
+br label list br-42 --json
+br label list-all --json
 ```
 
-Use assignment and claim state for ownership; use dependencies for ordering; use labels for lightweight classification.
+Use claim/assignment state for ownership, dependencies for ordering, labels for lightweight classification.
 
-## Diagnostics
+## Sync and diagnostics
 
 ```bash
-bd info
-bd status --json
-bd doctor --agent --json
-bd doctor --deep --json
+br sync --status --json       # Read-only sync state
+br sync --flush-only          # Export DB to .beads/issues.jsonl
+br sync --import-only         # Import JSONL into DB after pulling/recovery
+br doctor --json
+br stats --json
+br lint --json
 ```
 
-Ask before running commands that repair, migrate, delete, reinitialize, or change setup.
+Do not run bare `br sync`; choose a mode. Ask before running commands that repair, import, merge, delete, reinitialize, or change setup. `br` never runs git; stage/commit `.beads/` only when the user asked for a git workflow.
 
-## Advanced commands to discover with help
-
-Only use these when the task calls for them, and inspect help first:
+## Setup hooks for agents
 
 ```bash
-bd gate --help       # External waits such as human approval, timers, PRs, CI
-bd formula --help    # Workflow formula discovery
-bd cook --help       # Compile formula to a proto/template
-bd mol --help        # Molecules and wisps from workflow templates
-bd setup --help      # Integration/setup only when requested
+br init --help
+br agents --check
+br agents --add --dry-run
+br agents --add --force
 ```
+
+Initialize or edit project instruction files only when the user explicitly asks for setup.

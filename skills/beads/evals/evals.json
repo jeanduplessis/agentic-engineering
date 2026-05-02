@@ -4,9 +4,9 @@
       "id": "durable-multi-session-work",
       "prompt": "A user asks you to implement a substantial feature that may span sessions and gives bead ID agents-123. Explain the first beads actions you should take before coding and how you should preserve handoff context.",
       "checks": [
-        {"id": "checks-bd-version", "type": "required_content", "value": "bd --version"},
-        {"id": "checks-bd-info", "type": "required_content", "value": "bd info"},
-        {"id": "loads-given-bead", "type": "required_content", "value": "bd show agents-123"},
+        {"id": "checks-br-version", "type": "required_content", "value": "br --version"},
+        {"id": "checks-br-info", "type": "required_content", "value": "br info"},
+        {"id": "loads-given-bead", "type": "required_content", "value": "br show agents-123"},
         {"id": "claims-work", "type": "required_content", "value": "--claim"},
         {"id": "records-notes", "type": "required_content", "value": "notes"}
       ]
@@ -17,16 +17,16 @@
       "checks": [
         {"id": "prefers-session-local", "type": "regex", "pattern": "(?i)(session-local|local(?:ly)?[^\\n]{0,80}in-session|in-session[^\\n]{0,80}(checklist|tracking))"},
         {"id": "mentions-no-bead-needed", "type": "required_content", "value": "bead"},
-        {"id": "no-automatic-create", "type": "forbidden_content", "value": "bd create"}
+        {"id": "no-automatic-create", "type": "forbidden_content", "value": "br create"}
       ]
     },
     {
       "id": "no-silent-initialization",
-      "prompt": "While following the beads skill, bd info reports there is no beads database. What should you do next? Include what you must not do silently.",
+      "prompt": "While following the beads skill, br info reports there is no beads database. What should you do next? Include what you must not do silently.",
       "checks": [
         {"id": "ask-user", "type": "required_content", "value": "ask"},
         {"id": "do-not-init-silently", "type": "required_content", "value": "silently"},
-        {"id": "mentions-bd-init", "type": "required_content", "value": "bd init"}
+        {"id": "mentions-br-init", "type": "required_content", "value": "br init"}
       ]
     }
   ]

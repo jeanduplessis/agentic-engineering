@@ -9,8 +9,7 @@ product requirements document, then recording the approved PRD as a parent beads
 
 `SKILL.md` tells the assistant to gather only already-available context, identify the likely implementation
 shape, briefly confirm architecture and test focus, draft a durable product-focused PRD, and create a beads
-task only after the user approves the PRD. The skill prefers beads (`bd`) over GitHub tracking, verifies `bd
---version` and `bd info` before task creation, and avoids silently initializing beads.
+task only after the user approves the PRD. The skill prefers beads_rust (`br`) over GitHub tracking, verifies `br --version` and `br info` before task creation, and avoids silently initializing beads.
 
 ## Eval and validation
 
@@ -32,7 +31,7 @@ This invokes `tools.skill_valid` and may run live Pi/model gates when determinis
 
 - Preserve the rule to avoid a requirements interview; use existing context and ask only narrow confirmation questions about architecture or testing choices.
 
-- Preserve approval before beads creation, and keep `bd` availability checks before any task write.
+- Preserve approval before beads creation, and keep `br` availability checks before any task write.
 
 - Keep PRDs product-focused and durable; avoid file paths, code snippets, and transient implementation details.
 

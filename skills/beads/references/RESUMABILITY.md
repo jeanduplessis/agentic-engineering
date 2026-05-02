@@ -1,71 +1,81 @@
 # Writing resumable beads
 
-A bead should let a future agent resume without rediscovering the same facts. Write for an agent that has the repository and bd database but not this conversation.
+A bead should let a future agent resume without rediscovering the same facts. Write for an agent that has the repository and br database but not this conversation.
 
-## What to capture
+## What to record
 
-When creating or updating an issue, include:
+Record durable state, not every step:
 
-- **Goal** — what outcome matters.
-- **Current state** — what has already been done or verified.
-- **Next step** — the single most useful action to resume.
-- **Decisions** — tradeoffs and why a path was chosen.
-- **Files/commands** — exact paths, tests, scripts, PRs, CI runs, or logs.
-- **Blockers** — what is waiting on whom/what.
-- **Acceptance** — how to know the issue is done.
+- **CURRENT**: what works now, what changed, and where the branch stands.
+- **NEXT**: the next concrete action.
+- **DECISIONS**: choices that should not be relitigated.
+- **BLOCKERS**: unmet requirements, dependencies, or external waits.
+- **VALIDATE**: commands already run and commands still needed.
+- **FOLLOW-UP**: linked bead IDs for deferred work.
 
-## Good note shape
+Good note:
 
 ```text
-CURRENT: Parser accepts formula templates and creates parent/child beads. Unit tests pass in cmd/bd/formula_test.go.
-DECISIONS: Kept formula variables simple to avoid code execution.
-BLOCKED: Need product decision on where shared formula files should live.
-NEXT: Add integration test that instantiates an example workflow and verifies dependency edges.
-VALIDATE: go test ./cmd/bd -run TestFormulaWorkflow
+CURRENT: Parser accepts template variables and creates parent/child beads. Unit tests pass.
+DECISIONS: Kept variables declarative to avoid code execution.
+BLOCKED: Need product decision on shared template location.
+NEXT: Add validation errors after location decision.
+VALIDATE: cargo test parser_workflow
 ```
 
-## Creating with enough context
+Bad note:
+
+```text
+worked on parser, seems okay
+```
+
+## Create with useful context
 
 ```bash
-bd create "Add validation errors" \
+br create "Add validation errors" \
   -t task -p 2 \
-  --description "Goal: make invalid workflow templates explain path + field + suggested fix. Current parser returns generic errors. Validate with malformed examples." \
+  --description "CURRENT: parser path exists. NEXT: add user-facing validation errors. ACCEPTANCE: invalid input returns actionable messages and tests cover malformed cases." \
   --json
 ```
 
-For long descriptions, use `--body-file` or `--stdin` when supported by the installed command:
+For long descriptions, write to a temp file and pass the contents:
 
 ```bash
-bd create "Document handoff" --body-file handoff.md --json
-cat handoff.md | bd create "Document handoff" --stdin --json
+br create "Document handoff" --description "$(cat handoff.md)" --json
 ```
 
-For long handoffs on an existing issue, comments are often safer than trying to pack everything into one shell argument:
+For long narrative context after creation, prefer comments:
 
 ```bash
-bd comment bd-42 --file handoff.md --json
-cat handoff.md | bd comment bd-42 --stdin --json
+br comments add br-42 --file handoff.md --json
 ```
 
 ## Update cadence
 
-Update bd at natural persistence boundaries:
+Update br at natural persistence boundaries:
 
-- before compaction/session end;
-- before switching to another issue;
-- after a major design decision;
+- before pausing or handing off;
+- after a major decision;
+- when the next step changes;
 - when a blocker appears or clears;
-- after discovering linked work;
-- before closing.
+- before closing, with validation context.
 
-Do not update bd after every tiny checklist step unless that step changes future resumption context.
+Do not update br after every tiny checklist step unless that step changes future resumption context.
 
-## Closing well
-
-A close reason should be useful later:
+## Close with completion evidence
 
 ```bash
-bd close bd-42 --reason "Implemented token refresh in auth/session.go; added TestRefreshExpiredToken; follow-up UX polish tracked as bd-91" --json
+br close br-42 --reason "Implemented token refresh in auth/session.go; added TestRefreshExpiredToken; follow-up UX polish tracked as br-91" --json
 ```
 
-Avoid vague reasons such as `done` when the issue involved significant choices.
+A close reason should include what was delivered, how it was validated, and any linked follow-up.
+
+## If you cannot finish
+
+Leave the task open and write a handoff comment:
+
+```bash
+br comments add br-42 --message "Handoff: RED test TestRefreshExpiredToken fails because token clock source is still hard-coded. NEXT: inject Clock into session manager, then rerun auth tests." --json
+```
+
+Do not close incomplete work just because your session is ending.

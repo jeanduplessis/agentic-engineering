@@ -4,12 +4,12 @@
       "id": "durable-existing-bead-tdd-start",
       "prompt": "A user asks you to use TDD for bead agents-123: implement checkout discount behavior. Explain the first actions before coding and how you keep the task resumable.",
       "checks": [
-        {"id": "checks-bd-version", "type": "required_content", "value": "bd --version"},
-        {"id": "checks-bd-info", "type": "required_content", "value": "bd info"},
-        {"id": "loads-given-bead", "type": "required_content", "value": "bd show agents-123 --json"},
+        {"id": "checks-br-version", "type": "required_content", "value": "br --version"},
+        {"id": "checks-br-info", "type": "required_content", "value": "br info"},
+        {"id": "loads-given-bead", "type": "required_content", "value": "br show agents-123 --json"},
         {"id": "claims-work", "type": "required_content", "value": "--claim"},
         {"id": "records-notes", "type": "required_content", "value": "--notes"},
-        {"id": "records-comment", "type": "required_content", "value": "bd comment agents-123"},
+        {"id": "records-comment", "type": "required_content", "value": "br comments add agents-123"},
         {"id": "avoids-horizontal-slice", "type": "regex", "pattern": "(?is)((not|do\\s+not|don't|avoid)\\s+(write|writing)\\s+all\\s+[^\\n.]*tests?\\s+(first|up\\s+front)|one\\s+vertical\\s+slice|repeat\\s+one\\s+behavior\\s+at\\s+a\\s+time|one\\s+failing\\s+test.*?(minimum|minimal).*?pass)"},
         {"id": "starts-with-one-behavior-test", "type": "regex", "pattern": "(?i)\\bone\\s+(?:[\\w-]+\\s+){0,8}(test|behavior)\\b"},
         {"id": "uses-red-green-vertical-slices", "type": "regex", "pattern": "(?is)(RED.*GREEN|GREEN.*RED|vertical\\s+(TDD\\s+)?slices?|RED/GREEN\\s+cycle|RED\\s*[→-]\\s*GREEN)"}
@@ -19,11 +19,10 @@
       "id": "new-durable-tdd-task",
       "prompt": "We need to build a user-visible password reset flow with red-green-refactor and this may span sessions. What beads task should you create and how should you track follow-up work found during implementation?",
       "checks": [
-        {"id": "creates-tdd-task", "type": "required_content", "value": "bd create \"TDD:"},
+        {"id": "creates-tdd-task", "type": "required_content", "value": "br create \"TDD:"},
         {"id": "uses-task-type", "type": "required_content", "value": "-t task"},
         {"id": "uses-discovered-from", "type": "regex", "pattern": "--deps\\s+discovered-from:(<[^>]+>|[A-Za-z0-9_.-]+)"},
-        {"id": "no-github-default", "type": "forbidden_content", "value": "gh issue"},
-        {"id": "no-sync", "type": "forbidden_content", "value": "bd sync"}
+        {"id": "no-github-default", "type": "forbidden_content", "value": "gh issue"}
       ]
     },
     {
@@ -32,17 +31,16 @@
       "checks": [
         {"id": "prefers-local-checklist", "type": "regex", "pattern": "(?i)(local checklist|session-local|same-session)"},
         {"id": "mentions-beads-boundary", "type": "required_content", "value": "beads"},
-        {"id": "does-not-create-bead", "type": "forbidden_content", "value": "bd create"}
+        {"id": "does-not-create-bead", "type": "forbidden_content", "value": "br create"}
       ]
     },
     {
       "id": "beads-command-syntax-guardrails",
-      "prompt": "While using the TDD skill, show the correct bd commands to add a handoff note and close bead agents-456. Include any command forms to avoid.",
+      "prompt": "While using the TDD skill, show the correct br commands to add a handoff note and close bead agents-456. Include command forms to avoid.",
       "checks": [
-        {"id": "uses-singular-comment", "type": "required_content", "value": "bd comment agents-456"},
-        {"id": "closes-with-reason", "type": "required_content", "value": "bd close agents-456 --reason"},
-        {"id": "forbids-comment-add", "type": "required_content", "value": "bd comment add"},
-        {"id": "forbids-sync", "type": "required_content", "value": "bd sync"}
+        {"id": "uses-comments-add", "type": "required_content", "value": "br comments add agents-456"},
+        {"id": "closes-with-reason", "type": "required_content", "value": "br close agents-456 --reason"},
+        {"id": "forbids-bare-sync", "type": "required_content", "value": "bare br sync"}
       ]
     }
   ]

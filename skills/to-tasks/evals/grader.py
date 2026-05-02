@@ -79,7 +79,7 @@ def _appears_to_create_beads(lower: str) -> bool:
         "created bead",
         "created the bead",
         "created these bead",
-        "created tasks in bd",
+        "created tasks in br",
         "i created",
     )
     if any(claim in lower for claim in creation_claims):
