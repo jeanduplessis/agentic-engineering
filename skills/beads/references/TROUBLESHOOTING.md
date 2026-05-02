@@ -2,6 +2,17 @@
 
 Prefer diagnosis and reversible actions. Ask before destructive repairs, setup changes, database rebuilds, imports, merges, or deletes.
 
+## Table of contents
+
+- [First checks](#first-checks)
+- [Common failures](#common-failures)
+- [Doctor and repair](#doctor-and-repair)
+- [Doctor summaries](#doctor-summaries)
+- [Cleanup side effects](#cleanup-side-effects)
+- [Setup or initialization problems](#setup-or-initialization-problems)
+- [Sync and storage issues](#sync-and-storage-issues)
+- [Handoff unresolved problems](#handoff-unresolved-problems)
+
 ## First checks
 
 ```bash
@@ -46,6 +57,41 @@ br doctor --repair --json
 
 Run repair only when the user approves or when the requested task cannot continue without it and the user confirms the risk.
 
+## Doctor summaries
+
+When summarizing `br doctor --json`, report separately:
+
+- `ok`;
+- `workspace_health`;
+- `reliability_audit.anomalies`;
+- every non-OK check.
+
+Do not call the result clean if warnings, recoverable health, degraded health, or anomalies remain.
+Distinguish "non-OK checks cleared" from "workspace health is clean".
+If `workspace_health: recoverable` remains due to `truncated_wal`, say so explicitly.
+
+Do not escalate warning-only output to repair when all are true:
+
+- `ok: true`;
+- issue counts match JSONL;
+- sync dirty count is zero;
+- warnings are limited to local recovery/sidecar artifacts.
+
+In that case, do not run `br doctor --repair`, `br sync --import-only --rebuild`, or manual JSONL edits without fresh explicit approval.
+
+## Cleanup side effects
+
+Before deleting local recovery or sidecar artifacts, copy `.beads/` to a temp directory.
+Test the cleanup and verification sequence there first.
+Apply only the minimal proven cleanup to the real repo after confirmation.
+
+When cleaning `.beads/.br_recovery/`, verify in side-effect-aware order:
+
+1. Remove stale recovery artifacts only after approval.
+2. Run `br doctor --json`.
+3. Inspect non-OK checks, `workspace_health`, and `reliability_audit.anomalies`.
+4. Avoid extra `br sync --status` or `br list` calls unless you rerun cleanup or state that they may recreate WAL/recovery artifacts.
+
 ## Setup or initialization problems
 
 If the user asked to set up beads and no database exists:
@@ -80,9 +126,30 @@ br sync --import-only --rebuild
 br doctor --repair
 ```
 
+Before `br sync --import-only`, scan classic beads JSONL for non-integer `comments[].id` values.
+If found, ask before mapping legacy string/UUID comment IDs to integers.
+Preserve comment text, author, timestamps, and issue IDs.
+
+After `br sync --import-only` fails, stop.
+Report the exact error and backup path.
+Ask before changing recovery strategy, moving more `.beads/` files, using `--force`/`--rebuild`, editing JSONL, or repairing.
+
 Do not run bare `br sync`; choose an explicit mode.
 
 ## Handoff unresolved problems
+
+Before staging `.beads/`, ensure local-only runtime/recovery artifacts are ignored:
+
+```text
+beads.db
+beads.db-*
+*.db-wal
+*.db-shm
+.write.lock
+.br_history/
+.br_recovery/
+interactions.jsonl
+```
 
 If you cannot resolve a beads problem in-session, leave a useful comment or note when a current issue ID is known and br writes still work. Include:
 

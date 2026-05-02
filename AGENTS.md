@@ -41,6 +41,17 @@ explicitly in the file or directory that needs it.
 
 - Respect nested `AGENTS.md` files; the closest one to the files being changed has the most specific guidance.
 
+- Nested package staging:
+  - After every `git add` and before committing, verify scope with `git diff --cached --name-status`.
+  - If unrelated root or sibling files are staged, run `git reset` and restage exact paths from the current cwd, or use:
+    ```sh
+    git -C <repo-root> add <repo-root-relative-paths>
+    ```
+
+- Nested package beads work:
+  - Name the target `.beads/` directory before mutating.
+  - Keep root `.beads/` out of scope unless the target repo path is the repository root.
+
 ## Useful validation commands
 
 For tool changes:
