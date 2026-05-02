@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "gh-pr-review",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "plan-address-unresolved-review-feedback",
+          "prompt": "You are in a repository with PR #42. Do not run commands, install tools, call GitHub, or modify files. Using the gh-pr-review skill, write the exact gh pr-review command sequence you would use to inspect actionable unresolved review feedback, narrow to a reviewer named octocat if needed, reply after a fix, and resolve the addressed thread. Include the command for each step and one short note about when resolving is safe.",
+          "checks": [
+            {
+              "id": "uses-view-command",
+              "type": "required_content",
+              "value": "gh pr-review view"
+            },
+            {
+              "id": "focuses-unresolved-not-outdated",
+              "type": "required_content",
+              "value": "--unresolved --not-outdated"
+            },
+            {
+              "id": "uses-reviewer-filter",
+              "type": "required_content",
+              "value": "--reviewer octocat"
+            },
+            {
+              "id": "uses-reply-command",
+              "type": "required_content",
+              "value": "gh pr-review reply"
+            },
+            {
+              "id": "uses-resolve-command",
+              "type": "required_content",
+              "value": "gh pr-review resolve"
+            },
+            {
+              "id": "mentions-thread-id",
+              "type": "required_content",
+              "value": "--thread-id PRRT_"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}
