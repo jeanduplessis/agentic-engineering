@@ -1,10 +1,10 @@
 # AGENTS.md — skills directory context
 
-This directory contains agent skills. Each skill should be self-contained, easy for agents to discover, and optionally measurable through the repo-level skill eval framework in `tools/skill_eval`.
+This directory contains agent skills. Each skill should be self-contained, easy for agents to discover, and optionally measurable via the repo-level `tools/skill_eval` framework.
 
 ## Skill structure
 
-A skill should normally live in its own directory:
+Skills should normally live in their own directories:
 
 ```text
 skills/<skill-name>/
@@ -15,7 +15,7 @@ skills/<skill-name>/
     grader.py            # optional skill-local deterministic grader
 ```
 
-`SKILL.md` is required for an installable skill. It should include frontmatter with at least:
+`SKILL.md` is required for installable skills and should include at least this frontmatter:
 
 ```yaml
 ---
@@ -42,7 +42,7 @@ python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
   --require-real
 ```
 
-Live Pi execution is gated. Only run live evals when explicitly requested or approved:
+Live Pi execution is gated; run live evals only when explicitly requested or approved:
 
 ```bash
 SKILL_EVAL_ALLOW_LIVE_PI=1 \
@@ -102,7 +102,7 @@ Minimal manifest:
 }
 ```
 
-Relative paths in manifests are resolved from the manifest directory. This includes `skill.path`, `legacy_evals`, `custom_grader`, and copy fixtures.
+Relative manifest paths resolve from the manifest directory, including `skill.path`, `legacy_evals`, `custom_grader`, and copy fixtures.
 
 ## Suites
 
@@ -110,8 +110,8 @@ Current runner support:
 
 - `workflow`: executable; tests behavior when the skill is intentionally available.
 - `regression`: executable; known-fixed real failures that should stay passing.
-- `trigger`: representable but not executed by the current runner.
-- `capability`: representable but not executed by the current runner.
+- `trigger`: representable; not executed by the current runner.
+- `capability`: representable; not executed by the current runner.
 
 For workflow suites, compare:
 
@@ -120,7 +120,7 @@ For workflow suites, compare:
 
 ## Checks and graders
 
-Prefer deterministic checks. Built-in check types include:
+Prefer deterministic checks. Built-in types include:
 
 - `required_content`
 - `forbidden_content`
@@ -128,7 +128,7 @@ Prefer deterministic checks. Built-in check types include:
 - `json_field_equals`
 - `non_empty_response`
 
-Use a skill-local `evals/grader.py` only when generic checks cannot express the domain contract. A custom grader should expose:
+Use skill-local `evals/grader.py` only when generic checks cannot express the domain contract. A custom grader should expose:
 
 ```python
 def grade(response, case=None, context=None):
@@ -193,7 +193,7 @@ python3 -m tools.skill_eval promote-regressions \
   --source-bead <bead-id>
 ```
 
-Only promote failed, non-skipped, real runs that represent actual skill behavior problems. Do not promote synthetic smoke failures, skipped runs, process timeouts, or grader false positives as canonical regressions.
+Promote only failed, non-skipped, real runs that represent actual skill behavior problems. Do not promote synthetic smoke failures, skipped runs, process timeouts, or grader false positives as canonical regressions.
 
 ## Expectations for new or changed skills
 
