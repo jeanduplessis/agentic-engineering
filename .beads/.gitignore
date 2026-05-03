@@ -9,6 +9,16 @@ sync-state.json
 last-touched
 .exclusive-lock
 
+# br runtime files (local-only)
+beads.db
+beads.db-*
+*.db-wal
+*.db-shm
+.write.lock
+.br_history/
+.br_recovery/
+interactions.jsonl
+
 # Daemon runtime (lock, log, pid)
 daemon.*
 
