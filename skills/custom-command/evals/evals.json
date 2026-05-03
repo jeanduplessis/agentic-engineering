@@ -3,15 +3,15 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Create a slash command called fix-tests that I can use in both OpenCode and Pi. It should run the relevant test suite, diagnose failures, make the smallest safe fix, and rerun tests. I want to be able to pass an optional test command or focus area.\n\nEval contract: You may either return the complete Markdown command contents or write the command file in the sandbox. If you write a file, summarize the path and include any OpenCode/Pi install or copy paths in your response.",
-      "expected_output": "A complete portable Markdown command file for fix-tests, plus OpenCode and Pi install paths and a compatibility note.",
+      "prompt": "Create a Pi slash command called fix-tests. It should run the relevant test suite, diagnose failures, make the smallest safe fix, and rerun tests. I want to pass an optional test command or focus area.\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox. If you write a file, summarize the path and include Pi install or discovery paths in your response.",
+      "expected_output": "A complete Pi Markdown prompt template for fix-tests, plus Pi install/discovery paths and a validation note.",
       "files": [],
       "expectations": [
         "The recommended filename is flat, kebab-case, and ends with .md.",
-        "The command uses valid YAML frontmatter with a description field.",
-        "The core prompt uses $ARGUMENTS rather than OpenCode shell injection.",
-        "The output does not rely on agent, model, or subtask frontmatter for correct behavior.",
-        "The output includes install paths for both OpenCode and Pi."
+        "The command uses valid scalar YAML frontmatter with a description field.",
+        "The prompt uses $ARGUMENTS for the optional test command or focus area.",
+        "The output does not rely on unsupported behavior frontmatter such as agent, model, or subtask.",
+        "The output includes Pi install or discovery paths."
       ],
       "checks": [
         {
@@ -22,17 +22,16 @@
     },
     {
       "id": 2,
-      "prompt": "Please audit this OpenCode command and rewrite it so the same file will work in Pi too. The shared command must accept an optional coverage command or focus area from the user via portable arguments, so include `$ARGUMENTS` in the rewritten command body and explain how it is interpreted:\n\n```md\n---\ndescription: Analyze coverage\nagent: build\nmodel: anthropic/claude-3-5-sonnet-20241022\n---\n\nHere are the current test results:\n!`npm test -- --coverage`\n\nBased on these results, suggest improvements to increase coverage.\n```\n\nEval contract: You may either return the complete Markdown command contents or write the command file in the sandbox. If you write a file, summarize the path and include any OpenCode/Pi install or copy paths in your response.",
-      "expected_output": "A compatibility audit explaining the non-portable parts and a rewritten shared command that preserves the core coverage-analysis behavior, accepts an optional coverage command or focus area through `$ARGUMENTS`, and avoids OpenCode-only execution features.",
+      "prompt": "Please audit this legacy command and rewrite it as a Pi prompt template. The Pi command must accept an optional coverage command or focus area from the user via `$ARGUMENTS` and explain how it is interpreted:\n\n```md\n---\ndescription: Analyze coverage\nagent: build\nmodel: legacy-provider/legacy-model\n---\n\nHere are the current test results:\n!`npm test -- --coverage`\n\nBased on these results, suggest improvements to increase coverage.\n```\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox. If you write a file, summarize the path and include Pi install or discovery paths in your response.",
+      "expected_output": "A migration audit explaining the unsupported legacy parts and a rewritten Pi prompt template that preserves coverage-analysis behavior, accepts an optional coverage command or focus area through `$ARGUMENTS`, and avoids pre-expanded shell output.",
       "files": [],
       "expectations": [
-        "The audit identifies agent and model as OpenCode-specific behavior-changing frontmatter.",
-        "The audit identifies !`...` shell output injection as non-portable core behavior.",
+        "The audit identifies agent and model as unsupported frontmatter for normal Pi prompt templates.",
+        "The audit identifies !`...` shell output interpolation as unsupported legacy pre-expansion.",
         "The rewritten command asks the agent to run or infer the coverage command instead of embedding !`...`.",
         "The rewritten command accepts an optional coverage command or focus area through $ARGUMENTS.",
         "The rewritten command explains how to interpret $ARGUMENTS when present and what default coverage command to use when absent.",
-        "The rewritten command keeps the same core purpose: analyze coverage and suggest improvements.",
-        "Any retained non-core metadata is clearly labeled as graceful degradation or removed."
+        "The rewritten command keeps the same core purpose: analyze coverage and suggest improvements."
       ],
       "checks": [
         {
@@ -43,15 +42,15 @@
     },
     {
       "id": 3,
-      "prompt": "Make me a cross-agent command named pr-review. Usage should be `/pr-review <PR-URL> [extra instructions]`. It should review the PR with focus on bugs, tests, security, and maintainability. If the args are ambiguous it should ask a brief clarification.\n\nEval contract: You may either return the complete Markdown command contents or write the command file in the sandbox. If you write a file, summarize the path and include any OpenCode/Pi install or copy paths in your response.",
-      "expected_output": "A portable pr-review Markdown command that handles a PR URL and optional freeform instructions without relying on incompatible positional parsing.",
+      "prompt": "Make a Pi command named pr-review. Usage should be `/pr-review <PR-URL> [extra instructions]`. It should review the PR with focus on bugs, tests, security, and maintainability. Use Pi argument placeholders so the PR URL is the first argument and the remaining words are extra instructions. If the args are ambiguous it should ask a brief clarification.\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox. If you write a file, summarize the path and include Pi install or discovery paths in your response.",
+      "expected_output": "A Pi pr-review Markdown prompt template that handles a PR URL with $1 and optional freeform instructions with Pi slicing.",
       "files": [],
       "expectations": [
-        "The command uses $ARGUMENTS for the PR URL plus optional freeform instructions.",
-        "The prompt tells the agent how to interpret `<PR-URL> [extra instructions]` from the argument string.",
+        "The command uses $1 for the PR URL.",
+        "The command uses ${@:2} or equivalent Pi-supported slicing for optional freeform instructions.",
         "The prompt includes a concise clarification path for ambiguous arguments.",
-        "The output avoids Pi-only slicing placeholders such as $@ or ${@:N}.",
-        "The output avoids OpenCode-only behavior-changing fields such as agent, model, or subtask."
+        "The output uses Pi-supported frontmatter only.",
+        "The output includes Pi install or discovery paths."
       ],
       "checks": [
         {
@@ -62,15 +61,15 @@
     },
     {
       "id": 4,
-      "prompt": "I want one command file for OpenCode and Pi called review-file. It should review a file path I pass in for performance issues. Can we use @src/foo.ts in the body so it auto-includes the file?\n\nEval contract: You may either return the complete Markdown command contents or write the command file in the sandbox. If you write a file, summarize the path and include any OpenCode/Pi install or copy paths in your response.",
-      "expected_output": "A review-file command that explains why @file inclusion should not be required for core behavior, and instead accepts the target file path via arguments.",
+      "prompt": "I want a Pi command called review-file. It should review a file path I pass in for performance issues. Can we use @src/foo.ts in the body so it auto-includes the file?\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox. If you write a file, summarize the path and include Pi install or discovery paths in your response.",
+      "expected_output": "A review-file Pi prompt template that explains why @file inclusion should not be required for template behavior, and instead accepts the target file path via arguments.",
       "files": [],
       "expectations": [
-        "The response explains that @path file inclusion is not a portable template feature for core behavior.",
-        "The command accepts the file path through $ARGUMENTS.",
+        "The response explains that @path file inclusion should not be required for core Pi prompt-template behavior.",
+        "The command accepts the file path through $1 or $ARGUMENTS.",
         "The prompt instructs the agent to read the supplied path before reviewing it.",
-        "The core review behavior remains the same in both agents.",
-        "The compatibility note distinguishes graceful convenience from required behavior."
+        "The core review behavior remains explicit in the prompt body.",
+        "The output includes Pi install or discovery paths."
       ],
       "checks": [
         {
@@ -81,15 +80,15 @@
     },
     {
       "id": 5,
-      "prompt": "Convert this Pi prompt template into a shared OpenCode/Pi command. I don't want any behavioral differences.\n\n```md\n---\ndescription: Scaffold a React component\nargument-hint: \"<name> [features...]\"\n---\n\nCreate a React component named $1 with features: ${@:2}\n```\n\nEval contract: You may either return the complete Markdown command contents or write the command file in the sandbox. If you write a file, summarize the path and include any OpenCode/Pi install or copy paths in your response.",
-      "expected_output": "A converted shared command that preserves the component-scaffolding intent while replacing Pi-only argument slicing with portable argument handling.",
+      "prompt": "Audit this Pi prompt template. Keep it Pi-native and preserve its fixed first argument plus freeform tail semantics.\n\n```md\n---\ndescription: Scaffold a React component\nargument-hint: \"<name> [features...]\"\n---\n\nCreate a React component named $1 with features: ${@:2}\n```\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox. If you write a file, summarize the path and include Pi install or discovery paths in your response.",
+      "expected_output": "A Pi-native audit or revised template that preserves $1 for the component name and Pi slicing for the feature tail.",
       "files": [],
       "expectations": [
-        "The response identifies ${@:2} as Pi-only and not safe for behavior-identical sharing.",
-        "The converted command uses $ARGUMENTS instead of Pi-only slicing.",
-        "The prompt explains how to infer the component name and features from the argument string.",
-        "argument-hint is either retained only as harmless UI help or omitted with explanation.",
-        "The output includes a compatibility note confirming there are no required agent-specific behaviors."
+        "The response treats $1 as a Pi-supported positional argument.",
+        "The response treats ${@:2} as Pi-supported slicing.",
+        "The command preserves fixed first argument plus freeform tail semantics.",
+        "argument-hint is retained as Pi autocomplete help.",
+        "The output includes Pi install or discovery paths if returning an installable template."
       ],
       "checks": [
         {

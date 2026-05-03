@@ -15,7 +15,7 @@
       "cases": [
         {
           "id": "chat-premortem-report",
-          "prompt": "Run a premortem in chat only; do not create files. Plan: launch a $297 live online workshop that teaches Claude workflows to marketing managers at companies with 10-50 employees. Audience: marketing managers who need practical AI workflows for campaign planning and reporting. Success: sell 50 seats, get strong testimonials from team managers, and use the workshop to validate demand for future cohorts.",
+          "prompt": "Run a premortem in chat only; do not create files. Plan: launch a $297 live online workshop that teaches Pi workflows to marketing managers at companies with 10-50 employees. Audience: marketing managers who need practical AI workflows for campaign planning and reporting. Success: sell 50 seats, get strong testimonials from team managers, and use the workshop to validate demand for future cohorts.",
           "checks": [
             {
               "id": "non-empty-response",

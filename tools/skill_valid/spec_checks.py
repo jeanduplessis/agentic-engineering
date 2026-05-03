@@ -11,8 +11,7 @@ MAX_SKILL_NAME_LENGTH = 64
 MAX_DESCRIPTION_LENGTH = 1024
 MAX_COMPATIBILITY_LENGTH = 500
 MAX_BODY_LINES = 500
-ALLOWED_FIELDS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
-RESERVED_NAME_WORDS = {"anthropic", "claude"}
+ALLOWED_FIELDS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools", "disable-model-invocation"}
 
 
 @dataclass(frozen=True)
@@ -26,11 +25,12 @@ class SpecCheck:
 
 
 def run_skill_spec_checks(skill_dir: Path) -> list[SpecCheck]:
-    """Run deterministic Agent Skills spec and portability checks.
+    """Run deterministic Pi skill compatibility checks.
 
-    Checks marked ``failed`` are exact spec/portability violations. Checks marked
-    ``warn`` are deterministic best-practice concerns that may reduce skill
-    reliability but should not block live behavioral gates by themselves.
+    Checks marked ``failed`` are Pi loadability or repo contract violations.
+    Checks marked ``warn`` are deterministic best-practice concerns that may
+    reduce skill reliability but should not block live behavioral gates by
+    themselves.
     """
     skill_dir = Path(skill_dir)
     skill_file = skill_dir / "SKILL.md"
@@ -207,7 +207,7 @@ def _check_frontmatter_fields(metadata: dict[str, Any]) -> list[SpecCheck]:
     if extra:
         checks.append(SpecCheck("frontmatter.allowed-fields", "failed", f"Unexpected frontmatter field(s): {', '.join(extra)}."))
     else:
-        checks.append(SpecCheck("frontmatter.allowed-fields", "passed", "Frontmatter uses only Agent Skills fields."))
+        checks.append(SpecCheck("frontmatter.allowed-fields", "passed", "Frontmatter uses only Pi-supported skill fields."))
     for required in ("name", "description"):
         if required in metadata:
             checks.append(SpecCheck(f"frontmatter.{required}.present", "passed", f"Required field {required!r} is present."))
@@ -252,12 +252,6 @@ def _check_name(value: Any, directory_name: str) -> list[SpecCheck]:
     else:
         checks.append(SpecCheck("name.no-xml", "passed", "Skill name contains no XML tags."))
 
-    lowered_parts = set(re.split(r"-+", name.lower()))
-    reserved = sorted(lowered_parts & RESERVED_NAME_WORDS)
-    if reserved:
-        checks.append(SpecCheck("name.reserved-words", "failed", f"Skill name contains Claude-reserved word(s): {', '.join(reserved)}."))
-    else:
-        checks.append(SpecCheck("name.reserved-words", "passed", "Skill name avoids Claude-reserved words."))
     return checks
 
 
@@ -332,11 +326,18 @@ def _check_optional_fields(metadata: dict[str, Any]) -> list[SpecCheck]:
     if "allowed-tools" in metadata:
         value = metadata["allowed-tools"]
         if isinstance(value, str) and value.strip():
-            checks.append(SpecCheck("allowed-tools.format", "passed", "allowed-tools is a space-separated string."))
+            checks.append(SpecCheck("allowed-tools.format", "passed", "allowed-tools is a space-delimited string."))
         elif isinstance(value, list) and value:
-            checks.append(SpecCheck("allowed-tools.format", "warn", "allowed-tools as a YAML list is agent-specific; agentskills.io specifies a space-separated string."))
+            checks.append(SpecCheck("allowed-tools.format", "warn", "Pi documents allowed-tools as a space-delimited string; list form may not behave as intended."))
         else:
-            checks.append(SpecCheck("allowed-tools.format", "failed", "allowed-tools must be a non-empty space-separated string if present."))
+            checks.append(SpecCheck("allowed-tools.format", "failed", "allowed-tools must be a non-empty space-delimited string if present."))
+
+    if "disable-model-invocation" in metadata:
+        value = metadata["disable-model-invocation"]
+        if isinstance(value, bool):
+            checks.append(SpecCheck("disable-model-invocation.type", "passed", "disable-model-invocation is a boolean."))
+        else:
+            checks.append(SpecCheck("disable-model-invocation.type", "failed", "disable-model-invocation must be true or false when present."))
     return checks
 
 

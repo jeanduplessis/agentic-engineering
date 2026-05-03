@@ -21,8 +21,8 @@
   online check.
 
 - **Skill Spec Gate**: The deterministic **Cheap Gate** keyed `skill_spec` that parses `SKILL.md` and checks
-  exact Agent Skills spec, Claude compatibility, resource-reference, and portability rules before live review.
-  Avoid aliases: Static skill lint, spec validator.
+  Pi skill compatibility, resource references, and repo-contract rules before live review. Avoid aliases: Static
+  skill lint, spec validator.
 
 - **Prerequisite Accumulation**: The validation policy of checking all deterministic prerequisite gates before
   live work so one result can report multiple missing requirements. Avoid aliases: Bulk lint, exhaustive
@@ -117,7 +117,7 @@
 
 - **Prerequisite Accumulation** reports deterministic missing requirements together before any live Pi/model call.
 
-- The **Skill Spec Gate** owns deterministic SKILL.md spec/resource validation; the **Validate-Skills Gate** owns qualitative judgment after live opt-in.
+- The **Skill Spec Gate** owns deterministic Pi SKILL.md compatibility/resource validation; the **Validate-Skills Gate** owns qualitative judgment after live opt-in.
 
 - The **LLM Optimal Check Gate** analyzes only `SKILL.md` in v1; `warn` is non-blocking, while `fail` and tool errors block live gates.
 

@@ -74,5 +74,5 @@ on common choices (Space Grotesk, for example) across generations.
 with extensive animations and effects. Minimalist or refined designs need restraint, precision, and careful
 attention to spacing, typography, and subtle details. Elegance comes from executing the vision well.
 
-Remember: Claude is capable of extraordinary creative work. Don't hold back, show what can truly be created
+Remember: Pi agents are capable of extraordinary creative work. Don't hold back, show what can truly be created
 when thinking outside the box and committing fully to a distinctive vision.

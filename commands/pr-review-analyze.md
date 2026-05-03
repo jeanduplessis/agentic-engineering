@@ -1,16 +1,24 @@
 ---
-description: Analyze the review comments on a PR
-agent: general
+description: "Analyze the review comments on a PR"
+argument-hint: "[PR URL]"
 ---
 
 ## Context
 
-- GitHub PR: !`gh pr view --json url --jq '.url'`
+- GitHub PR argument: $ARGUMENTS
 - Code reviewer: `kilo-code-bot`
+
+If no PR URL is supplied, run this command to resolve the current branch's PR URL:
+
+```bash
+gh pr view --json url --jq '.url'
+```
+
+If the PR URL is absent or ambiguous after resolution, ask one concise clarification and stop.
 
 ## Task
 
-Use the gh-pr-review skill with @general to address code-reviewer PR comments. Execute steps in order.
+Use the `gh-pr-review` skill to address code-reviewer PR comments. Execute steps in order.
 
 ### Step 1: Gather prior-run context
 

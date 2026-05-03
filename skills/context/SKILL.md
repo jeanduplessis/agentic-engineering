@@ -14,7 +14,7 @@ Create or update `CONTEXT.md`: the repo's agent-facing domain language and conte
 - Use the current conversation as the primary source.
 - If `CONTEXT.md` exists, read it first and preserve stable canonical terms unless the conversation clearly supersedes them.
 - If legacy `AGENT_LEXICON.md` exists, read it as migration input and write the updated contract to `CONTEXT.md`.
-- If upstream-style `CONTEXT-MAP.md` exists, read it and any referenced `CONTEXT.md` files as migration/input context.
+- If legacy `CONTEXT-MAP.md` exists, read it and any referenced `CONTEXT.md` files as migration/input context.
 - If relevant ADRs exist in `docs/adr/`, read only those that constrain terminology, ownership, boundaries, or agent behavior.
 
 ### Extract
@@ -52,7 +52,7 @@ Capture only context that affects agent behavior, interpretation, naming, or exe
 ### `CONTEXT.md`
 
 Local source of truth for agent-facing domain language, contexts, ownership boundaries, ambiguity decisions, and naming rules.
-It replaces the upstream-style `CONTEXT.md` / `CONTEXT-MAP.md` split locally.
+It replaces the legacy `CONTEXT.md` / `CONTEXT-MAP.md` split locally.
 
 ### `AGENTS.md`
 

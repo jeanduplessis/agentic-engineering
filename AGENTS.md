@@ -1,30 +1,20 @@
-# AGENTS.md — shared agent tooling context
+# AGENTS.md — Pi agent resource context
 
-This repository (`~/.agents`) is a shared home for agentic coding harness resources: installable skills,
-reusable custom commands/prompts, and repo-level tooling that supports skill validation and evaluation.
+This repository (`~/.agents`) is a local Pi resource package: downstream-owned skills,
+Pi prompt templates, system-prompt fragments, and repo-level validation/eval tooling.
 
-## Compatibility goals
-
-Aim for portable behavior across:
-
-1. Common public conventions, especially the Agent Skills specification: https://agentskills.io/specification
-
-2. OpenCode: https://opencode.ai/docs/
-
-3. Pi: https://pi.dev/docs
-
-When compatibility conflicts arise, prefer the smallest shared subset and document any agent-specific behavior
-explicitly in the file or directory that needs it.
+Pi is the only supported harness target. Optimize tracked resources for Pi behavior and vocabulary.
+Do not preserve compatibility with non-Pi harnesses except where required for license or provenance text.
 
 ## Directory map
 
-- `skills/` — installable agent skills. Read `skills/AGENTS.md` before adding or changing skills.
+- `skills/` — downstream-owned Pi skills. Read `skills/AGENTS.md` before adding or changing skills.
 
-- `commands/` — Markdown custom commands intended to stay broadly compatible across supported agents.
+- `commands/` — Pi Markdown prompt templates exposed as slash commands via `package.json` `pi.prompts`.
 
-- `prompts/` — reusable prompt/system fragments.
+- `prompts/` — system-prompt resources only. `prompts/APPEND_SYSTEM.md` is the repo-owned append-system fragment and is not a slash command.
 
-- `tools/` — Python tooling for token counting, LLM-optimization checks, skill evals, and skill validation.
+- `tools/` — Python tooling for token counting, LLM-optimization checks, Pi skill evals, and Pi skill validation.
   Read `tools/AGENTS.md` and any tool-local `AGENTS.md` before editing.
 
 - `.beads/` — local beads task state; do not hand-edit unless you are intentionally maintaining task metadata.
@@ -33,7 +23,7 @@ explicitly in the file or directory that needs it.
 
 - Keep LLM-facing Markdown concise, explicit, and easy to execute. Avoid clever indirection when direct instructions work.
 
-- Preserve cross-agent portability for skills, commands, and prompts unless the user specifically asks for an agent-specific feature.
+- Prefer Pi package, skill, prompt-template, context-file, and system-prompt terminology.
 
 - Prefer repo-level shared tools over one-off scripts. If a public tool contract changes, update its README, `AGENTS.md`, and tests together.
 

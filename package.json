@@ -1,0 +1,11 @@
+{
+  "name": "agents-pi-resources",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local Pi skills and prompt templates.",
+  "keywords": ["pi-package"],
+  "pi": {
+    "skills": ["skills"],
+    "prompts": ["commands/*.md"]
+  }
+}

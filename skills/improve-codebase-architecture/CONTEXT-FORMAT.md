@@ -1,6 +1,6 @@
 # CONTEXT.md Format
 
-`CONTEXT.md` is the local agent-facing domain language/context map. It replaces the upstream `CONTEXT.md` / `CONTEXT-MAP.md` split for local skills.
+`CONTEXT.md` is the local agent-facing domain language/context map. It replaces the legacy `CONTEXT.md` / `CONTEXT-MAP.md` split for local skills.
 
 ## Structure
 
@@ -76,6 +76,6 @@ If the repo has one context, use one row.
 ## Compatibility
 
 - If `CONTEXT.md` exists, read it first.
-- If legacy/upstream `CONTEXT-MAP.md` exists, read it and fold relevant ownership into `CONTEXT.md`.
+- If legacy `CONTEXT-MAP.md` exists, read it and fold relevant ownership into `CONTEXT.md`.
 - If legacy `AGENT_LEXICON.md` exists, read it as migration input; write updates to `CONTEXT.md`.
 - If none exists, create root `CONTEXT.md` lazily when resolving the first domain term, context boundary, or ambiguity.

@@ -288,6 +288,32 @@ class SkillValidTests(unittest.TestCase):
             self.assertEqual(len(calls["pi"]), 1)
             self.assertTrue(calls["eval"])
 
+    def test_skill_spec_accepts_pi_disable_model_invocation_and_non_reserved_names(self):
+        with self.make_repo() as (tmp, root):
+            target = self.write_valid_skill(root, name="pi-helper", regression=False)
+            (target / "SKILL.md").write_text(
+                "---\n"
+                "name: pi-helper\n"
+                "description: Use when a Pi user wants a hidden helper workflow.\n"
+                "disable-model-invocation: true\n"
+                "---\n"
+                "# Hidden helper\n"
+            )
+            deps, calls = self.passing_deps(
+                pi_stdout='review text\nSKILL_VALID_RESULT={"status":"passed","target":"skills/pi-helper","checks":[{"id":"spec","status":"passed","message":"ok"}]}\n'
+            )
+
+            code, result = validate_skill(ValidationOptions(target, repo_root=root, allow_live_pi=True), deps=deps)
+
+            self.assertEqual(code, 0)
+            self.assertTrue(result["valid"])
+            checks = result["gates"]["skill_spec"]["details"]["checks"]
+            check_map = {check["id"]: check for check in checks}
+            self.assertEqual(check_map["frontmatter.allowed-fields"]["status"], "passed")
+            self.assertEqual(check_map["disable-model-invocation.type"]["status"], "passed")
+            self.assertNotIn("name.reserved-words", check_map)
+            self.assertEqual(len(calls["pi"]), 1)
+
     def test_eval_manifest_structural_failures_fail_before_live_work(self):
         cases = []
 
@@ -497,8 +523,8 @@ class SkillValidTests(unittest.TestCase):
                     target,
                     repo_root=root,
                     allow_live_pi=True,
-                    provider="anthropic",
-                    model="claude-test",
+                    provider="openrouter",
+                    model="gpt-test",
                     thinking="low",
                 ),
                 deps=deps,
@@ -518,9 +544,9 @@ class SkillValidTests(unittest.TestCase):
             skill_arg = command[command.index("--skill") + 1]
             self.assertTrue(skill_arg.endswith("skills/validate-skills/SKILL.md"))
             self.assertIn("--provider", command)
-            self.assertIn("anthropic", command)
+            self.assertIn("openrouter", command)
             self.assertIn("--model", command)
-            self.assertIn("claude-test", command)
+            self.assertIn("gpt-test", command)
             self.assertIn("--thinking", command)
             self.assertIn("low", command)
             prompt = command[-1]

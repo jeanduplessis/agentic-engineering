@@ -27,6 +27,12 @@ before changing a tool's internals.
   AGENTS.md, `llm_optimal_check`, live opt-in, validate-skills, and live eval gates. Stdout is compact JSON.
   The shell wrapper renders a friendly human summary..
 
+- `tools.command_valid`: Purpose: Deterministic validation for one clean Pi extended command.. Primary CLI/API:
+  `python3 -m tools.command_valid <command-name> [--json]`; `validate_command(CommandValidationOptions)`.
+  Notes: Uses repo-root `commands/` by default; validates kebab/reserved names, direct `<name>.md` resolution,
+  scalar frontmatter, supported fields, valid `thinking`/`restore`, body placeholders/syntax, and declared
+  skill resolution; emits friendly stdout by default and compact JSON with `--json`; does not query live Pi state..
+
 ## Selection guide
 
 - Need exact token counts for a snippet or file content: use `tools.llm_token_count`.
@@ -34,6 +40,8 @@ before changing a tool's internals.
 - Need deterministic optimization findings for a prompt, command, or `SKILL.md`: use `tools.llm_optimal_check`.
 
 - Need behavior evidence from a skill-owned eval manifest: use `tools.skill_eval`.
+
+- Need to validate one Pi command name and direct command-file resolution: use `tools.command_valid`.
 
 - Need to decide whether a repo-local skill is valid: use `tools.skill_valid` or the friendly `tools/skill_valid/skill_validate.sh` wrapper.
 
@@ -56,6 +64,7 @@ before changing a tool's internals.
 Run focused tests after changing a tool:
 
 ```sh
+python3 -m unittest tools.command_valid.tests.test_command_valid -v
 python3 -m unittest tools.skill_eval.tests.test_llm_optimized_smell_test -v
 python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
 python3 -m unittest tools.skill_valid.tests.test_skill_validate_wrapper -v

@@ -31,7 +31,7 @@ Before running the premortem, gather enough context to answer:
 3. **What does success mean?** Define the hoped-for outcome so failure can be the inverse.
 
 First use context already available in the conversation, attached/referenced files, and obvious project docs:
-`AGENTS.md`, `CLAUDE.md`, README files, plans, briefs, or `memory/`.
+`AGENTS.md`, legacy context files, README files, plans, briefs, or `memory/`.
 Do a quick scan only; do not turn the task into research unless the user asks.
 
 If any of the three context items are missing, ask the single most important missing question, then re-check.

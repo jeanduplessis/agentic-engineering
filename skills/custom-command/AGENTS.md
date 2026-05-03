@@ -2,17 +2,23 @@
 
 ## Purpose
 
-Maintain `SKILL.md` as the portability guide for creating, porting, auditing, and editing Markdown slash commands/prompt templates for both OpenCode and Pi. Preserve behavior-identical shared commands; explicitly flag agent-specific features that would change core results.
+Maintain `SKILL.md` as the Pi prompt-template authoring and migration guide. Optimize for Pi slash commands, prompt-template discovery, argument placeholders, and legacy syntax cleanup.
 
 ## How the skill works
 
-`SKILL.md` defines the shared Markdown command shape, portable argument rules, frontmatter guidance, non-portable expansion warnings, naming rules, output template, checklist, and examples. Keep the default path on the shared subset: `description` frontmatter, Markdown body text, `$ARGUMENTS`, flat kebab-case `.md` filenames, and install paths for both agents.
+`SKILL.md` defines Pi template locations, frontmatter, argument placeholders, migration rules, naming rules, output format, checklist, and examples. Keep the default path Pi-native: `description`, optional `argument-hint`, Markdown body text, `$ARGUMENTS`/`$@`/`$1`/slicing, and flat kebab-case `.md` filenames.
 
 ## Eval and validation
 
-`evals/manifest.json` declares workflow, trigger, and capability suites. Workflow cases come from `evals/evals.json`; `evals/grader.py` grades them by checking portable filenames, frontmatter, `$ARGUMENTS`, absence of behavior-changing OpenCode frontmatter, absence of required shell/file expansion, and install-path guidance.
+`evals/manifest.json` declares workflow, trigger, and capability suites. Workflow cases come from `evals/evals.json`; `evals/grader.py` grades generated Pi templates for filenames, frontmatter, supported placeholders, absence of legacy pre-expansion, and Pi install/discovery guidance.
 
-Run the full local validity wrapper from the repo root only with live Pi/model execution approval:
+Run deterministic tests from the repo root after changes:
+
+```sh
+python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
+```
+
+Run the full local validity wrapper only with live Pi/model execution approval:
 
 ```sh
 ./tools/skill_valid/skill_validate.sh skills/custom-command
@@ -20,8 +26,8 @@ Run the full local validity wrapper from the repo root only with live Pi/model e
 
 ## Change guidelines
 
-- Preserve cross-agent portability as core contract; do not require OpenCode-only or Pi-only features for correct behavior in shared commands.
-- Update `evals/evals.json` and `evals/grader.py` when changing expected command output, portability rules, or compatibility checklist in `SKILL.md`.
+- Keep the skill Pi-only unless the repo-wide contract changes.
+- Update `evals/evals.json`, `evals/grader.py`, and `tools/skill_eval/tests/test_skill_eval.py` when changing expected prompt-template output, migration rules, or checklist behavior.
 - Keep `evals/manifest.json` aligned with the skill name and eval assets when adding or removing suites.
-- Keep examples behavior-identical across OpenCode and Pi unless clearly labeled as non-portable or graceful-degradation conveniences.
-- Prefer concise direct instructions to broad compatibility commentary agents cannot execute.
+- Keep examples Pi-native and executable without hidden pre-expansion.
+- Prefer concise direct instructions to broad commentary agents cannot execute.

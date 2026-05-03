@@ -6,7 +6,7 @@ Maintain `SKILL.md` as the workflow for creating and updating `CONTEXT.md`: the 
 
 ## How the skill works
 
-`SKILL.md` tells the assistant to scan conversation context, existing `CONTEXT.md`, legacy `AGENT_LEXICON.md`, upstream-style `CONTEXT-MAP.md`, and relevant ADRs for behaviorally important domain terms, context ownership, boundaries, relationships, synonyms, and overloaded terms. It rewrites `CONTEXT.md`, keeps ADRs separate but referenced, and adds a short `AGENTS.md` pointer when one exists.
+`SKILL.md` tells the assistant to scan conversation context, existing `CONTEXT.md`, legacy `AGENT_LEXICON.md`, legacy `CONTEXT-MAP.md`, and relevant ADRs for behaviorally important domain terms, context ownership, boundaries, relationships, synonyms, and overloaded terms. It rewrites `CONTEXT.md`, keeps ADRs separate but referenced, and adds a short `AGENTS.md` pointer when one exists.
 
 Preserve core behavior when editing: agent-facing definitions, opinionated canonical terms, avoided aliases, explicit ambiguity decisions, execution-relevant relationships, context ownership/boundary mapping, full rewrites on rerun, and a short `AGENTS.md` pointer without duplicating the context contract.
 
@@ -33,6 +33,6 @@ python3 -m tools.skill_valid skills/context --allow-live-pi
 - Keep `SKILL.md` compact and directly executable; avoid tutorial prose.
 - Keep `CONTEXT.md` agent-facing, not human-facing product docs or implementation docs.
 - Keep ADRs separate; reference them only when they constrain terminology, ownership, boundaries, or agent behavior.
-- Preserve compatibility migration from legacy `AGENT_LEXICON.md` and upstream-style `CONTEXT-MAP.md` inputs.
+- Preserve migration from legacy `AGENT_LEXICON.md` and `CONTEXT-MAP.md` inputs.
 - Update `evals/manifest.json` and `evals/grader.py` when the public artifact contract changes.
 - Keep eval checks deterministic and focused on externally visible artifacts, especially `CONTEXT.md` and the `AGENTS.md` domain-context pointer.

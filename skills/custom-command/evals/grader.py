@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 
-_DISALLOWED_FRONTMATTER = ("agent", "model", "subtask")
+_UNSUPPORTED_FRONTMATTER = ("agent", "model", "subtask")
 _EXPECTED_FILENAMES = {
     "1": "fix-tests.md",
     "3": "pr-review.md",
@@ -37,7 +37,7 @@ def grade(*, response: str, case: Any | None = None, context: dict[str, Any] | N
         "custom-command.filename",
         "custom_filename",
         filename_ok,
-        f"Filename {filename!r} is portable" if filename_ok else f"Filename {filename!r} is not the expected flat kebab-case Markdown filename",
+        f"Filename {filename!r} is flat kebab-case Markdown" if filename_ok else f"Filename {filename!r} is not the expected flat kebab-case Markdown filename",
         {"filename": filename, "expected": expected_filename},
     ))
 
@@ -56,59 +56,56 @@ def grade(*, response: str, case: Any | None = None, context: dict[str, Any] | N
         "custom-command.markdown_frontmatter",
         "custom_markdown_frontmatter",
         has_description,
-        "Markdown command frontmatter contains description" if has_description else "Missing markdown frontmatter description",
+        "Markdown frontmatter contains description" if has_description else "Missing markdown frontmatter description",
     ))
 
-    disallowed = [key for key in _DISALLOWED_FRONTMATTER if re.search(rf"^{key}\s*:", frontmatter or "", re.MULTILINE)]
+    unsupported = [key for key in _UNSUPPORTED_FRONTMATTER if re.search(rf"^{key}\s*:", frontmatter or "", re.MULTILINE)]
     checks.append(_check(
         "custom-command.no_behavior_frontmatter",
         "custom_markdown_frontmatter",
-        not disallowed,
-        "No behavior-changing OpenCode frontmatter" if not disallowed else f"Disallowed frontmatter: {', '.join(disallowed)}",
-        {"disallowed": disallowed},
+        not unsupported,
+        "No unsupported Pi prompt-template frontmatter" if not unsupported else f"Unsupported frontmatter: {', '.join(unsupported)}",
+        {"unsupported": unsupported},
     ))
 
-    uses_arguments = "$ARGUMENTS" in markdown
+    pi_argument = re.search(r"\$ARGUMENTS|\$@|\$\d+|\$\{@:\d+(?::\d+)?\}", markdown)
     checks.append(_check(
         "custom-command.arguments",
         "custom_arguments",
-        uses_arguments,
-        "Uses $ARGUMENTS" if uses_arguments else "Does not use $ARGUMENTS",
+        pi_argument is not None,
+        f"Uses Pi argument placeholder {pi_argument.group(0)}" if pi_argument else "Does not use a Pi argument placeholder",
     ))
 
-    shell_injection = re.search(r"!`[^`]+`", markdown)
+    shell_interpolation = re.search(r"!`[^`]+`", markdown)
     checks.append(_check(
-        "custom-command.no_required_shell_injection",
-        "custom_portability",
-        shell_injection is None,
-        "Does not require OpenCode shell injection" if shell_injection is None else "Requires OpenCode !`...` shell injection",
+        "custom-command.no_required_shell_interpolation",
+        "custom_pi_template",
+        shell_interpolation is None,
+        "Does not require legacy shell interpolation" if shell_interpolation is None else "Requires legacy !`...` shell interpolation",
     ))
 
     required_at_file = re.search(r"@(?:[\w./-]+)", markdown)
     checks.append(_check(
         "custom-command.no_required_at_file",
-        "custom_portability",
+        "custom_pi_template",
         required_at_file is None,
-        "Does not require @file template inclusion" if required_at_file is None else f"Requires @file inclusion: {required_at_file.group(0)}",
-    ))
-
-    slicing = re.search(r"\$1|\$@|\$\{@:", markdown)
-    checks.append(_check(
-        "custom-command.no_positional_slicing",
-        "custom_portability",
-        slicing is None,
-        "Does not use agent-specific positional slicing" if slicing is None else f"Uses non-portable slicing: {slicing.group(0)}",
+        "Does not require template @file inclusion" if required_at_file is None else f"Requires @file inclusion: {required_at_file.group(0)}",
     ))
 
     if str(getattr(case, "id", "")) == "1":
-        has_opencode = ".opencode/commands" in response or ".opencode/command" in response
-        has_pi = ".pi/prompts" in response or ".pi/prompt" in response
+        has_pi_path = any(token in response for token in (
+            "~/.pi/agent/prompts",
+            ".pi/prompts",
+            "pi.prompts",
+            "commands/fix-tests.md",
+            "commands/",
+        ))
         checks.append(_check(
             "custom-command.install_paths",
             "custom_install_paths",
-            has_opencode and has_pi,
-            "Includes OpenCode and Pi install paths" if has_opencode and has_pi else "Missing OpenCode or Pi install path",
-            {"opencode": has_opencode, "pi": has_pi},
+            has_pi_path,
+            "Includes Pi install/discovery path" if has_pi_path else "Missing Pi install/discovery path",
+            {"pi": has_pi_path},
         ))
 
     return checks

@@ -1,177 +1,111 @@
 ---
 name: custom-command
-description: Helps create Markdown slash commands/prompt templates that work compatibly in both OpenCode and Pi. Use this skill whenever the user asks to create, port, audit, or edit a custom command, prompt template, slash command, .opencode/commands file, .pi/prompts file, or one command file intended to run in both agents. It focuses on the shared safe subset and flags agent-specific features that would change core behavior.
+description: Create, port, audit, and edit Pi Markdown prompt templates and slash commands. Use when the user asks for a Pi prompt template, slash command, command file, prompt-template file, .pi/prompts file, global Pi prompt, package prompt entry, command migration, or prompt-template syntax audit. Focuses on Pi locations, frontmatter, argument placeholders, package discovery, and legacy syntax cleanup.
 ---
 
 # Custom Command
 
-OpenCode and Pi store commands differently but share a basic Markdown shape. Use the shared subset to preserve core behavior in both.
-Agent-specific features are acceptable only when they degrade gracefully and do not affect the command's essential result.
+Author Pi prompt templates: Markdown snippets invoked as slash commands. Filename stem becomes the slash command name.
 
 ## Goal
 
-Produce a command file copyable into both ecosystems:
+Produce Pi-native prompt templates for one of these locations:
 
-- OpenCode global: `~/.config/opencode/commands/<name>.md`
-- OpenCode project: `.opencode/commands/<name>.md`
-- Pi global: `~/.pi/agent/prompts/<name>.md`
-- Pi project: `.pi/prompts/<name>.md`
+- Global: `~/.pi/agent/prompts/<name>.md`
+- Project: `.pi/prompts/<name>.md`
+- Package conventional directory: `prompts/<name>.md`
+- Package manifest entry: `package.json` `pi.prompts`
+- This repo: `commands/<name>.md`, exposed by root `package.json` `pi.prompts`
+- CLI one-off: `pi --prompt-template <path>`
 
-If the user wants a file installed, ask which target(s) to write unless already specified.
+If the user wants a file installed and no target is specified, ask one concise clarification. For this repo, default to `commands/<name>.md`.
 
-## Compatibility contract
-
-Use this portable Markdown shape:
+## Pi template shape
 
 ```markdown
 ---
-description: Short description shown in command autocomplete
+description: "Short description shown in Pi autocomplete"
+argument-hint: "[optional args]"
 ---
 
-Prompt body here. Use $ARGUMENTS for user-provided input.
+Prompt body. User input: $ARGUMENTS
 ```
 
-Shared behavior:
+Rules:
 
-- Filename without `.md` becomes the slash command name.
-- YAML frontmatter is delimited by `---`.
-- Both support `description`.
-- The body becomes the prompt/template.
-- Both support `$ARGUMENTS`; it is the safest argument placeholder.
+- Use flat lowercase kebab-case filenames with `.md`.
+- Keep frontmatter scalar YAML.
+- `description` is optional in Pi but required for clean repo templates.
+- `argument-hint` is optional autocomplete help; use `<required>` and `[optional]` notation.
+- The body is the prompt Pi inserts/executes.
 
-## Safe default workflow
+## Arguments
 
-1. Identify command name, purpose, and whether it needs arguments.
-2. Use only shared behavior unless there is a clear reason not to.
-3. Prefer `$ARGUMENTS` for all user input.
-4. Avoid automatic shell output and file inclusion in shared templates.
-5. Make the prompt explicit enough that either agent can perform the same work with its normal tools.
-6. Validate strict YAML frontmatter.
-7. Provide install/copy paths for both agents.
+Pi prompt templates support:
 
-## Portable argument rules
+- `$1`, `$2`, ... positional arguments.
+- `$@` or `$ARGUMENTS` for all args joined.
+- `${@:N}` for args from position `N` onward, 1-indexed.
+- `${@:N:L}` for `L` args starting at position `N`.
 
-Prefer `$ARGUMENTS`:
+Guidance:
 
-```markdown
-Analyze this target and report risks: $ARGUMENTS
-```
+- Prefer `$ARGUMENTS` for freeform text, paths with spaces, or arbitrary tails.
+- Use `$1` only when the first argument has a fixed meaning.
+- Use `${@:2}` when `$1` is a required target and the rest are freeform notes.
+- State ambiguity behavior in the prompt: missing/ambiguous required args should trigger one concise clarification and stop.
 
-Use numbered placeholders only when the command has fixed, simple, usually single-token arguments and extra words should not be accepted.
-Pi treats `$1` as the first parsed argument. OpenCode's final numbered placeholder may absorb the remaining argument string.
-If a command takes freeform text, filenames with spaces, or an arbitrary tail, use `$ARGUMENTS` instead.
+## Pi-native workflow
 
-Avoid these in shared commands:
+1. Identify command name, purpose, target location, and argument contract.
+2. Choose placeholders: `$ARGUMENTS` by default; `$1`/slicing only for clear fixed positions.
+3. Write valid scalar frontmatter with `description` and optional `argument-hint`.
+4. Make the body executable by a Pi agent using normal tools; do not depend on pre-expanded shell output or file inclusion.
+5. Validate filename, frontmatter, placeholders, and install/discovery path.
+6. If writing the file, create/update the requested path and summarize it.
 
-- `$@` — Pi supports it; OpenCode does not document it.
-- `${@:N}` and `${@:N:L}` — Pi-only slicing.
-- Complex positional parsing where differences would change the result.
+## Legacy migration notes
 
-If the user asks for multiple arguments, design the prompt so `$ARGUMENTS` is acceptable, e.g.:
+When porting old command files to Pi:
 
-```markdown
-Use the arguments as: `<target> <mode> [notes...]`.
-Arguments: $ARGUMENTS
-
-Infer the target, mode, and notes from that argument string. If ambiguous, ask a concise clarification.
-```
-
-## Frontmatter rules
-
-Portable core frontmatter:
-
-```yaml
-description: "Review a pull request or diff"
-```
-
-Allowed only as graceful degradation:
-
-```yaml
-argument-hint: "<target> [notes]"
-```
-
-`argument-hint` is useful in Pi autocomplete and should be harmless elsewhere. Use it only as UI help; never rely on it for behavior.
-
-Avoid in shared files unless the user explicitly accepts OpenCode-specific behavior:
-
-```yaml
-agent: build
-model: anthropic/claude-3-5-sonnet-20241022
-subtask: true
-```
-
-These alter OpenCode execution and are ignored by Pi, so they can change core behavior across agents.
-If needed, create an OpenCode-specific variant or clearly label the file as not behavior-identical.
-
-When rewriting an existing agent-specific command into one shared file, remove `agent`, `model`, and `subtask` from emitted frontmatter.
-Do not only audit these fields and keep them in the rewritten shared command.
-If the user explicitly wants to preserve them, produce a separate OpenCode-specific variant instead of a behavior-identical shared file.
-
-YAML hygiene:
-
-- Quote values containing `:`, `{}`, `[]`, `#`, leading `<`, or other YAML-sensitive characters.
-- Keep frontmatter valid YAML; Pi is stricter than OpenCode's fallback parser.
-- Use simple scalar strings unless there is a strong reason for multiline YAML.
-
-## Avoid non-portable automatic expansion
-
-Do not rely on OpenCode-only expansions for core behavior:
-
-```markdown
-!`npm test`
-@src/file.ts
-```
-
-OpenCode can inject shell output with ``!`command` `` and include file references with `@path`.
-Pi does not document the same behavior inside prompt templates.
-If that context is required, tell the agent to perform the work:
-
-```markdown
-Run `npm test` and summarize failures. If tests fail, inspect the relevant files and propose fixes.
-```
-
-```markdown
-Read the file path supplied in the arguments, then review it for performance issues.
-Target: $ARGUMENTS
-```
-
-Agent-specific expansion may be acceptable only as extra convenience when the prompt still works correctly without it.
+- Remove unsupported frontmatter such as `agent`, `subtask`, and legacy model-routing fields unless a Pi-specific extension explicitly owns them.
+- Replace shell interpolation like ``!`npm test` `` with instructions to run the command.
+- Replace template file inclusion like `@src/file.ts` with instructions to read the supplied path.
+- Keep only Pi-supported frontmatter for normal prompt templates: `description` and `argument-hint`.
+- Preserve behavior by making implicit pre-expanded context explicit in the prompt body.
 
 ## File and naming rules
 
 - Use `.md` extension.
-- Prefer flat filenames (`review.md`, `fix-tests.md`) because Pi's default prompt discovery is non-recursive.
-- Avoid names that collide with built-in commands unless the user intentionally wants to override them.
-- Use lowercase kebab-case for portability and clarity.
-- If subdirectories are required, mention that Pi needs explicit prompt path configuration or a flattened copy.
+- Use flat lowercase kebab-case names: `fix-tests.md`, `pr-review.md`.
+- Avoid names that collide with Pi built-in slash commands unless the user intentionally overrides them.
+- Pi default prompt discovery is non-recursive. Use explicit settings/package entries for nested paths.
 
-## Output format when creating a command
+## Output format when creating a template
 
 Unless the user explicitly asks you to write or install files, return:
 
 1. Recommended filename.
 2. Complete Markdown contents.
-3. Install paths for OpenCode and Pi.
-4. Short compatibility note naming intentional graceful-degradation features.
+3. Pi install/discovery path(s).
+4. Short validation note naming placeholders and any migrated legacy syntax.
 
 If writing files directly, create the requested file(s), then summarize written paths.
 For returned Markdown commands with fenced code blocks, use a four-backtick outer fence so nested triple-backtick examples remain valid Markdown.
 
-## Compatibility review checklist
+## Pi prompt-template checklist
 
-Before finalizing, check:
-
-- [ ] The core prompt works if only `description`, body text, and `$ARGUMENTS` are interpreted.
-- [ ] No `agent`, `model`, or `subtask` is required for correct behavior.
-- [ ] No ``!`shell` `` output is required.
-- [ ] No `@file` inclusion is required.
-- [ ] Positional placeholders are absent or fixed-arity and safe.
-- [ ] YAML frontmatter is valid and quoted where needed.
-- [ ] Filename is flat, kebab-case, and `.md`.
+- [ ] Filename is flat lowercase kebab-case and ends with `.md`.
+- [ ] Frontmatter is valid scalar YAML.
+- [ ] Frontmatter uses only `description` and optional `argument-hint` for normal Pi templates.
+- [ ] The argument contract uses `$ARGUMENTS`, `$@`, `$1`, or Pi slicing deliberately.
+- [ ] Missing/ambiguous required arguments have a concise clarification path.
+- [ ] The body does not rely on legacy shell interpolation or template file inclusion.
+- [ ] The template is discoverable through a Pi prompt directory, package `pi.prompts`, settings, or CLI flag.
 
 ## Examples
 
-### Freeform command, fully portable
+### Freeform command
 
 Filename: `review-changes.md`
 
@@ -185,49 +119,39 @@ Review the requested changes.
 
 Scope or instructions: $ARGUMENTS
 
-Focus on:
-- Bugs and logic errors
-- Tests that should be added or updated
-- Security or data-loss risks
-- Maintainability concerns
-
 If no scope is provided, inspect the current working tree changes.
+Focus on bugs, missing tests, security risks, and maintainability concerns.
 ```
 
-Portable because `$ARGUMENTS` carries all user input and `argument-hint` is only UI help.
+### Fixed first argument plus freeform tail
 
-### Test command without OpenCode shell injection
-
-Filename: `fix-tests.md`
+Filename: `component.md`
 
 ```markdown
 ---
-description: "Run the test suite, diagnose failures, and propose or apply fixes"
-argument-hint: "[test command or focus area]"
+description: "Create a React component"
+argument-hint: "<name> [features...]"
 ---
 
-Run the relevant tests and diagnose failures.
+Create a React component named $1.
 
-User instructions: $ARGUMENTS
+Requested features: ${@:2}
 
-If no test command is provided, infer the project's standard test command from package/config files.
-Explain the failing behavior, make the smallest safe fix, and rerun the relevant tests.
+If the component name is missing or ambiguous, ask one concise clarification and stop.
 ```
 
-Portable because it asks the agent to run tests rather than relying on OpenCode's ``!`npm test` `` pre-expansion.
+### Legacy shell interpolation migrated to Pi instructions
 
-### Avoid: behavior differs by agent
+Before:
 
 ```markdown
----
-description: "Analyze coverage"
-agent: build
----
-
-Here is current coverage:
-!`npm test -- --coverage`
-
-Suggest improvements.
+Here are current test results:
+!`npm test`
 ```
 
-Not compatible: OpenCode changes execution agent and injects shell output while Pi sees a normal prompt template.
+After:
+
+```markdown
+Run `npm test`, summarize failures, make the smallest safe fix, and rerun the relevant tests.
+User focus: $ARGUMENTS
+```

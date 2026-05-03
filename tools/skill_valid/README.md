@@ -1,8 +1,8 @@
 # skill_valid
 
-`skill_valid` validates one repo-local skill through deterministic spec/resource gates, maintenance-doc gates,
-a deterministic LLM optimization-readiness gate, a live validate-skills qualitative review, and live behavior
-evals.
+`skill_valid` validates one repo-local Pi skill through deterministic Pi compatibility/resource gates,
+maintenance-doc gates, a deterministic LLM optimization-readiness gate, a live validate-skills qualitative review,
+and live behavior evals.
 
 ## Usage
 
@@ -27,8 +27,8 @@ Optional live execution overrides are applied to both live gates:
 ```sh
 python3 -m tools.skill_valid skills/<skill-name> \
   --allow-live-pi \
-  --provider anthropic \
-  --model claude-sonnet \
+  --provider openrouter \
+  --model gpt-5 \
   --thinking low
 ```
 
@@ -91,10 +91,11 @@ Exit code is `0` only when `valid` is `true`. Gate statuses are `passed`, `warn`
 
 2. `skill_spec` — parses `SKILL.md` without external dependencies.
 
-   - Runs deterministic Agent Skills spec, Claude compatibility, resource-reference, and portability checks.
-   - Spec violations fail.
+   - Runs deterministic Pi skill compatibility, resource-reference, and repo-contract checks.
+   - Pi loadability and repo-contract violations fail.
    - Deterministic best-practice concerns warn without blocking validity, such as weak trigger wording or
      list-form `allowed-tools`.
+   - Pi-supported fields include `disable-model-invocation`; obsolete harness-specific fields fail only when not part of Pi's documented skill metadata.
 
 3. `eval_manifest` — `evals/manifest.json` must load through `tools.skill_eval`, declare a non-empty
    `workflow` suite, align skill name/path with the target, define a Pi `with_skill` configuration with

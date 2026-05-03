@@ -29,4 +29,4 @@ The manifest has no copy fixtures, custom grader, or legacy eval assets.
 - Keep recommendations concrete and mapped to failure modes.
 - Update `evals/manifest.json` when required report sections or output defaults change.
 - Prefer deterministic manifest checks. Add a skill-local grader only if generic checks cannot express the contract.
-- Preserve cross-agent portability; avoid harness-specific instructions unless the repo-wide skill contract changes.
+- Preserve the repo-wide Pi-only contract; avoid non-Pi compatibility requirements.

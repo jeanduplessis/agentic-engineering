@@ -46,7 +46,7 @@ See [CONTEXT-FORMAT.md](CONTEXT-FORMAT.md) and [ADR-FORMAT.md](ADR-FORMAT.md).
 Read existing documentation first:
 
 - `CONTEXT.md`
-- Legacy/upstream `CONTEXT-MAP.md` only if present
+- Legacy `CONTEXT-MAP.md` only if present
 - Relevant ADRs in `docs/adr/` and any context-scoped `docs/adr/` directories
 
 If any files don't exist, proceed silently: don't flag absence or suggest creating them upfront.

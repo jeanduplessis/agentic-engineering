@@ -16,12 +16,14 @@ class SkillEvalSmokeTests(unittest.TestCase):
         evals = json.loads(Path("skills/custom-command/evals/evals.json").read_text())
         prompts = "\n".join(case["prompt"] for case in evals["evals"])
 
-        self.assertIn("Unless the user explicitly asks you to write or install files", skill)
-        self.assertIn("When rewriting an existing agent-specific command into one shared file", skill)
-        self.assertIn("remove `agent`, `model`, and `subtask` from the emitted frontmatter", skill)
-        self.assertIn("Do not merely mention these fields in the audit and then keep them", skill)
+        self.assertIn("Pi prompt templates", skill)
+        self.assertIn("$1", skill)
+        self.assertIn("$@", skill)
+        self.assertIn("$ARGUMENTS", skill)
+        self.assertIn("${@:N}", skill)
+        self.assertIn("Remove unsupported frontmatter such as `agent`, `subtask`, and legacy model-routing fields", skill)
         self.assertIn("four-backtick outer fence", skill)
-        self.assertIn("You may either return the complete Markdown command contents or write the command file", prompts)
+        self.assertIn("You may either return the complete Markdown prompt-template contents or write the command file", prompts)
         self.assertIn("If you write a file, summarize the path", prompts)
 
     def test_skill_eval_documentation_covers_real_workflow_and_caveats(self):
@@ -56,11 +58,12 @@ class SkillEvalSmokeTests(unittest.TestCase):
         self.assertEqual(len(suite.cases), 5)
         self.assertEqual(suite.cases[0].id, "1")
         self.assertIn("fix-tests", suite.cases[0].prompt)
-        self.assertIn("complete portable Markdown command", suite.cases[0].expected_output)
+        self.assertIn("complete Pi Markdown prompt template", suite.cases[0].expected_output)
         self.assertIn("$ARGUMENTS", "\n".join(suite.cases[0].expectations))
         self.assertIn("agent and model", "\n".join(suite.cases[1].expectations))
         self.assertIn("optional coverage command or focus area", suite.cases[1].prompt)
         self.assertIn("$ARGUMENTS", "\n".join(suite.cases[1].expectations))
+        self.assertIn("${@:2}", "\n".join(suite.cases[2].expectations))
 
     def test_eval_cases_keep_subjective_checks_separate_and_judge_is_optional(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -237,7 +240,7 @@ Run tests from: $ARGUMENTS
                 "Run tests and diagnose failures. User input: $ARGUMENTS\n"
             )
             grade = grade_response(
-                "Created fix-tests.md in the current directory. Install paths: .opencode/commands/fix-tests.md and .pi/prompts/fix-tests.md.",
+                "Created fix-tests.md in the current directory. Pi discovery paths: commands/fix-tests.md and .pi/prompts/fix-tests.md.",
                 case.checks,
                 custom_grader=str(Path("skills/custom-command/evals") / suite.custom_grader),
                 case=case,
@@ -306,7 +309,7 @@ description: "Run and fix tests"
 Run the relevant test suite. If the user supplied an optional test command or focus area in $ARGUMENTS, use that first. Diagnose failures, make the smallest safe fix, and rerun tests.
 ```
 
-Install it at `.opencode/commands/fix-tests.md` and `.pi/prompts/fix-tests.md`.
+Install it at `commands/fix-tests.md` or `.pi/prompts/fix-tests.md`.
 """
 
         grade = grade_response(
@@ -352,8 +355,8 @@ Install it at `.opencode/commands/fix-tests.md` and `.pi/prompts/fix-tests.md`.
             first_without = Path(tmp) / "results" / "custom-command" / "workflow" / "1" / "without_skill"
             self.assertTrue((first_with / "raw_output.json").exists())
             self.assertTrue((first_without / "raw_output.json").exists())
-            self.assertIn("complete portable Markdown command", (first_with / "response.md").read_text())
-            self.assertIn("Create a slash command", (first_without / "response.md").read_text())
+            self.assertIn("complete Pi Markdown prompt template", (first_with / "response.md").read_text())
+            self.assertIn("Create a Pi slash command", (first_without / "response.md").read_text())
             with_grade = json.loads((first_with / "grade.json").read_text())
             without_grade = json.loads((first_without / "grade.json").read_text())
             self.assertEqual(with_grade["judge"]["status"], "skipped")
@@ -388,7 +391,7 @@ Install it at `.opencode/commands/fix-tests.md` and `.pi/prompts/fix-tests.md`.
             raw = json.loads((first_with / "raw_output.json").read_text())
             self.assertEqual(raw["status"], "skipped")
             self.assertIn("live Pi execution is disabled", raw["skip_reason"])
-            self.assertNotIn("complete portable Markdown command", (first_with / "response.md").read_text())
+            self.assertNotIn("complete Pi Markdown prompt template", (first_with / "response.md").read_text())
 
     def test_custom_command_workflow_can_run_all_cases_through_fake_real_pi(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -420,17 +423,16 @@ Install it at `.opencode/commands/fix-tests.md` and `.pi/prompts/fix-tests.md`.
             first_without_response = (result_root / "custom-command" / "workflow" / "1" / "without_skill" / "response.md").read_text()
             self.assertIn("generated command artifact", first_with_response)
             self.assertIn("generated command artifact", first_without_response)
-            self.assertNotIn("complete portable Markdown command", first_with_response)
+            self.assertNotIn("complete Pi Markdown prompt template", first_with_response)
             self.assertNotEqual(first_without_response, load_manifest(Path("skills/custom-command/evals/manifest.json")).suite("workflow").cases[0].prompt)
 
     def test_manifest_represents_suite_purposes_and_trigger_is_explicitly_not_run(self):
         manifest = load_manifest(Path("skills/custom-command/evals/manifest.json"))
         suites = {suite.name: suite for suite in manifest.suites}
 
-        self.assertEqual({suite.type for suite in manifest.suites}, {"workflow", "trigger", "capability", "regression"})
+        self.assertEqual({suite.type for suite in manifest.suites}, {"workflow", "trigger", "capability"})
         self.assertTrue(suites["trigger"].cases[0].metadata["should_trigger"])
         self.assertFalse(suites["trigger"].cases[1].metadata["should_trigger"])
-        self.assertEqual(suites["regression"].cases[0].metadata["regression_from"], "agents-bf0")
 
         with tempfile.TemporaryDirectory() as tmp:
             summary = run_suite(Path("skills/custom-command/evals/manifest.json"), "trigger", Path(tmp) / "results")
@@ -607,7 +609,7 @@ Install it at `.opencode/commands/fix-tests.md` and `.pi/prompts/fix-tests.md`.
             self.assertIn("without_skill", benchmark["cases"]["1"]["configurations"])
             self.assertIn("custom-command / workflow", report)
             self.assertIn("Case 1", report)
-            self.assertIn("Create a slash command", report)
+            self.assertIn("Create a Pi slash command", report)
             self.assertIn("with_skill", report)
             self.assertIn("without_skill", report)
 

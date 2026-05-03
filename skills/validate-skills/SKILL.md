@@ -89,6 +89,6 @@ Use top-level `status: "passed"` only when every check in the sentinel passed.
 
 ## References
 
+- [Pi skills documentation](https://pi.dev/docs/skills)
 - [Agent Skills specification](https://agentskills.io/specification)
 - [Agent Skills best practices](https://agentskills.io/skill-creation/best-practices)
-- [Claude skill best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)

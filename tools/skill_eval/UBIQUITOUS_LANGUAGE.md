@@ -226,8 +226,7 @@
   canonical domain term; reserve `expectations` only as a legacy schema field until migrated.
 
 - "Runner", "framework", and "harness" were overloaded. Use **Skill Eval Framework** for the whole system,
-  **Central Runner** for the repo-owned executable, and "agent harness" only for external runtimes such as
-  Claude Code, Pi, OpenCode, or Daedalus.
+  **Central Runner** for the repo-owned executable, and **Pi Harness** for live Pi execution.
 
 - "Workspace", "sandbox", and "fixture" were blurred. Use **Sandbox** for the isolated per-run working area,
   **Fixture** for the starting state, and **Workspace Diff** for changes after execution.
