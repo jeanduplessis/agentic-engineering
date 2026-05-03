@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "premortem",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "chat-premortem-report",
+          "prompt": "Run a premortem in chat only; do not create files. Plan: launch a $297 live online workshop that teaches Claude workflows to marketing managers at companies with 10-50 employees. Audience: marketing managers who need practical AI workflows for campaign planning and reporting. Success: sell 50 seats, get strong testimonials from team managers, and use the workshop to validate demand for future cohorts.",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            },
+            {
+              "id": "most-likely-failure",
+              "type": "regex",
+              "pattern": "(?i)most likely failure"
+            },
+            {
+              "id": "hidden-assumption",
+              "type": "regex",
+              "pattern": "(?i)hidden assumption"
+            },
+            {
+              "id": "revised-plan",
+              "type": "regex",
+              "pattern": "(?i)revised plan"
+            },
+            {
+              "id": "pre-launch-checklist",
+              "type": "regex",
+              "pattern": "(?i)pre[- ]launch checklist"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}
