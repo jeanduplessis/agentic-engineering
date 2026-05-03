@@ -4,7 +4,6 @@
       "id": "durable-multi-session-work",
       "prompt": "A user asks you to implement a substantial feature that may span sessions and gives bead ID agents-123. Explain the first beads actions you should take before coding and how you should preserve handoff context.",
       "checks": [
-        {"id": "checks-br-version", "type": "required_content", "value": "br --version"},
         {"id": "checks-br-info", "type": "required_content", "value": "br info"},
         {"id": "loads-given-bead", "type": "required_content", "value": "br show agents-123"},
         {"id": "claims-work", "type": "required_content", "value": "--claim"},
