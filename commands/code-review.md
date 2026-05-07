@@ -1,6 +1,7 @@
 ---
 description: "Review current code changes and fix actionable findings"
 argument-hint: "[scope or instructions]"
+skill: code-review-workflow
 ---
 
 Review current changes or requested subset; fix actionable issues.

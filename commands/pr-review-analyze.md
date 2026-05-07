@@ -1,6 +1,7 @@
 ---
 description: "Analyze the review comments on a PR"
 argument-hint: "[PR URL]"
+skill: gh-pr-review
 ---
 
 ## Context

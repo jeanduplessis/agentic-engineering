@@ -1,16 +1,17 @@
 ---
 description: "Implement an epic bead's child tasks in dependency order using TDD"
 argument-hint: "<epic-bead-id> [instructions]"
+skill: tdd
 ---
 
-Orchestrate TDD implementation for an epic bead and descendants using `br`.
+Orchestrate TDD for an epic bead and descendants with `br`.
 
 Arguments: $ARGUMENTS
 
 ## Arguments
 
-- First argument must be the epic bead ID. If missing/ambiguous, ask one concise clarification and stop.
-- Treat the rest as implementation constraints/focus notes.
+- First arg must be the epic bead ID. If missing/ambiguous, ask one concise clarification and stop.
+- Treat remaining args as implementation constraints/focus notes.
 - Do not create an epic; work only under the supplied epic.
 
 ## Skills
@@ -31,18 +32,18 @@ br ready --parent <epic-id> --recursive --json
 br blocked --json
 ```
 
-If `br` is unavailable, no beads database exists, or the epic ID is invalid, report it and ask before changing setup.
+If `br` is unavailable, no beads database exists, or the epic ID is invalid, report and ask before changing setup.
 
-Confirm the bead is an epic or parent/container.
-Use direct children from `br dep list ... --direction up --type parent-child`.
-If it has no children, report no subtasks and stop.
+Confirm bead is an epic or parent/container.
+Get direct children from `br dep list ... --direction up --type parent-child`.
+If no children, report no subtasks and stop.
 
 ## 2. Queue
 
-Use br as the ordering source:
+Use `br` as ordering source:
 
 - Scope: descendant tasks under the epic, excluding closed children.
-- Prefer `br ready --parent <epic-id> --recursive --json`; ready = open, unblocked, and not deferred.
+- Prefer `br ready --parent <epic-id> --recursive --json`; ready = open, unblocked, not deferred.
 - Sort ready work by priority, dependency order, then oldest created.
 - Never start a child with unclosed blockers.
 - If no child is ready and open children remain:
@@ -50,7 +51,7 @@ Use br as the ordering source:
   - intersect blocked IDs with epic descendants from `br dep tree <epic-id> --direction up --json`;
   - report blocked children and stop.
 
-Before coding, append orchestration context as a comment:
+Before coding, add orchestration context comment:
 
 ```bash
 br comments add <epic-id> --message "ORCHESTRATION: starting TDD pass. READY: <ids>. BLOCKED: <ids>. NOTES: <user constraints>." --json
@@ -66,14 +67,14 @@ Repeat until every descendant child is closed or all remaining work is blocked:
    br ready --parent <epic-id> --recursive --json
    br blocked --json
    ```
-2. Pick the next ready child by queue rules.
+2. Pick next ready child by queue rules.
 
 3. Inspect and claim:
    ```bash
    br show <child-id> --json
    br update <child-id> --claim --json
    ```
-4. Implement using `tdd`:
+4. Implement with `tdd`:
 
    - Derive public interface and test behavior from bead description, acceptance criteria, project docs, and codebase.
    - If behavior/interface is ambiguous, ask before implementing that child.
@@ -120,8 +121,7 @@ Repeat until every descendant child is closed or all remaining work is blocked:
 ## 4. Blockers and failures
 
 - Test needs scope change to turn green: record the red state in child notes and stop.
-- Missing requirements, external dependency, or unrelated failing test: record the blocker.
-  Continue only if another child is ready.
+- Missing requirements, external dependency, or unrelated failing test: record the blocker. Continue only if another child is ready.
 - Unrelated validation failure: record the failure and create a `discovered-from:<child-id>` follow-up unless project guidance says fix it now.
 - Do not close:
   - a child with failing relevant tests;
@@ -139,7 +139,7 @@ br epic status --json
 br epic close-eligible --dry-run --json
 ```
 
-Close the epic only if br reports it eligible or all children are closed:
+Close the epic only if `br` reports it eligible or all children are closed:
 
 ```bash
 br close <epic-id> --reason "Implemented all child tasks with TDD. Final validation: <commands>." --json

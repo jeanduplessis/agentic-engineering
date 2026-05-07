@@ -1,6 +1,7 @@
 ---
 description: "Flesh out an idea, file, or the current conversation through focused decision questions"
 argument-hint: "[file path | idea | current conversation]"
+skill: flesh-out
 ---
 
 Strictly follow `flesh-out` skill for <context-target>$ARGUMENTS</context-target>.

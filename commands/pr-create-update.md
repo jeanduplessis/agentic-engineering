@@ -1,6 +1,7 @@
 ---
 description: "Create or update a GitHub pull request using the pr-create skill"
 argument-hint: "[draft] [rebase first] [focus/instructions]"
+skill: pr-create
 ---
 
 Use `pr-create` to create/update the current branch's GitHub PR.
