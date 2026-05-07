@@ -9,63 +9,211 @@
       "name": "workflow",
       "type": "workflow",
       "mode": "forced",
-      "fixture": {"type": "empty"},
+      "fixture": {
+        "type": "empty"
+      },
       "cases": [
         {
           "id": "batch-confirmation-contract",
           "prompt": "Using the llm-optimized-rewrite workflow, describe the confirmation choices for a repeated low-risk edit batch without editing files. Include the exact compact option string Y/N/E/O/S and mention token delta.",
           "checks": [
-            {"id": "mentions-option-string", "type": "required_content", "value": "Y/N/E/O/S"},
-            {"id": "mentions-token-delta", "type": "regex", "pattern": "(?i)token\\s+delta"}
+            {
+              "id": "mentions-option-string",
+              "type": "required_content",
+              "value": "Y/N/E/O/S"
+            },
+            {
+              "id": "mentions-token-delta",
+              "type": "regex",
+              "pattern": "(?i)token\\s+delta"
+            }
           ]
         },
         {
           "id": "semantic-api-constraints",
           "prompt": "Optimize this API spec sentence without applying changes: `The API MUST reject requests where the client_id field is missing, empty, or contains characters outside the lowercase ASCII alphanumeric set. Rejections MUST return HTTP 400 with error_code invalid_client_id and MUST NOT create an audit-log success event.` Preserve every requirement and ask for confirmation.",
           "checks": [
-            {"id": "preserves-client-id", "type": "required_content", "value": "client_id"},
-            {"id": "preserves-error-code", "type": "required_content", "value": "invalid_client_id"},
-            {"id": "preserves-status", "type": "required_content", "value": "HTTP 400"},
-            {"id": "mentions-confirmation", "type": "regex", "pattern": "(?i)(confirm|apply|Y/N|yes/no)"}
+            {
+              "id": "preserves-client-id",
+              "type": "required_content",
+              "value": "client_id"
+            },
+            {
+              "id": "preserves-error-code",
+              "type": "required_content",
+              "value": "invalid_client_id"
+            },
+            {
+              "id": "preserves-status",
+              "type": "required_content",
+              "value": "HTTP 400"
+            },
+            {
+              "id": "mentions-confirmation",
+              "type": "regex",
+              "pattern": "(?i)(confirm|apply|Y/N|yes/no)"
+            }
           ]
         },
         {
           "id": "command-frontmatter-handling",
           "prompt": "Optimize this Markdown command body without applying changes. Because it is a command file, ignore leading YAML frontmatter unless asked to edit metadata. Include confirmation choices.\n\n```md\n---\ndescription: \"Rewrite a target file\"\nargument-hint: \"<file-path>\"\n---\n\nThe user must provide exactly one target file path.\nIf no file path is provided, ask for it and stop.\nIf the path is ambiguous, list matches and ask a concise clarification before editing.\n```",
           "checks": [
-            {"id": "mentions-frontmatter", "type": "regex", "pattern": "(?i)frontmatter|YAML"},
-            {"id": "mentions-confirmation-options", "type": "regex", "pattern": "Y/N|yes/no|confirm"}
+            {
+              "id": "mentions-frontmatter",
+              "type": "regex",
+              "pattern": "(?i)frontmatter|YAML"
+            },
+            {
+              "id": "mentions-confirmation-options",
+              "type": "regex",
+              "pattern": "Y/N|yes/no|confirm"
+            }
           ]
         },
         {
           "id": "markdown-line-reflow-contract",
           "prompt": "Using the llm-optimized-rewrite workflow, describe how to evaluate a Markdown file whose prose remains soft-wrapped below 100 columns after prose edits. Do not edit files. Include the variants and counting requirement.",
           "checks": [
-            {"id": "mentions-100-column", "type": "required_content", "value": "100-column"},
-            {"id": "mentions-120-column", "type": "required_content", "value": "120-column"},
-            {"id": "mentions-full-unwrap", "type": "regex", "pattern": "(?i)full unwrap|aggressive"},
-            {"id": "mentions-exact-token-counts", "type": "regex", "pattern": "(?i)exact token"}
+            {
+              "id": "mentions-100-column",
+              "type": "required_content",
+              "value": "100-column"
+            },
+            {
+              "id": "mentions-120-column",
+              "type": "required_content",
+              "value": "120-column"
+            },
+            {
+              "id": "mentions-full-unwrap",
+              "type": "regex",
+              "pattern": "(?i)full unwrap|aggressive"
+            },
+            {
+              "id": "mentions-exact-token-counts",
+              "type": "regex",
+              "pattern": "(?i)exact token"
+            }
           ]
         },
         {
           "id": "path-resolution-contract",
           "prompt": "Using the llm-optimized-rewrite workflow, state what to do before planning when file-backed work has no path, when a glob or @path matches multiple files, and when one exact path is available.",
           "checks": [
-            {"id": "asks-when-no-path", "type": "regex", "pattern": "(?i)ask.*path|path.*ask"},
-            {"id": "lists-multiple-matches", "type": "regex", "pattern": "(?i)list.*matches|matches.*list"},
-            {"id": "reads-exact-path", "type": "regex", "pattern": "(?i)read.*before planning|read.*planning"}
+            {
+              "id": "asks-when-no-path",
+              "type": "regex",
+              "pattern": "(?i)ask.*path|path.*ask"
+            },
+            {
+              "id": "lists-multiple-matches",
+              "type": "regex",
+              "pattern": "(?i)list.*matches|matches.*list"
+            },
+            {
+              "id": "reads-exact-path",
+              "type": "regex",
+              "pattern": "(?i)read.*before planning|read.*planning"
+            }
+          ]
+        },
+        {
+          "id": "smell-findings-advisory",
+          "prompt": "Using the llm-optimized-rewrite workflow, explain how to treat smell_test findings that remain after semantic review. Do not edit files.",
+          "checks": [
+            {
+              "id": "mentions-advisory",
+              "type": "regex",
+              "pattern": "(?i)advisory"
+            },
+            {
+              "id": "does-not-chase-pass",
+              "type": "regex",
+              "pattern": "(?i)do not.*(optimize|edit).*solely|not.*pass/fail"
+            },
+            {
+              "id": "mentions-false-positive-boundary",
+              "type": "regex",
+              "pattern": "(?i)false.?positive|reduce clarity|change behavior"
+            }
+          ]
+        },
+        {
+          "id": "non-equivalent-improvements-boundary",
+          "prompt": "Using the llm-optimized-rewrite workflow, state what to do when you notice useful improvements that are not meaning-preserving. Do not edit files.",
+          "checks": [
+            {
+              "id": "lists-separately",
+              "type": "regex",
+              "pattern": "(?i)separate|separately"
+            },
+            {
+              "id": "requires-approval",
+              "type": "regex",
+              "pattern": "(?i)explicit.*approval|without.*approval|confirm"
+            },
+            {
+              "id": "does-not-apply",
+              "type": "regex",
+              "pattern": "(?i)do not apply|not applied"
+            }
           ]
         },
         {
           "id": "stop-final-summary",
-          "prompt": "Continue this llm-optimized-rewrite session. The user chose S to stop. Accepted changes: one low-risk prose batch. Rejected or unfinished edits: none. Session baseline was 120 tokens, current pass baseline was 100 tokens, and final count is 90 tokens. Produce the final summary with the skill's token-count format and do not present another opportunity.",
+          "prompt": "Continue this llm-optimized-rewrite session. The user chose S to stop. Accepted changes: one low-risk prose batch. Rejected or unfinished edits: none. Snapshot path is /tmp/llm-opt-original.abc123. Session baseline was 120 tokens, current pass baseline was 100 tokens, final count is 90 tokens, token-saving edits total -15, and token-increasing reliability edits total +5. Produce the final summary with the skill's token-count format and do not present another opportunity.",
           "checks": [
-            {"id": "mentions-summary", "type": "regex", "pattern": "(?i)summary"},
-            {"id": "mentions-token-counts", "type": "required_content", "value": "Token counts"},
-            {"id": "mentions-session-baseline", "type": "required_content", "value": "Session baseline"},
-            {"id": "mentions-current-pass-baseline", "type": "required_content", "value": "Current pass baseline"},
-            {"id": "mentions-rejected-unfinished", "type": "regex", "pattern": "(?i)rejected|unfinished"},
-            {"id": "forbids-new-opportunity", "type": "forbidden_content", "value": "Confirm?"}
+            {
+              "id": "mentions-summary",
+              "type": "regex",
+              "pattern": "(?i)summary"
+            },
+            {
+              "id": "mentions-token-counts",
+              "type": "required_content",
+              "value": "Token counts"
+            },
+            {
+              "id": "mentions-session-baseline",
+              "type": "required_content",
+              "value": "Session baseline"
+            },
+            {
+              "id": "mentions-current-pass-baseline",
+              "type": "required_content",
+              "value": "Current pass baseline"
+            },
+            {
+              "id": "mentions-rejected-unfinished",
+              "type": "regex",
+              "pattern": "(?i)rejected|unfinished"
+            },
+            {
+              "id": "forbids-new-opportunity",
+              "type": "forbidden_content",
+              "value": "Confirm?"
+            },
+            {
+              "id": "mentions-snapshot",
+              "type": "required_content",
+              "value": "Snapshot"
+            },
+            {
+              "id": "mentions-token-saving-edits",
+              "type": "required_content",
+              "value": "Token-saving edits"
+            },
+            {
+              "id": "mentions-token-increasing-reliability",
+              "type": "required_content",
+              "value": "Token-increasing reliability edits"
+            },
+            {
+              "id": "mentions-net",
+              "type": "required_content",
+              "value": "Net"
+            }
           ]
         }
       ]

@@ -21,6 +21,7 @@ semantics, format contracts, or functional roles.
    cp "$path" "$snapshot"
    ```
 
+   Record the exact snapshot path; use it for final diffs and include it in the final summary.
    If `mktemp` is unavailable, use a deterministic PID/timestamp path.
 
 3. Identify rewrite opportunities and group by pattern, scope, risk, savings, and reliability impact:
@@ -59,11 +60,12 @@ semantics, format contracts, or functional roles.
 
 10. Apply accepted edits before presenting the next item.
 
-11. Track accepted, rejected, and unfinished opportunities.
+11. Track accepted, rejected, unfinished, and token-increasing reliability opportunities.
 
 12. When only low-value micro-edits remain, follow the micro-edit policy before asking whether to batch, continue, or stop.
 
-13. Stop when the user says done, chooses **S**, or no safe opportunities remain; then present the final summary.
+13. Stop when the user says done, chooses **S**, or no safe opportunities remain. In or after the final
+    summary, list optional non-equivalent improvements separately; do not apply them without explicit user approval.
 
 ## Optional smell test
 
@@ -78,7 +80,10 @@ python3 <skill-dir>/scripts/smell_test.py <path>
 Do not run `python3 -m tools.llm_optimal_check <path>` outside the package repo unless setting `PYTHONPATH` to
 that repo. The tool emits JSON-only token-cost and reliability heuristics with exact token metrics and excludes
 leading YAML frontmatter. Use it to spot likely opportunities before planning; it does not replace semantic
-verification, exact token counts for proposed edits, or user confirmation before applying changes.
+verification, exact token counts for proposed edits, or user confirmation before applying changes. Treat findings
+as advisory, not a pass/fail goal. Do not optimize solely to clear smell findings. After semantic review, mark
+intentional structured-list or low-value findings as advisory/false positive when fixing them would reduce clarity
+or change behavior.
 
 ## Markdown line reflow
 
@@ -262,12 +267,21 @@ When changes were applied:
 <unified diff from original to final text>
 ```
 
+Snapshot: <snapshot path, for file-backed work>
+
 Token counts:
-- Session baseline: <A> → <B> (<Δ>)
-- Current pass baseline, if different: <C> → <B> (<Δ>)
+- Session baseline: <A> → <B> (<net Δ>)
+- Current pass baseline, if different: <C> → <B> (<net Δ>)
+- Token-saving edits: <negative total or none>
+- Token-increasing reliability edits: <positive total or none>
+- Net: <Δ>
 
 Summary:
 - <accepted change>
-- Rejected/unfinished edits were not applied:
-  - <item>
+
+Rejected/unfinished edits were not applied:
+- <item>
+
+Optional non-equivalent improvements, not applied:
+- <item, if any>
 ````
