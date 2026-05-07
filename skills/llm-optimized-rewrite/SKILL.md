@@ -1,12 +1,6 @@
 ---
 name: llm-optimized-rewrite
-description: >-
-  Rewrites technical text for lower token cost and higher LLM execution reliability while
-  preserving exact meaning, constraints, compliance, schemas, APIs, ambiguity, and trigger behavior. Use when
-  the user asks to compress, shorten, tighten, reduce tokens, make concise, optimize for LLMs, improve
-  prompt/skill reliability, or edit prompts, docs, specs, or skills for brevity and reliable execution;
-  especially when token counts, diffs, staged review, one-by-one review, confirmation, or safe file-backed edits
-  are needed.
+description: "Rewrites technical text for lower token cost and higher LLM execution reliability while preserving exact meaning, constraints, compliance, schemas, APIs, ambiguity, and trigger behavior. Use when the user asks to compress, shorten, tighten, reduce tokens, make concise, optimize for LLMs, improve prompt/skill reliability, or edit prompts, docs, specs, or skills for brevity and reliable execution; especially when token counts, diffs, staged review, one-by-one review, confirmation, or safe file-backed edits are needed."
 ---
 
 Act as an LLM optimization editor. Improve text for token efficiency and model execution reliability without
@@ -15,15 +9,27 @@ semantics, format contracts, or functional roles.
 
 ## Workflow
 
-1. If the user provides a file path or `@path`, read it first.
+1. Resolve input. For file-backed work, require one path: if absent, ask and stop; if a glob or
+   `@path` matches multiple paths, list matches and ask; if one exact path is available, read it
+   before planning. If the user provides inline text, optimize that text.
 
-2. For file-backed text, snapshot the original before editing so final diffs work outside git.
+2. For file-backed text, snapshot the original before editing so final diffs work outside git:
+
+   ```bash
+   path="<target-path>"
+   snapshot="$(mktemp -t llm-opt-original.XXXXXX)"
+   cp "$path" "$snapshot"
+   ```
+
+   If `mktemp` is unavailable, use a deterministic PID/timestamp path.
 
 3. Identify rewrite opportunities and group by pattern, scope, risk, savings, and reliability impact:
 
    - low-risk repeated/mechanical edits
 
    - structure or clarity edits that improve LLM execution
+
+   - Markdown line reflow candidates
 
    - style-sensitive edits
 
@@ -35,9 +41,11 @@ semantics, format contracts, or functional roles.
 
 5. Count exact original and rewritten snippets with the bundled token script; for batches, sum all affected snippets.
 
-6. Present a compact review plan: groups, counts, risk, token delta, reliability impact, recommended action.
+6. For Markdown prose soft-wrapped below ~100 columns, run the Markdown line reflow check after prose/semantic batches.
 
-7. Default review mode:
+7. Present a compact review plan: groups, counts, risk, token delta, reliability impact, recommended action.
+
+8. Default review mode:
 
    - batch repeated low-risk edits
 
@@ -47,23 +55,48 @@ semantics, format contracts, or functional roles.
 
    - use one-by-one only when requested
 
-8. Ask: **Y** apply, **N** reject, **E** expand, **O** review one-by-one, **S** stop.
+9. Ask: **Y** apply, **N** reject, **E** expand, **O** review one-by-one, **S** stop.
 
-9. Apply accepted edits before presenting the next item.
+10. Apply accepted edits before presenting the next item.
 
-10. Track accepted, rejected, and unfinished opportunities.
+11. Track accepted, rejected, and unfinished opportunities.
 
-11. When only low-value micro-edits remain, ask whether to batch, continue, or stop.
+12. When only low-value micro-edits remain, follow the micro-edit policy before asking whether to batch, continue, or stop.
 
-12. Stop when the user says done, chooses **S**, or no safe opportunities remain; then present the final summary.
+13. Stop when the user says done, chooses **S**, or no safe opportunities remain; then present the final summary.
 
 ## Optional smell test
 
-For file-backed Markdown, prompt, command, or skill rewrites, `python3 -m tools.llm_optimal_check <path>` is
-an optional candidate-discovery aid. The legacy `scripts/smell_test.py <path>` wrapper remains compatible. It
-emits JSON-only token-cost and reliability heuristics with exact token metrics and excludes leading YAML
-frontmatter. Use it to spot likely opportunities before planning; it does not replace semantic verification,
-exact token counts for proposed edits, or user confirmation before applying changes.
+For file-backed Markdown, prompt, command, or skill rewrites, run the skill-local wrapper as an optional
+candidate-discovery aid; it works from downstream project directories. Resolve `<skill-dir>` to this skill's
+directory, then run:
+
+```bash
+python3 <skill-dir>/scripts/smell_test.py <path>
+```
+
+Do not run `python3 -m tools.llm_optimal_check <path>` outside the package repo unless setting `PYTHONPATH` to
+that repo. The tool emits JSON-only token-cost and reliability heuristics with exact token metrics and excludes
+leading YAML frontmatter. Use it to spot likely opportunities before planning; it does not replace semantic
+verification, exact token counts for proposed edits, or user confirmation before applying changes.
+
+## Markdown line reflow
+
+After prose/semantic batches, if Markdown prose remains soft-wrapped below ~100 columns or token
+savings matter, evaluate these variants:
+
+- current
+
+- 100-column
+
+- 120-column
+
+- full unwrap/aggressive
+
+Count exact tokens for each candidate. Recommend 120-column by default when it saves tokens and diff
+readability remains acceptable. Present full unwrap separately as high-diff/noisy review risk; apply
+only after explicit confirmation. Do not reflow code blocks, tables, YAML/frontmatter, lists requiring
+semantic line breaks, or format-sensitive examples unless confirmed safe.
 
 ## Rewrite rules
 
@@ -90,11 +123,13 @@ exact token counts for proposed edits, or user confirmation before applying chan
 
 - For Markdown command/prompt files, ignore leading YAML frontmatter (`---` block) as harness metadata unless the user asks to optimize/count it.
 
+- For templates and spec scaffolds, preserve placeholders, examples, section labels, and instructional affordances; treat template prose as reusable guidance, not ordinary prose; do not make it cryptic for small savings.
+
 - Prefer direct, active, compact phrasing.
 
 - Remove filler, pleasantries, redundancy, hedging, weak qualifiers, and repetition.
 
-- Avoid boilerplate intros, summaries, and weak modifiers (`may`, `might`, `generally`, `simply`, `just`, `very`) unless required.
+- Avoid boilerplate intros, summaries, and weak modifiers (`may`, `might`, `generally`, `simply`, `just`, `very`) unless required by meaning.
 
 - Avoid cross-section restatement unless needed for safety, compliance, trigger behavior, or standalone readability.
 
@@ -102,9 +137,17 @@ exact token counts for proposed edits, or user confirmation before applying chan
 
 - If a reliability improvement increases tokens, present it separately with positive token delta and rationale; apply only after confirmation.
 
-- Preserve readability by default; do not make grammar telegraphic for 1-2 token savings unless aggressive compression is requested.
+- Preserve readability by default; do not make grammar telegraphic for small savings unless aggressive compression is requested.
 
-- Treat 1-2 token edits as micro-edits: batch if low-risk; skip if readability or style worsens.
+- Micro-edit policy by absolute token savings:
+
+  - `<5`: batch only if low-risk; otherwise skip unless the user asks to continue.
+
+  - `5-15`: low-value; ask once whether to continue, batch, or stop.
+
+  - `16-25`: medium value; prefer batching related edits.
+
+  - `>25`: normal opportunity.
 
 - Treat typo fixes as separate opportunities when they preserve meaning.
 
@@ -112,18 +155,19 @@ exact token counts for proposed edits, or user confirmation before applying chan
 
 ## Token counting
 
-Use the repo-level token tool or the bundled compatibility wrapper; do not estimate when tools are available.
+Use the skill-local compatibility wrapper from any project directory; do not estimate when tools are available.
+Resolve `<skill-dir>` to this skill's directory.
 
 ```bash
-python3 -m tools.llm_token_count <<'TEXT'
+python3 <skill-dir>/scripts/count_tokens.py <<'TEXT'
 <exact snippet text>
 TEXT
 ```
 
-Compatibility wrapper:
+Repo-module form works only from the package repo or with `PYTHONPATH` set to that repo:
 
 ```bash
-python <skill-dir>/scripts/count_tokens.py <<'TEXT'
+PYTHONPATH=<package-repo> python3 -m tools.llm_token_count <<'TEXT'
 <exact snippet text>
 TEXT
 ```
@@ -193,9 +237,11 @@ Use one diff block. Prefix removals with `-` and additions with `+`. Include con
 
 ## Applying changes
 
-- Apply accepted edits precisely.
+- Apply accepted edits precisely with exact replacement edits by default.
 
 - If original text repeats, include enough surrounding context to target confirmed occurrences.
+
+- Use scripts only for confirmed mechanical whole-file transformations, after writing a temporary candidate and counting/diffing it.
 
 - For file-backed text, diff original snapshot against current content; do not depend on git.
 
@@ -215,6 +261,10 @@ When changes were applied:
 ```diff
 <unified diff from original to final text>
 ```
+
+Token counts:
+- Session baseline: <A> → <B> (<Δ>)
+- Current pass baseline, if different: <C> → <B> (<Δ>)
 
 Summary:
 - <accepted change>

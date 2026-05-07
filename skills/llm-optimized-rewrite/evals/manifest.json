@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "llm-optimized-rewrite",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {"type": "empty"},
+      "cases": [
+        {
+          "id": "batch-confirmation-contract",
+          "prompt": "Using the llm-optimized-rewrite workflow, describe the confirmation choices for a repeated low-risk edit batch without editing files. Include the exact compact option string Y/N/E/O/S and mention token delta.",
+          "checks": [
+            {"id": "mentions-option-string", "type": "required_content", "value": "Y/N/E/O/S"},
+            {"id": "mentions-token-delta", "type": "regex", "pattern": "(?i)token\\s+delta"}
+          ]
+        },
+        {
+          "id": "semantic-api-constraints",
+          "prompt": "Optimize this API spec sentence without applying changes: `The API MUST reject requests where the client_id field is missing, empty, or contains characters outside the lowercase ASCII alphanumeric set. Rejections MUST return HTTP 400 with error_code invalid_client_id and MUST NOT create an audit-log success event.` Preserve every requirement and ask for confirmation.",
+          "checks": [
+            {"id": "preserves-client-id", "type": "required_content", "value": "client_id"},
+            {"id": "preserves-error-code", "type": "required_content", "value": "invalid_client_id"},
+            {"id": "preserves-status", "type": "required_content", "value": "HTTP 400"},
+            {"id": "mentions-confirmation", "type": "regex", "pattern": "(?i)(confirm|apply|Y/N|yes/no)"}
+          ]
+        },
+        {
+          "id": "command-frontmatter-handling",
+          "prompt": "Optimize this Markdown command body without applying changes. Because it is a command file, ignore leading YAML frontmatter unless asked to edit metadata. Include confirmation choices.\n\n```md\n---\ndescription: \"Rewrite a target file\"\nargument-hint: \"<file-path>\"\n---\n\nThe user must provide exactly one target file path.\nIf no file path is provided, ask for it and stop.\nIf the path is ambiguous, list matches and ask a concise clarification before editing.\n```",
+          "checks": [
+            {"id": "mentions-frontmatter", "type": "regex", "pattern": "(?i)frontmatter|YAML"},
+            {"id": "mentions-confirmation-options", "type": "regex", "pattern": "Y/N|yes/no|confirm"}
+          ]
+        },
+        {
+          "id": "markdown-line-reflow-contract",
+          "prompt": "Using the llm-optimized-rewrite workflow, describe how to evaluate a Markdown file whose prose remains soft-wrapped below 100 columns after prose edits. Do not edit files. Include the variants and counting requirement.",
+          "checks": [
+            {"id": "mentions-100-column", "type": "required_content", "value": "100-column"},
+            {"id": "mentions-120-column", "type": "required_content", "value": "120-column"},
+            {"id": "mentions-full-unwrap", "type": "regex", "pattern": "(?i)full unwrap|aggressive"},
+            {"id": "mentions-exact-token-counts", "type": "regex", "pattern": "(?i)exact token"}
+          ]
+        },
+        {
+          "id": "path-resolution-contract",
+          "prompt": "Using the llm-optimized-rewrite workflow, state what to do before planning when file-backed work has no path, when a glob or @path matches multiple files, and when one exact path is available.",
+          "checks": [
+            {"id": "asks-when-no-path", "type": "regex", "pattern": "(?i)ask.*path|path.*ask"},
+            {"id": "lists-multiple-matches", "type": "regex", "pattern": "(?i)list.*matches|matches.*list"},
+            {"id": "reads-exact-path", "type": "regex", "pattern": "(?i)read.*before planning|read.*planning"}
+          ]
+        },
+        {
+          "id": "stop-final-summary",
+          "prompt": "Continue this llm-optimized-rewrite session. The user chose S to stop. Accepted changes: one low-risk prose batch. Rejected or unfinished edits: none. Session baseline was 120 tokens, current pass baseline was 100 tokens, and final count is 90 tokens. Produce the final summary with the skill's token-count format and do not present another opportunity.",
+          "checks": [
+            {"id": "mentions-summary", "type": "regex", "pattern": "(?i)summary"},
+            {"id": "mentions-token-counts", "type": "required_content", "value": "Token counts"},
+            {"id": "mentions-session-baseline", "type": "required_content", "value": "Session baseline"},
+            {"id": "mentions-current-pass-baseline", "type": "required_content", "value": "Current pass baseline"},
+            {"id": "mentions-rejected-unfinished", "type": "regex", "pattern": "(?i)rejected|unfinished"},
+            {"id": "forbids-new-opportunity", "type": "forbidden_content", "value": "Confirm?"}
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false
+    }
+  }
+}
