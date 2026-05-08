@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "idea-challenger",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "custom_grader": "grader.py",
+      "cases": [
+        {
+          "id": "quick-triage",
+          "prompt": "Challenge this idea: add AI-generated task suggestions to our project management app so users can create tasks faster. Is this worth building?"
+        },
+        {
+          "id": "final-decision-record",
+          "prompt": "Challenge this product/software idea and give the final decision record now: Build a full in-app analytics dashboard because some users ask for more visibility. Evidence: two support tickets, no usage research, the team is already behind on reliability work, and the dashboard would require new event instrumentation and long-term metric ownership."
+        }
+      ]
+    },
+    {
+      "name": "trigger",
+      "type": "trigger",
+      "mode": "natural",
+      "fixture": {
+        "type": "empty"
+      },
+      "unsupported_reason": "Trigger execution is represented but not implemented in the current runner.",
+      "cases": [
+        {
+          "id": "trigger-positive-worth-building",
+          "prompt": "Is this feature worth building?",
+          "should_trigger": true,
+          "expected_skill": "idea-challenger"
+        },
+        {
+          "id": "trigger-positive-challenge-product-idea",
+          "prompt": "Challenge this product idea before we commit engineering time.",
+          "should_trigger": true,
+          "expected_skill": "idea-challenger"
+        },
+        {
+          "id": "trigger-negative-premortem",
+          "prompt": "Run a premortem on our launch plan.",
+          "should_trigger": false,
+          "expected_skill": null
+        },
+        {
+          "id": "trigger-negative-task-planning",
+          "prompt": "Break this approved feature spec into implementation tasks.",
+          "should_trigger": false,
+          "expected_skill": null
+        }
+      ]
+    },
+    {
+      "name": "capability",
+      "type": "capability",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "unsupported_reason": "Capability suite execution is represented but not implemented in the current runner.",
+      "cases": [
+        {
+          "id": "capability-socratic-product-challenge",
+          "prompt": "Pressure-test a software feature idea before planning implementation.",
+          "capability": "socratic-product-software-pursuit-challenge"
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false
+    }
+  }
+}
