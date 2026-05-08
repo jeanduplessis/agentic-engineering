@@ -39,6 +39,6 @@ python3 -m tools.command_valid <command-name>
 python3 -m tools.command_valid <command-name> --json
 ```
 
-Clean command files use scalar frontmatter with `description` plus optional `argument-hint`, `model`, `thinking`, `skill`, and `restore`. Model routing accepts exact `provider/model` or unique bare model IDs. `skill` injects one visible local skill context message. `restore` defaults to `true`; set `restore: false` only for intentional sticky model/thinking switches.
+Clean command files use frontmatter with `description` plus optional `argument-hint`, `model`, `thinking`, `skill`, YAML-list `skills`, and `restore`. Model routing accepts exact `provider/model` or unique bare model IDs. `skill` and `skills` inject visible local skill context messages. `restore` defaults to `true`; set `restore: false` only for intentional sticky model/thinking switches.
 
-Migration guidance: replace legacy shell/file expansion such as ``!`cmd` `` or `@path` with explicit instructions for Pi to run commands or read files. Keep commands flat; recursive command directories, project-local ownership, multiple skills, deterministic shell execution, loops, chains, parallel execution, worktrees, subagents, and agent-callable prompt execution are out of V1 scope.
+Migration guidance: replace legacy OpenCode shell/file expansion such as ``!`cmd` `` or `@path` with explicit instructions for Pi to run commands or read files. Keep commands flat; recursive command directories, project-local ownership, deterministic shell execution, loops, chains, parallel execution, worktrees, subagents, and agent-callable prompt execution are out of V1 scope.

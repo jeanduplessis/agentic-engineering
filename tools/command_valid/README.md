@@ -24,15 +24,15 @@ python3 -m tools.command_valid code-review --commands-dir /path/to/commands
 - command name must not be reserved by Pi;
 - command must resolve to one direct `<command-name>.md` file in the command library;
 - validation does not recurse into subdirectories;
-- command file must start with scalar frontmatter and a non-empty `description`;
-- recognized fields: `description`, `argument-hint`, `model`, `thinking`, `skill`, `restore`;
+- command file must start with frontmatter and a non-empty scalar `description`;
+- recognized fields: scalar `description`, `argument-hint`, `model`, `thinking`, `skill`, `restore`, plus scoped YAML-list `skills`;
 - unknown fields fail validation;
-- nested/list/malformed frontmatter fails validation;
+- unsupported nested/list/malformed frontmatter fails validation;
 - `thinking` must be `off`, `minimal`, `low`, `medium`, `high`, or `xhigh`;
 - `restore` must be `true` or `false`;
 - unsupported legacy body syntax such as shell/file expansion fails validation;
 - unsupported placeholders such as `${@:N}` fail validation;
-- declared `skill` must resolve to a readable local skill;
+- declared `skill` and `skills` entries must resolve to readable local skills;
 - validation is static and does not query Pi's live model registry.
 
 Exit codes:

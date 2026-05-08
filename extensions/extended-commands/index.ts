@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const KNOWN_FRONTMATTER_FIELDS = new Set(["description", "argument-hint", "model", "thinking", "skill", "restore"]);
+const KNOWN_FRONTMATTER_FIELDS = new Set(["description", "argument-hint", "model", "thinking", "skill", "skills", "restore"]);
 const VALID_THINKING_LEVELS = new Set(["off", "minimal", "low", "medium", "high", "xhigh"]);
 
 export type ParsedCommand = {
@@ -13,6 +13,7 @@ export type ParsedCommand = {
 	argumentHint?: string;
 	body: string;
 	frontmatter: Record<string, string>;
+	skills: string[];
 	warnings: string[];
 };
 
@@ -68,6 +69,7 @@ export function substituteArguments(body: string, rawArgs: string): string {
 export function parseCommandFile(path: string, name: string, content: string): ParsedCommand {
 	const warnings: string[] = [];
 	const frontmatter: Record<string, string> = {};
+	let frontmatterSkills: string[] = [];
 	let body = content;
 
 	if (content.startsWith("---\n")) {
@@ -75,19 +77,7 @@ export function parseCommandFile(path: string, name: string, content: string): P
 		if (end >= 0) {
 			const rawFrontmatter = content.slice(4, end).trim();
 			body = content.slice(end + 4).replace(/^\r?\n/, "");
-			for (const line of rawFrontmatter.split(/\r?\n/)) {
-				const trimmed = line.trim();
-				if (!trimmed || trimmed.startsWith("#")) continue;
-				const match = trimmed.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-				if (!match) {
-					warnings.push(`Unsupported frontmatter line in /${name}: ${trimmed}`);
-					continue;
-				}
-				const key = match[1];
-				const value = unquoteScalar(match[2] ?? "");
-				frontmatter[key] = value;
-				if (!KNOWN_FRONTMATTER_FIELDS.has(key)) warnings.push(`Unknown frontmatter field in /${name}: ${key}`);
-			}
+			frontmatterSkills = parseFrontmatter(rawFrontmatter, name, frontmatter, warnings);
 		} else {
 			warnings.push(`Unclosed frontmatter in /${name}; treating file as a plain prompt body.`);
 		}
@@ -101,6 +91,7 @@ export function parseCommandFile(path: string, name: string, content: string): P
 		argumentHint: frontmatter["argument-hint"],
 		body,
 		frontmatter,
+		skills: declaredSkills(frontmatter, frontmatterSkills),
 		warnings,
 	};
 }
@@ -175,15 +166,15 @@ export function registerExtendedCommands(pi: ExtensionAPI, commandDir = getDefau
 				const restore = command.frontmatter.restore !== "false";
 				const previousModel = (ctx as any).model;
 				const previousThinking = (pi as any).getThinkingLevel?.();
-				let skillContext: { content: string; path?: string } | undefined;
+				const skillContexts: Array<{ name: string; content: string; path?: string }> = [];
 
-				if (command.frontmatter.skill) {
-					const resolvedSkill = resolveDeclaredSkill(command.frontmatter.skill, (ctx as any).cwd, commandDir);
+				for (const skill of command.skills) {
+					const resolvedSkill = resolveDeclaredSkill(skill, (ctx as any).cwd, commandDir);
 					if (!resolvedSkill.content) {
-						ctx.ui.notify(resolvedSkill.error ?? `Could not resolve skill: ${command.frontmatter.skill}`, "error");
+						ctx.ui.notify(resolvedSkill.error ?? `Could not resolve skill: ${skill}`, "error");
 						return;
 					}
-					skillContext = { content: resolvedSkill.content, path: resolvedSkill.path };
+					skillContexts.push({ name: skill, content: resolvedSkill.content, path: resolvedSkill.path });
 				}
 
 				if (command.frontmatter.model) {
@@ -210,12 +201,12 @@ export function registerExtendedCommands(pi: ExtensionAPI, commandDir = getDefau
 					(pi as any).setThinkingLevel?.(command.frontmatter.thinking);
 				}
 
-				if (skillContext) {
+				for (const skillContext of skillContexts) {
 					(pi as any).sendMessage?.({
 						customType: "extended-command-skill",
-						content: `Skill context for /${command.name} (${command.frontmatter.skill})\nSource: ${skillContext.path ?? "unknown"}\n\n${skillContext.content}`,
+						content: `Skill context for /${command.name} (${skillContext.name})\nSource: ${skillContext.path ?? "unknown"}\n\n${skillContext.content}`,
 						display: true,
-						details: { command: command.name, skill: command.frontmatter.skill, path: skillContext.path },
+						details: { command: command.name, skill: skillContext.name, path: skillContext.path },
 					});
 				}
 
@@ -230,6 +221,52 @@ export function registerExtendedCommands(pi: ExtensionAPI, commandDir = getDefau
 
 export default function extendedCommands(pi: ExtensionAPI) {
 	registerExtendedCommands(pi);
+}
+
+function parseFrontmatter(rawFrontmatter: string, name: string, frontmatter: Record<string, string>, warnings: string[]): string[] {
+	const skills: string[] = [];
+	const lines = rawFrontmatter.split(/\r?\n/);
+	for (let index = 0; index < lines.length; index++) {
+		const line = lines[index];
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith("#")) continue;
+		const match = trimmed.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+		if (!match) {
+			warnings.push(`Unsupported frontmatter line in /${name}: ${trimmed}`);
+			continue;
+		}
+		const key = match[1];
+		const value = unquoteScalar(match[2] ?? "");
+		frontmatter[key] = value;
+		if (!KNOWN_FRONTMATTER_FIELDS.has(key)) warnings.push(`Unknown frontmatter field in /${name}: ${key}`);
+		if (key !== "skills") continue;
+		if (value) {
+			warnings.push(`Unsupported skills frontmatter in /${name}; use an indented YAML list.`);
+			continue;
+		}
+		while (index + 1 < lines.length) {
+			const nextLine = lines[index + 1];
+			const nextTrimmed = nextLine.trim();
+			if (!nextTrimmed || nextTrimmed.startsWith("#")) {
+				index++;
+				continue;
+			}
+			if (!/^\s+/.test(nextLine)) break;
+			index++;
+			if (!nextTrimmed.startsWith("-")) {
+				warnings.push(`Unsupported frontmatter line in /${name}: ${nextTrimmed}`);
+				continue;
+			}
+			const skill = unquoteScalar(nextTrimmed.slice(1).trim());
+			if (skill) skills.push(skill);
+		}
+	}
+	return skills;
+}
+
+function declaredSkills(frontmatter: Record<string, string>, frontmatterSkills: string[]): string[] {
+	const skills = [frontmatter.skill, ...frontmatterSkills].filter((skill): skill is string => Boolean(skill));
+	return [...new Set(skills)];
 }
 
 function skillCandidates(skillName: string, cwd: string | undefined, commandDir: string): string[] {

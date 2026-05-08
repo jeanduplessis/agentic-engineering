@@ -1,7 +1,9 @@
 ---
 description: "Implement an epic bead's child tasks in dependency order using TDD"
 argument-hint: "<epic-bead-id> [instructions]"
-skill: tdd
+skills:
+  - tdd
+  - beads
 ---
 
 Orchestrate TDD for an epic bead and descendants with `br`.
@@ -13,10 +15,6 @@ Arguments: $ARGUMENTS
 - First arg must be the epic bead ID. If missing/ambiguous, ask one concise clarification and stop.
 - Treat remaining args as implementation constraints/focus notes.
 - Do not create an epic; work only under the supplied epic.
-
-## Skills
-
-Load and follow `beads` and `tdd`.
 
 ## 1. Verify and inspect
 
@@ -74,7 +72,7 @@ Repeat until every descendant child is closed or all remaining work is blocked:
    br show <child-id> --json
    br update <child-id> --claim --json
    ```
-4. Implement with `tdd`:
+4. Implement the child with TDD:
 
    - Derive public interface and test behavior from bead description, acceptance criteria, project docs, and codebase.
    - If behavior/interface is ambiguous, ask before implementing that child.

@@ -13,8 +13,8 @@ Local Pi extension that owns the global command library at `~/.agents/commands`.
 - Reports ambiguous, missing, or credential-unavailable model declarations as runtime errors before sending the prompt.
 - Supports valid Pi thinking levels.
 - Restores previous model/thinking after `agent_end` by default; `restore: false` makes changes sticky.
-- Supports one declared `skill` and injects its `SKILL.md` content as a visible custom message before the command prompt.
-- Fails command execution before prompt send when a declared skill is missing or unreadable.
+- Supports multiple skills via legacy scalar `skill` and YAML-list `skills`, injecting each declared `SKILL.md` as a separate visible custom message before the command prompt.
+- Resolves all declared skills before injection and fails command execution before skill injection or prompt send when any declared skill is missing or unreadable.
 - Substitutes `$ARGUMENTS`, `$@`, and simple positional placeholders (`$1`, `$2`, ...).
 - Passes legacy shell/file expansion syntax through literally; unsupported syntax produces runtime warnings.
 - Warns on unknown frontmatter instead of failing command execution.
@@ -46,7 +46,16 @@ Routing smoke test:
 
 Skill injection smoke test:
 
-1. Create or choose a local skill such as `~/.agents/skills/tdd/SKILL.md`.
-2. Create a command with `skill: tdd`.
-3. Run the command and confirm a visible custom message containing the skill content appears before the rendered command prompt.
-4. Change `skill` to a missing name and confirm the command fails before sending the prompt.
+1. Create or choose local skills such as `~/.agents/skills/tdd/SKILL.md` and `~/.agents/skills/beads/SKILL.md`.
+2. Create a command with:
+   ```md
+   ---
+   description: Skill smoke test
+   skills:
+     - tdd
+     - beads
+   ---
+   Prompt body
+   ```
+3. Run the command and confirm one visible custom message per skill appears before the rendered command prompt, in declaration order.
+4. Change one skill to a missing name and confirm the command fails before injecting skills or sending the prompt.

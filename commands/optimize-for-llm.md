@@ -1,12 +1,15 @@
 ---
 description: "Rewrite file for lower token cost and LLM execution reliability; preserve meaning"
 argument-hint: "<file-path>"
-skill: llm-optimized-rewrite
+skills:
+  - llm-optimized-rewrite
 ---
 
-Strictly follow `llm-optimized-rewrite` skill on $ARGUMENTS. Require one path; absent: ask and stop; ambiguous: list matches and ask concise clarification before editing. Read target; optimize for token cost and LLM execution reliability.
+Target path: $ARGUMENTS
 
-When running optional token/smell tools from downstream projects, use the skill-local wrappers:
+Require one path; absent: ask and stop; ambiguous: list matches and ask concise clarification before editing. Read target; optimize for token cost and LLM execution reliability.
+
+When running optional token/smell tools from downstream projects, use the bundled wrappers:
 
 ```bash
 python3 /Users/jdp/.agents/skills/llm-optimized-rewrite/scripts/smell_test.py <path>

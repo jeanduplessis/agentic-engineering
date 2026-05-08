@@ -1,7 +1,8 @@
 ---
 description: "Analyze the review comments on a PR"
 argument-hint: "[PR URL]"
-skill: gh-pr-review
+skills:
+  - gh-pr-review
 ---
 
 ## Context
@@ -19,7 +20,7 @@ If the PR URL is absent or ambiguous after resolution, ask one concise clarifica
 
 ## Task
 
-Use the `gh-pr-review` skill to address code-reviewer PR comments. Execute steps in order.
+Address code-reviewer PR comments. Execute steps in order.
 
 ### Step 1: Gather prior-run context
 

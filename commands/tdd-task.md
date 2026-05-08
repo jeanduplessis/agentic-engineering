@@ -1,7 +1,9 @@
 ---
 description: "Implement one bead task using TDD"
 argument-hint: "<task-bead-id> [instructions]"
-skill: tdd
+skills:
+  - tdd
+  - beads
 ---
 
 Implement exactly one beads task with TDD.
@@ -13,10 +15,6 @@ Args: $ARGUMENTS
 - First arg = task bead ID. If missing/ambiguous, ask one concise clarification and stop.
 - Rest = implementation constraints/focus notes.
 - Scope only the supplied bead. Do not implement siblings or an epic child queue.
-
-## Skills
-
-Load and follow `beads` and `tdd`.
 
 ## 1. Verify and inspect
 

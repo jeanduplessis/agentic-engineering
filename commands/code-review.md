@@ -1,7 +1,8 @@
 ---
 description: "Review current code changes and fix actionable findings"
 argument-hint: "[scope or instructions]"
-skill: code-review-workflow
+skills:
+  - code-review-workflow
 ---
 
 Review current changes or requested subset; fix actionable issues.
@@ -17,7 +18,7 @@ Arguments: $ARGUMENTS
 
 ## 1. Resolve scope
 
-Load `code-review-workflow` and `references/scope.md`.
+Read `references/scope.md`.
 
 Follow scope discovery:
 1. Inspect repository state with read-only git commands.
@@ -39,7 +40,7 @@ Run six independent, read-only focus reviews against the same `Resolved Review S
 5. Resource Management & Typos: leaks, cleanup, lifecycle, runtime-breaking typos.
 6. Style & Clarity: complexity, naming, consistency, project standards.
 
-For each focus review, load `code-review-workflow` and read:
+For each focus review, read:
 - `references/reviewer-core.md`
 - `references/output.md`
 - matching focus reference: `security.md`, `logic.md`, `types.md`, `data.md`, `resources.md`, or `style.md`
@@ -75,7 +76,7 @@ For delegated or self-invoked reviews, pass only:
 2. Focus name and matching focus reference to load.
 3. Brief original-argument intent, if needed.
 
-Do not pass full diffs, full skill text, or unresolved natural-language overrides. The resolved scope block is the contract.
+Do not pass full diffs, full reference text, or unresolved natural-language overrides. The resolved scope block is the contract.
 
 ## 3. Merge findings
 

@@ -13,7 +13,7 @@ INVALID_EXIT = 1
 USAGE_OR_RESOLUTION_EXIT = 2
 
 COMMAND_NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-ALLOWED_FRONTMATTER_FIELDS = frozenset({"description", "argument-hint", "model", "thinking", "skill", "restore"})
+ALLOWED_FRONTMATTER_FIELDS = frozenset({"description", "argument-hint", "model", "thinking", "skill", "skills", "restore"})
 VALID_THINKING_LEVELS = frozenset({"off", "minimal", "low", "medium", "high", "xhigh"})
 VALID_RESTORE_VALUES = frozenset({"true", "false"})
 RESERVED_COMMAND_NAMES = frozenset(
@@ -117,7 +117,7 @@ def _error(code: str, message: str) -> dict[str, str]:
 
 
 def _validate_markdown_contract(text: str, command_name: str, repo_root: Path) -> list[dict[str, str]]:
-    parsed, body, parse_errors = _parse_frontmatter(text, command_name)
+    parsed, skills, body, parse_errors = _parse_frontmatter(text, command_name)
     errors = list(parse_errors)
     description = parsed.get("description") if parsed else None
     if description is None or description.strip() == "":
@@ -131,9 +131,10 @@ def _validate_markdown_contract(text: str, command_name: str, repo_root: Path) -
     restore = parsed.get("restore")
     if restore and restore not in VALID_RESTORE_VALUES:
         errors.append(_error("invalid_restore", "Invalid restore value; expected true or false."))
-    skill = parsed.get("skill")
-    if skill and not _local_skill_exists(repo_root, skill):
-        errors.append(_error("missing_skill", f"Declared skill does not resolve to a readable local skill: {skill}"))
+    declared_skills = list(dict.fromkeys([skill for skill in [parsed.get("skill"), *skills] if skill]))
+    for skill in declared_skills:
+        if not _local_skill_exists(repo_root, skill):
+            errors.append(_error("missing_skill", f"Declared skill does not resolve to a readable local skill: {skill}"))
     if re.search(r"!`[^`]*`", body):
         errors.append(_error("unsupported_body_syntax", "Unsupported legacy shell expansion syntax is not valid in clean Pi commands."))
     if re.search(r"(?<!\\)@(?:[A-Za-z0-9_./~-]+)", body):
@@ -143,29 +144,57 @@ def _validate_markdown_contract(text: str, command_name: str, repo_root: Path) -
     return errors
 
 
-def _parse_frontmatter(text: str, command_name: str) -> tuple[dict[str, str], str, list[dict[str, str]]]:
+def _parse_frontmatter(text: str, command_name: str) -> tuple[dict[str, str], list[str], str, list[dict[str, str]]]:
     if not text.startswith("---\n"):
-        return {}, text, [_error("missing_frontmatter", "Command file must start with scalar YAML frontmatter delimited by ---.")]
+        return {}, [], text, [_error("missing_frontmatter", "Command file must start with YAML frontmatter delimited by ---.")]
     end = text.find("\n---", 4)
     if end < 0:
-        return {}, text, [_error("malformed_frontmatter", "Command frontmatter must close with ---." )]
+        return {}, [], text, [_error("malformed_frontmatter", "Command frontmatter must close with ---.")]
     raw = text[4:end].strip()
     body = text[end + 4 :].lstrip("\r\n")
     values: dict[str, str] = {}
+    skills: list[str] = []
     errors: list[dict[str, str]] = []
-    for line in raw.splitlines():
+    lines = raw.splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
+            index += 1
             continue
         match = re.fullmatch(r"([A-Za-z0-9_-]+):\s*(.*)", stripped)
         if not match:
             errors.append(_error("malformed_frontmatter", f"Malformed frontmatter line in /{command_name}: {stripped}"))
+            index += 1
             continue
         key, value = match.group(1), match.group(2).strip()
-        if value == "":
-            errors.append(_error("non_scalar_frontmatter", f"Frontmatter field must be a non-empty scalar: {key}"))
         values[key] = _unquote_scalar(value)
-    return values, body, errors
+        if key == "skills" and value != "":
+            errors.append(_error("non_scalar_frontmatter", "Frontmatter field must be a YAML list: skills"))
+        if key == "skills" and value == "":
+            index += 1
+            while index < len(lines):
+                item_line = lines[index]
+                item_stripped = item_line.strip()
+                if not item_stripped or item_stripped.startswith("#"):
+                    index += 1
+                    continue
+                if not re.match(r"\s+", item_line):
+                    break
+                if not item_stripped.startswith("-"):
+                    errors.append(_error("malformed_frontmatter", f"Malformed skills list item in /{command_name}: {item_stripped}"))
+                    index += 1
+                    continue
+                skill = _unquote_scalar(item_stripped[1:].strip())
+                if skill:
+                    skills.append(skill)
+                index += 1
+            continue
+        if value == "":
+            errors.append(_error("non_scalar_frontmatter", f"Frontmatter field must be a non-empty scalar unless it is a skills list: {key}"))
+        index += 1
+    return values, skills, body, errors
 
 
 def _unquote_scalar(value: str) -> str:

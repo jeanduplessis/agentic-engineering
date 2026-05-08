@@ -30,8 +30,8 @@ before changing a tool's internals.
 - `tools.command_valid`: Purpose: Deterministic validation for one clean Pi extended command.. Primary CLI/API:
   `python3 -m tools.command_valid <command-name> [--json]`; `validate_command(CommandValidationOptions)`.
   Notes: Uses repo-root `commands/` by default; validates kebab/reserved names, direct `<name>.md` resolution,
-  scalar frontmatter, supported fields, valid `thinking`/`restore`, body placeholders/syntax, and declared
-  skill resolution; emits friendly stdout by default and compact JSON with `--json`; does not query live Pi state..
+  scalar frontmatter plus scoped `skills` lists, supported fields, valid `thinking`/`restore`, body placeholders/syntax,
+  and declared skill resolution; emits friendly stdout by default and compact JSON with `--json`; does not query live Pi state..
 
 ## Selection guide
 

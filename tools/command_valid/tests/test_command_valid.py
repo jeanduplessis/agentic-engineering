@@ -135,6 +135,8 @@ class CommandValidTests(unittest.TestCase):
         with self.make_repo() as root:
             (root / "skills" / "review-skill").mkdir(parents=True)
             (root / "skills" / "review-skill" / "SKILL.md").write_text("---\nname: review-skill\ndescription: Review skill\n---\n")
+            (root / "skills" / "test-skill").mkdir(parents=True)
+            (root / "skills" / "test-skill" / "SKILL.md").write_text("---\nname: test-skill\ndescription: Test skill\n---\n")
             (root / "commands" / "routed-command.md").write_text(
                 "---\n"
                 "description: Routed command\n"
@@ -142,6 +144,8 @@ class CommandValidTests(unittest.TestCase):
                 "model: openrouter/gpt-5\n"
                 "thinking: high\n"
                 "skill: review-skill\n"
+                "skills:\n"
+                "  - test-skill\n"
                 "restore: false\n"
                 "---\n"
                 "Review $ARGUMENTS\n"
@@ -168,6 +172,35 @@ class CommandValidTests(unittest.TestCase):
             result = json.loads(stdout.getvalue())
             self.assertEqual(result["errors"][0]["code"], "unknown_frontmatter")
             self.assertIn("agent", result["errors"][0]["message"])
+
+    def test_scalar_skills_field_fails_validation(self):
+        with self.make_repo() as root:
+            (root / "commands" / "scalar-skills.md").write_text("---\ndescription: Bad\nskills: review-skill\n---\nBody\n")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            code = main(["scalar-skills", "--repo-root", str(root), "--json"], stdout=stdout, stderr=stderr)
+
+            self.assertEqual(code, 1)
+            result = json.loads(stdout.getvalue())
+            self.assertTrue(any(error["code"] == "non_scalar_frontmatter" and "skills" in error["message"] for error in result["errors"]))
+
+    def test_skills_list_items_must_resolve_to_readable_local_skills(self):
+        with self.make_repo() as root:
+            (root / "skills" / "review-skill").mkdir(parents=True)
+            (root / "skills" / "review-skill" / "SKILL.md").write_text("---\nname: review-skill\ndescription: Review skill\n---\n")
+            (root / "commands" / "multi-skill.md").write_text(
+                "---\ndescription: Multi\nskills:\n  - review-skill\n  - missing-skill\n---\nBody\n"
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            code = main(["multi-skill", "--repo-root", str(root), "--json"], stdout=stdout, stderr=stderr)
+
+            self.assertEqual(code, 1)
+            result = json.loads(stdout.getvalue())
+            self.assertEqual(result["errors"][0]["code"], "missing_skill")
+            self.assertIn("missing-skill", result["errors"][0]["message"])
 
     def test_nested_or_list_frontmatter_fails_scalar_validation(self):
         with self.make_repo() as root:

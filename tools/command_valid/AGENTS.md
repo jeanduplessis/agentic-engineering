@@ -15,9 +15,9 @@
 - Validate one command name per invocation.
 - Accept command names, not arbitrary paths.
 - Keep command discovery non-recursive.
-- Require scalar frontmatter with non-empty `description`.
-- Recognize only `description`, `argument-hint`, `model`, `thinking`, `skill`, and `restore`.
-- Fail unknown or nested/list/malformed frontmatter, invalid `thinking`/`restore`, unsupported legacy body syntax, unsupported placeholders, and missing declared skills.
+- Require frontmatter with non-empty scalar `description`.
+- Recognize only scalar `description`, `argument-hint`, `model`, `thinking`, `skill`, `restore`, plus scoped YAML-list `skills`.
+- Fail unknown or unsupported nested/list/malformed frontmatter, invalid `thinking`/`restore`, unsupported legacy body syntax, unsupported placeholders, and missing declared skills.
 - Keep stdout friendly by default and compact JSON with `--json`.
 - Preserve exit-code classes: `0` valid, `1` invalid command contract, `2` usage/resolution error.
 - Do not query live Pi state; this tool is deterministic and static.

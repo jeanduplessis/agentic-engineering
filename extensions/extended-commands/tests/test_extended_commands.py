@@ -63,6 +63,34 @@ class ExtendedCommandsTests(unittest.TestCase):
             self.assertTrue(any("shell expansion" in warning for warning in commands[0]["warnings"]))
             self.assertTrue(any("file expansion" in warning for warning in commands[0]["warnings"]))
 
+    def test_yaml_skills_frontmatter_parses_ordered_skills_and_merges_legacy_skill(self):
+        command = textwrap.dedent(
+            """
+            ---
+            description: Multi skill
+            skill: code-review-workflow
+            skills:
+              - tdd
+              - beads
+              - tdd
+            ---
+            Body
+            """
+        ).lstrip()
+        script = textwrap.dedent(
+            f"""
+            import {{ parseCommandFile }} from {json.dumps(EXTENSION.as_uri())};
+            const command = parseCommandFile('/tmp/multi.md', 'multi', {json.dumps(command)});
+            console.log(JSON.stringify(command));
+            """
+        )
+
+        command = json.loads(self.run_node(script))
+
+        self.assertEqual(command["description"], "Multi skill")
+        self.assertEqual(command["skills"], ["code-review-workflow", "tdd", "beads"])
+        self.assertEqual(command["warnings"], [])
+
     def test_registered_plain_command_sends_rendered_body_without_routing(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -278,6 +306,84 @@ class ExtendedCommandsTests(unittest.TestCase):
             self.assertTrue(result["customMessages"][0]["message"]["display"])
             self.assertIn("# Review Skill", result["customMessages"][0]["message"]["content"])
             self.assertEqual(result["userMessages"], [{"message": "Prompt target\n", "options": None}])
+
+    def test_multiple_declared_skills_are_injected_as_visible_custom_messages_before_prompt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "commands").mkdir()
+            for skill, content in [("review-skill", "# Review Skill\nUse carefully.\n"), ("test-skill", "# Test Skill\nTest first.\n")]:
+                (root / "skills" / skill).mkdir(parents=True)
+                (root / "skills" / skill / "SKILL.md").write_text(content)
+            (root / "commands" / "multi-skill-command.md").write_text(
+                "---\ndescription: Multi skill command\nskills:\n  - review-skill\n  - test-skill\n---\nPrompt $1\n"
+            )
+            script = textwrap.dedent(
+                f"""
+                import {{ registerExtendedCommands }} from {json.dumps(EXTENSION.as_uri())};
+                const registered = [];
+                const customMessages = [];
+                const userMessages = [];
+                const pi = {{
+                  registerCommand(name, options) {{ registered.push({{ name, options }}); }},
+                  on() {{}},
+                  sendMessage(message, options) {{ customMessages.push({{ message, options: options ?? null }}); }},
+                  sendUserMessage(message, options) {{ userMessages.push({{ message, options: options ?? null }}); }},
+                }};
+                registerExtendedCommands(pi, {json.dumps(str(root / 'commands'))});
+                await registered[0].options.handler('target', {{
+                  cwd: {json.dumps(str(root))},
+                  isIdle() {{ return true; }},
+                  ui: {{ notify() {{}} }},
+                }});
+                console.log(JSON.stringify({{ customMessages, userMessages }}));
+                """
+            )
+
+            result = json.loads(self.run_node(script))
+
+            self.assertEqual([message["message"]["details"]["skill"] for message in result["customMessages"]], ["review-skill", "test-skill"])
+            self.assertIn("# Review Skill", result["customMessages"][0]["message"]["content"])
+            self.assertIn("# Test Skill", result["customMessages"][1]["message"]["content"])
+            self.assertEqual(result["userMessages"], [{"message": "Prompt target\n", "options": None}])
+
+    def test_missing_skill_in_multi_skill_command_reports_error_before_any_injection_or_prompt_send(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "commands").mkdir()
+            (root / "skills" / "review-skill").mkdir(parents=True)
+            (root / "skills" / "review-skill" / "SKILL.md").write_text("# Review Skill\n")
+            (root / "commands" / "multi-skill-command.md").write_text(
+                "---\ndescription: Multi skill command\nskills:\n  - review-skill\n  - missing-skill\n---\nPrompt\n"
+            )
+            script = textwrap.dedent(
+                f"""
+                import {{ registerExtendedCommands }} from {json.dumps(EXTENSION.as_uri())};
+                const registered = [];
+                const notifications = [];
+                const customMessages = [];
+                const userMessages = [];
+                const pi = {{
+                  registerCommand(name, options) {{ registered.push({{ name, options }}); }},
+                  on() {{}},
+                  sendMessage(message) {{ customMessages.push(message); }},
+                  sendUserMessage(message) {{ userMessages.push(message); }},
+                }};
+                registerExtendedCommands(pi, {json.dumps(str(root / 'commands'))});
+                await registered[0].options.handler('', {{
+                  cwd: {json.dumps(str(root))},
+                  isIdle() {{ return true; }},
+                  ui: {{ notify(message, level) {{ notifications.push({{ message, level }}); }} }},
+                }});
+                console.log(JSON.stringify({{ notifications, customMessages, userMessages }}));
+                """
+            )
+
+            result = json.loads(self.run_node(script))
+
+            self.assertEqual(result["customMessages"], [])
+            self.assertEqual(result["userMessages"], [])
+            self.assertEqual(result["notifications"][0]["level"], "error")
+            self.assertIn("missing-skill", result["notifications"][0]["message"])
 
     def test_missing_declared_skill_reports_error_before_prompt_send(self):
         with tempfile.TemporaryDirectory() as tmp:
