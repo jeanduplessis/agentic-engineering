@@ -408,6 +408,151 @@ class ExtendedCommandsTests(unittest.TestCase):
             self.assertEqual(result["notifications"][0]["level"], "error")
             self.assertIn("skill", result["notifications"][0]["message"])
 
+    def test_duplicate_extension_skill_in_active_context_is_silently_skipped_before_prompt_send(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "commands").mkdir()
+            (root / "skills" / "review-skill").mkdir(parents=True)
+            skill_path = root / "skills" / "review-skill" / "SKILL.md"
+            skill_path.write_text("# Review Skill\n")
+            (root / "commands" / "skill-command.md").write_text("---\nskill: review-skill\n---\nPrompt\n")
+            script = textwrap.dedent(
+                f"""
+                import {{ registerExtendedCommands }} from {json.dumps(EXTENSION.as_uri())};
+                const registered = [];
+                const notifications = [];
+                const customMessages = [];
+                const userMessages = [];
+                const pi = {{
+                  registerCommand(name, options) {{ registered.push({{ name, options }}); }},
+                  on() {{}},
+                  sendMessage(message) {{ customMessages.push(message); }},
+                  sendUserMessage(message) {{ userMessages.push(message); }},
+                }};
+                registerExtendedCommands(pi, {json.dumps(str(root / 'commands'))});
+                await registered[0].options.handler('', {{
+                  cwd: {json.dumps(str(root))},
+                  sessionManager: {{ buildSessionContext() {{ return {{ messages: [{{ role: 'custom', customType: 'extended-command-skill', content: 'old', details: {{ skill: 'review-skill', path: {json.dumps(str(skill_path))} }} }}] }}; }} }},
+                  isIdle() {{ return true; }},
+                  ui: {{ notify(message, level) {{ notifications.push({{ message, level }}); }} }},
+                }});
+                console.log(JSON.stringify({{ notifications, customMessages, userMessages }}));
+                """
+            )
+
+            result = json.loads(self.run_node(script))
+
+            self.assertEqual(result["notifications"], [])
+            self.assertEqual(result["customMessages"], [])
+            self.assertEqual(result["userMessages"], ["Prompt\n"])
+
+    def test_native_skill_block_in_active_context_prevents_duplicate_extension_injection(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "commands").mkdir()
+            (root / "skills" / "review-skill").mkdir(parents=True)
+            skill_path = root / "skills" / "review-skill" / "SKILL.md"
+            skill_path.write_text("# Review Skill\n")
+            (root / "commands" / "skill-command.md").write_text("---\nskill: review-skill\n---\nPrompt\n")
+            native_block = f'<skill name="review-skill" location="{skill_path}">\nReferences are relative.\n</skill>'
+            script = textwrap.dedent(
+                f"""
+                import {{ registerExtendedCommands }} from {json.dumps(EXTENSION.as_uri())};
+                const registered = [];
+                const customMessages = [];
+                const userMessages = [];
+                const pi = {{
+                  registerCommand(name, options) {{ registered.push({{ name, options }}); }},
+                  on() {{}},
+                  sendMessage(message) {{ customMessages.push(message); }},
+                  sendUserMessage(message) {{ userMessages.push(message); }},
+                }};
+                registerExtendedCommands(pi, {json.dumps(str(root / 'commands'))});
+                await registered[0].options.handler('', {{
+                  cwd: {json.dumps(str(root))},
+                  sessionManager: {{ buildSessionContext() {{ return {{ messages: [{{ role: 'user', content: {json.dumps(native_block)} }}] }}; }} }},
+                  isIdle() {{ return true; }},
+                  ui: {{ notify() {{}} }},
+                }});
+                console.log(JSON.stringify({{ customMessages, userMessages }}));
+                """
+            )
+
+            result = json.loads(self.run_node(script))
+
+            self.assertEqual(result["customMessages"], [])
+            self.assertEqual(result["userMessages"], ["Prompt\n"])
+
+    def test_skill_identity_uses_canonical_path_before_name_fallback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = root / "one" / "same-name" / "SKILL.md"
+            second = root / "two" / "same-name" / "SKILL.md"
+            first.parent.mkdir(parents=True)
+            second.parent.mkdir(parents=True)
+            first.write_text("one")
+            second.write_text("two")
+            script = textwrap.dedent(
+                f"""
+                import {{ messagesContainSkill }} from {json.dumps(EXTENSION.as_uri())};
+                const messages = [{{ role: 'custom', customType: 'extended-command-skill', content: '', details: {{ skill: 'same-name', path: {json.dumps(str(first))} }} }}];
+                console.log(JSON.stringify({{
+                  samePath: messagesContainSkill(messages, {{ name: 'same-name', path: {json.dumps(str(first))} }}),
+                  differentPathSameName: messagesContainSkill(messages, {{ name: 'same-name', path: {json.dumps(str(second))} }}),
+                  nameFallback: messagesContainSkill(messages, {{ name: 'same-name' }}),
+                }}));
+                """
+            )
+
+            result = json.loads(self.run_node(script))
+
+            self.assertTrue(result["samePath"])
+            self.assertFalse(result["differentPathSameName"])
+            self.assertTrue(result["nameFallback"])
+
+    def test_context_hook_removes_duplicate_extension_owned_skill_messages(self):
+        script = textwrap.dedent(
+            f"""
+            import {{ dedupeExtendedCommandSkillMessages }} from {json.dumps(EXTENSION.as_uri())};
+            const messages = [
+              {{ role: 'custom', customType: 'extended-command-skill', content: '', details: {{ skill: 'review-skill', path: '/tmp/review/SKILL.md' }} }},
+              {{ role: 'assistant', content: [{{ type: 'text', text: 'middle' }}] }},
+              {{ role: 'custom', customType: 'extended-command-skill', content: '', details: {{ skill: 'review-skill', path: '/tmp/review/SKILL.md' }} }},
+            ];
+            console.log(JSON.stringify(dedupeExtendedCommandSkillMessages(messages)));
+            """
+        )
+
+        result = json.loads(self.run_node(script))
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["details"]["skill"], "review-skill")
+        self.assertEqual(result[1]["role"], "assistant")
+
+    def test_context_hook_prefers_native_skill_message_and_removes_only_extension_duplicate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            skill_path = root / "review-skill" / "SKILL.md"
+            skill_path.parent.mkdir()
+            skill_path.write_text("# Review Skill\n")
+            native_block = f'<skill name="review-skill" location="{skill_path}">\nNative\n</skill>'
+            script = textwrap.dedent(
+                f"""
+                import {{ dedupeExtendedCommandSkillMessages }} from {json.dumps(EXTENSION.as_uri())};
+                const messages = [
+                  {{ role: 'user', content: {json.dumps(native_block)} }},
+                  {{ role: 'custom', customType: 'extended-command-skill', content: '', details: {{ skill: 'review-skill', path: {json.dumps(str(skill_path))} }} }},
+                  {{ role: 'custom', customType: 'other-extension', content: 'keep me', details: {{ skill: 'review-skill', path: {json.dumps(str(skill_path))} }} }},
+                ];
+                console.log(JSON.stringify(dedupeExtendedCommandSkillMessages(messages)));
+                """
+            )
+
+            result = json.loads(self.run_node(script))
+
+            self.assertEqual([message["role"] for message in result], ["user", "custom"])
+            self.assertEqual(result[1]["customType"], "other-extension")
+
     def test_documentation_covers_validator_runtime_migration_and_out_of_scope(self):
         extension_readme = (REPO_ROOT / "extensions" / "extended-commands" / "README.md").read_text()
         command_valid_readme = (REPO_ROOT / "tools" / "command_valid" / "README.md").read_text()

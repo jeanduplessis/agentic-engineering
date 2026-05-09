@@ -13,7 +13,7 @@ This extension registers the local global command library (`~/.agents/commands/*
 - Runtime is permissive during migration: warn on unknown frontmatter or unsupported legacy syntax; do not fail plain command execution for those warnings.
 - Model routing supports exact `provider/model` and unique bare model IDs. Ambiguous/missing/unavailable models fail before prompt send.
 - Thinking routing uses Pi thinking levels and restores model/thinking after `agent_end` unless `restore: false`.
-- Skill injection supports legacy `skill` and YAML-list `skills`, resolves all local `SKILL.md` files before injecting any skill, sends one visible `extended-command-skill` custom message per skill before the command prompt, and does not add a custom renderer.
+- Skill injection supports legacy `skill` and YAML-list `skills`, resolves all local `SKILL.md` files before injecting any skill, sends one visible `extended-command-skill` custom message per not-already-loaded skill before the command prompt, silently skips duplicates already present in active model context, uses canonical `SKILL.md` path as primary identity with skill-name fallback, prefers native Pi `<skill ...>` messages, and does not add a custom renderer.
 
 ## Eval and validation
 

@@ -148,6 +148,77 @@ export function resolveDeclaredModel(modelRef: string, modelRegistry: any): { mo
 	return { error: `Model is not available: ${modelRef}` };
 }
 
+export type SkillIdentity = {
+	name?: string;
+	path?: string;
+};
+
+export function canonicalSkillPath(path: string | undefined): string | undefined {
+	if (!path) return undefined;
+	try {
+		return realpathSync(path);
+	} catch {
+		return resolve(path);
+	}
+}
+
+export function messageSkillIdentity(message: any): SkillIdentity | undefined {
+	if (!message) return undefined;
+	if (message.role === "custom" && message.customType === "extended-command-skill") {
+		const details = message.details ?? {};
+		const content = messageContentText(message.content);
+		const sourceMatch = content.match(/^Source:\s*(.+)$/m);
+		const nameMatch = content.match(/^Skill context for \/[^\s]+ \(([^)]+)\)/);
+		return {
+			name: typeof details.skill === "string" ? details.skill : nameMatch?.[1],
+			path: canonicalSkillPath(typeof details.path === "string" ? details.path : sourceMatch?.[1]),
+		};
+	}
+	if (message.role === "user") {
+		const text = messageContentText(message.content);
+		const match = text.match(/<skill name="([^"]+)" location="([^"]+)">/);
+		if (match) return { name: match[1], path: canonicalSkillPath(match[2]) };
+	}
+	return undefined;
+}
+
+export function messagesContainSkill(messages: any[], skill: SkillIdentity): boolean {
+	const normalizedSkill = { ...skill, path: canonicalSkillPath(skill.path) };
+	return messages.some((message) => identitiesMatch(messageSkillIdentity(message), normalizedSkill));
+}
+
+export function activeContextMessages(ctx: any): any[] {
+	const built = ctx.sessionManager?.buildSessionContext?.();
+	if (Array.isArray(built?.messages)) return built.messages;
+	const branch = ctx.sessionManager?.getBranch?.();
+	if (Array.isArray(branch)) {
+		return branch.flatMap((entry: any) => {
+			if (entry.type === "message" && entry.message) return [entry.message];
+			if (entry.type === "custom_message") {
+				return [{ role: "custom", customType: entry.customType, content: entry.content, display: entry.display, details: entry.details }];
+			}
+			return [];
+		});
+	}
+	return [];
+}
+
+export function dedupeExtendedCommandSkillMessages(messages: any[]): any[] {
+	const nativeIdentities = messages
+		.map(messageSkillIdentity)
+		.filter((identity, index): identity is SkillIdentity => Boolean(identity) && messages[index]?.role === "user");
+	const keptExtensionIdentities: SkillIdentity[] = [];
+	return messages.filter((message) => {
+		if (message.role !== "custom" || message.customType !== "extended-command-skill") return true;
+		const identity = messageSkillIdentity(message);
+		if (!identity) return true;
+		if (nativeIdentities.some((nativeIdentity) => identitiesMatch(nativeIdentity, identity))) return false;
+		if (keptExtensionIdentities.some((keptIdentity) => identitiesMatch(keptIdentity, identity))) return false;
+		keptExtensionIdentities.push(identity);
+		return true;
+	});
+}
+
 export function registerExtendedCommands(pi: ExtensionAPI, commandDir = getDefaultCommandDir()): ParsedCommand[] {
 	const commands = discoverCommands(commandDir);
 	let pendingRestore: { model?: any; thinking?: string } | undefined;
@@ -158,6 +229,7 @@ export function registerExtendedCommands(pi: ExtensionAPI, commandDir = getDefau
 		if (restore.model) await (pi as any).setModel?.(restore.model);
 		if (restore.thinking !== undefined) (pi as any).setThinkingLevel?.(restore.thinking);
 	});
+	(pi as any).on?.("context", async (event: any) => ({ messages: dedupeExtendedCommandSkillMessages(event.messages ?? []) }));
 	for (const command of commands) {
 		pi.registerCommand(command.name, {
 			description: command.description,
@@ -201,7 +273,10 @@ export function registerExtendedCommands(pi: ExtensionAPI, commandDir = getDefau
 					(pi as any).setThinkingLevel?.(command.frontmatter.thinking);
 				}
 
+				const activeMessages = activeContextMessages(ctx);
 				for (const skillContext of skillContexts) {
+					const identity = { name: skillContext.name, path: canonicalSkillPath(skillContext.path) };
+					if (messagesContainSkill(activeMessages, identity)) continue;
 					(pi as any).sendMessage?.({
 						customType: "extended-command-skill",
 						content: `Skill context for /${command.name} (${skillContext.name})\nSource: ${skillContext.path ?? "unknown"}\n\n${skillContext.content}`,
@@ -298,6 +373,18 @@ function unquoteScalar(value: string): string {
 		if ((first === '"' && last === '"') || (first === "'" && last === "'")) return trimmed.slice(1, -1);
 	}
 	return trimmed;
+}
+
+function messageContentText(content: any): string {
+	if (typeof content === "string") return content;
+	if (Array.isArray(content)) return content.filter((part) => part?.type === "text").map((part) => part.text).join("\n");
+	return "";
+}
+
+function identitiesMatch(left: SkillIdentity | undefined, right: SkillIdentity | undefined): boolean {
+	if (!left || !right) return false;
+	if (left.path && right.path) return left.path === right.path;
+	return Boolean(left.name && right.name && left.name === right.name);
 }
 
 function unsupportedSyntaxWarnings(name: string, body: string): string[] {

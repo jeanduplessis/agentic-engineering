@@ -14,6 +14,8 @@ Local Pi extension that owns the global command library at `~/.agents/commands`.
 - Supports valid Pi thinking levels.
 - Restores previous model/thinking after `agent_end` by default; `restore: false` makes changes sticky.
 - Supports multiple skills via legacy scalar `skill` and YAML-list `skills`, injecting each declared `SKILL.md` as a separate visible custom message before the command prompt.
+- Skips declared-skill injection silently when the same skill is already present in the active model context through a native Pi `<skill ...>` user message or prior `extended-command-skill` message; canonical `SKILL.md` path is the primary identity, with skill name as fallback.
+- Adds a context-hook safety net that removes only duplicate `extended-command-skill` messages before provider calls, preferring native Pi skill messages and never removing user/native skill messages.
 - Resolves all declared skills before injection and fails command execution before skill injection or prompt send when any declared skill is missing or unreadable.
 - Substitutes `$ARGUMENTS`, `$@`, and simple positional placeholders (`$1`, `$2`, ...).
 - Passes legacy shell/file expansion syntax through literally; unsupported syntax produces runtime warnings.
@@ -58,4 +60,5 @@ Skill injection smoke test:
    Prompt body
    ```
 3. Run the command and confirm one visible custom message per skill appears before the rendered command prompt, in declaration order.
-4. Change one skill to a missing name and confirm the command fails before injecting skills or sending the prompt.
+4. Run another command that declares an already-loaded skill and confirm duplicate skill context is skipped silently while the prompt still sends.
+5. Change one skill to a missing name and confirm the command fails before injecting skills or sending the prompt.
