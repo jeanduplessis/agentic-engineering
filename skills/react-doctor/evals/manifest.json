@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "react-doctor",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "changed-react-code-diff-scan",
+          "prompt": "You just finished React code changes. Do not run commands or edit files. Using the react-doctor skill, state the exact command you would run, why `--diff` is included, and what you must do if the health score regressed.",
+          "checks": [
+            {
+              "id": "uses-diff-command",
+              "type": "required_content",
+              "value": "npx -y react-doctor@latest . --verbose --diff"
+            },
+            {
+              "id": "mentions-diff-purpose",
+              "type": "required_content",
+              "value": "changed files"
+            },
+            {
+              "id": "checks-score-regression",
+              "type": "required_content",
+              "value": "score"
+            },
+            {
+              "id": "fixes-regressions",
+              "type": "required_content",
+              "value": "fix"
+            }
+          ]
+        },
+        {
+          "id": "cleanup-full-scan-order",
+          "prompt": "You are asked to improve React code quality across a codebase, not just changed files. Do not run commands or edit files. Using the react-doctor skill, state the exact command you would run and the severity order for fixing issues.",
+          "checks": [
+            {
+              "id": "uses-full-command",
+              "type": "required_content",
+              "value": "npx -y react-doctor@latest . --verbose"
+            },
+            {
+              "id": "mentions-errors",
+              "type": "regex",
+              "pattern": "(?i)errors"
+            },
+            {
+              "id": "mentions-warnings",
+              "type": "regex",
+              "pattern": "(?i)warnings"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}

@@ -1,11 +1,12 @@
 ---
 name: code-review-workflow
-description: Use when reviewing local repository changes or running /review or @review-* workflows. Provides a deterministic, read-only review process for staged, unstaged, untracked, deleted, and branch-diff changes across security, logic, types, data, resources, and style.
+description: Use when reviewing local repository changes or running /review or @review-* workflows. Provides a deterministic review process for staged, unstaged, untracked, deleted, and branch-diff changes across security, logic, types, data, resources, style, and React code quality.
 ---
 
 # Code Review Workflow
 
-Read-only review of local changes. Inspect evidence; do not edit code or run application logic.
+Review local changes. Focus reviews inspect evidence and do not edit code or run application logic.
+React Code Quality may run the required `react-doctor` static analyzer.
 
 ## Reference loading
 
@@ -18,6 +19,7 @@ Read-only review of local changes. Inspect evidence; do not edit code or run app
   - `references/data.md` for `@review-data`.
   - `references/resources.md` for `@review-resources`.
   - `references/style.md` for `@review-style`.
+  - `references/react.md` for `@review-react`.
 
 ## Usage paths
 
@@ -25,7 +27,7 @@ Read-only review of local changes. Inspect evidence; do not edit code or run app
 
 1. Load this skill and `references/scope.md`.
 2. Resolve scope and emit a `Resolved Review Scope` block.
-3. Launch the six reviewer sub-agents in parallel, passing each the same scope block.
+3. Launch the seven reviewer sub-agents in parallel, passing each the same scope block.
 4. Each sub-agent loads this skill, `references/reviewer-core.md`, `references/output.md`, and one focus reference.
 5. Sub-agents skip `references/scope.md` because the caller already resolved scope.
 

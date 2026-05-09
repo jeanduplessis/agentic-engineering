@@ -1,6 +1,6 @@
 # Output Format
 
-Required output format for all review sub-agents. Every finding must use this structure.
+Required output format for all review sub-agents. Every code finding must use this structure.
 
 ## For Each Issue
 
@@ -21,7 +21,7 @@ Required output format for all review sub-agents. Every finding must use this st
 **Impact:** <What breaks at runtime and under what conditions>
 ```
 
-Every field (Evidence, Trace, Impact) is required. If any field cannot be populated with concrete evidence from inspected code, drop the finding.
+Every field (Evidence, Trace, Impact) is required. If any field cannot be populated with concrete evidence from inspected code or required analyzer output, drop the finding.
 
 ## Severities
 
@@ -59,4 +59,17 @@ No issues found.
 - `src/other.ts`
 ```
 
-Replace `<Focus Area Name>` with the specific agent's focus (e.g., "Security", "Logic & Error Handling", "Type Safety & API Contract", "Data & Schema Safety", "Resource Management & Typos", "Style & Clarity").
+Replace `<Focus Area Name>` with the specific agent's focus (e.g., "Security", "Logic & Error Handling", "Type Safety & API Contract", "Data & Schema Safety", "Resource Management & Typos", "Style & Clarity", "React Code Quality").
+
+## Analyzer Status
+
+Analyzer-backed focus areas may add a short status section before findings:
+
+```md
+### Analyzer Status
+
+- `<command>`: PASS|FAIL|NOT APPLICABLE
+- Notes: <score, regression status, failure reason, or applicability reason>
+```
+
+For React Code Quality, `react-doctor` failure in a React-applicable repo is blocking: report `FAIL`, do not say "No issues found," and include the failed command and stderr/stdout evidence.

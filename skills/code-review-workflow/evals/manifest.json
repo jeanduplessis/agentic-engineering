@@ -53,6 +53,42 @@
               "value": "No issues found"
             }
           ]
+        },
+        {
+          "id": "react-review-requires-react-doctor",
+          "prompt": "You are acting as @review-react for a code-review-workflow smoke test. Do not read files, write files, run shell commands, or invoke external tools. Load the review workflow and state the normal React Code Quality behavior for a React-applicable resolved scope: required analyzer command, analyzer status handling, severity mapping for errors/warnings/score regression, and the exact review summary heading.",
+          "checks": [
+            {
+              "id": "react-summary-heading",
+              "type": "required_content",
+              "value": "## Review Summary (React Code Quality)"
+            },
+            {
+              "id": "analyzer-status",
+              "type": "required_content",
+              "value": "Analyzer Status"
+            },
+            {
+              "id": "react-doctor-command",
+              "type": "required_content",
+              "value": "npx -y react-doctor@latest . --verbose --diff"
+            },
+            {
+              "id": "critical-errors",
+              "type": "required_content",
+              "value": "CRITICAL"
+            },
+            {
+              "id": "warning-warnings",
+              "type": "required_content",
+              "value": "WARNING"
+            },
+            {
+              "id": "score-regression",
+              "type": "required_content",
+              "value": "score regression"
+            }
+          ]
         }
       ]
     }

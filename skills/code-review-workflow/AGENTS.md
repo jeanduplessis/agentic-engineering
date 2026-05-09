@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Maintain `SKILL.md` as the router for deterministic, read-only review of local repository changes. The skill should guide `/review` and `@review-*` workflows across staged, unstaged, untracked, deleted, and branch-diff changes without editing code or running application logic.
+Maintain `SKILL.md` as the router for deterministic review of local repository changes. The skill should guide `/review` and `@review-*` workflows across staged, unstaged, untracked, deleted, and branch-diff changes without editing code or running application logic. React Code Quality is the only focus allowed to run the required `react-doctor` static analyzer.
 
 ## How the skill works
 
-`SKILL.md` selects which reference files a caller should load. `references/scope.md` resolves changed files and emits the `Resolved Review Scope` contract. `references/reviewer-core.md` defines shared reviewer constraints. `references/output.md` defines the Evidence / Trace / Impact output shape. Focus references under `references/` define security, logic, types, data, resources, and style criteria.
+`SKILL.md` selects which reference files a caller should load. `references/scope.md` resolves changed files and emits the `Resolved Review Scope` contract. `references/reviewer-core.md` defines shared reviewer constraints. `references/output.md` defines the Evidence / Trace / Impact output shape. Focus references under `references/` define security, logic, types, data, resources, style, and React criteria.
 
 ## Eval and validation
 
@@ -27,6 +27,7 @@ Run the full local validity wrapper only with approval for live Pi/model executi
 ## Change guidelines
 
 - Keep `SKILL.md` concise; move detailed review rules into `references/`.
-- Preserve read-only behavior: no edits, commits, pushes, builds, tests, servers, or application-code execution during review.
+- Preserve no-edit behavior: no edits, commits, pushes, builds, tests, servers, or application-code execution during focus review.
+- Keep the analyzer exception narrow: only React Code Quality may run `npx -y react-doctor@latest . --verbose --diff`, and only when React is applicable.
 - Update `evals/manifest.json` when the routing contract or required output shape changes.
 - Keep command and reference mentions aligned with the skill name `code-review-workflow`.
