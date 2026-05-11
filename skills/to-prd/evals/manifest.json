@@ -15,16 +15,16 @@
       "cases": [
         {
           "id": "draft-prd-with-approved-scope",
-          "prompt": "Turn this already-agreed feature context into a PRD. Draft the PRD only; do not run commands, create files, or create a beads task. Assume I approve this implementation shape and testing focus, so do not interview me before drafting. Context: Users of a note-taking app need saved search alerts. They can save a search query, choose daily or weekly email alerts, pause or delete alerts, and see why an alert matched a note. Implementation shape: add an alert scheduling module, an email notification module, and UI/API changes for managing saved-search alerts. Testing focus: scheduler behavior, notification content, and pause/delete behavior. Out of scope: mobile push notifications, team-shared alerts, and complex boolean query syntax.",
+          "prompt": "Turn this already-agreed feature context into a PRD. Draft the PRD only; do not run commands, create files, or create a beads epic. Assume I approve this implementation shape and testing focus, so do not interview me before drafting. Context: Users of a note-taking app need saved search alerts. They can save a search query, choose daily or weekly email alerts, pause or delete alerts, and see why an alert matched a note. Implementation shape: add an alert scheduling module, an email notification module, and UI/API changes for managing saved-search alerts. Testing focus: scheduler behavior, notification content, and pause/delete behavior. Out of scope: mobile push notifications, team-shared alerts, and complex boolean query syntax.",
           "checks": [
             {
               "id": "non-empty-response",
               "type": "non_empty_response"
             },
             {
-              "id": "has-problem-statement",
+              "id": "has-problem",
               "type": "required_content",
-              "value": "## Problem Statement"
+              "value": "## Problem"
             },
             {
               "id": "has-solution",
