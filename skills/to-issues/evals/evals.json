@@ -1,0 +1,14 @@
+{
+  "evals": [
+    {
+      "id": "draft-vertical-slice-breakdown",
+      "prompt": "Use the to-issues workflow on this implementation brief. You are in an empty sandbox with no initialized .ait project; do not initialize ait. Draft the implementation issue set you would create, include the issue body fields, and ask how I want to proceed with ait setup instead of claiming issues were created. Brief: Add saved search alerts to an existing issue tracker. Users can save a query, choose daily or immediate email alerts, receive notifications when new matching issues appear, and disable alerts from settings. Constraints: reuse the existing issue search UI and email job framework; include a design-review checkpoint only if needed before implementation.",
+      "checks": [
+        {
+          "id": "non-empty-response",
+          "type": "non_empty_response"
+        }
+      ]
+    }
+  ]
+}

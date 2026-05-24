@@ -17,8 +17,6 @@ Do not preserve compatibility with non-Pi harnesses except where required for li
 - `tools/` — Python tooling for token counting, LLM-optimization checks, Pi skill evals, and Pi skill validation.
   Read `tools/AGENTS.md` and any tool-local `AGENTS.md` before editing.
 
-- `.beads/` — local beads task state; do not hand-edit unless you are intentionally maintaining task metadata.
-
 ## Working conventions
 
 - Keep LLM-facing Markdown concise, explicit, and easy to execute. Avoid clever indirection when direct instructions work.
@@ -38,10 +36,6 @@ Do not preserve compatibility with non-Pi harnesses except where required for li
     git -C <repo-root> add <repo-root-relative-paths>
     ```
 
-- Nested package beads work:
-  - Name the target `.beads/` directory before mutating.
-  - Keep root `.beads/` out of scope unless the target repo path is the repository root.
-
 ## Useful validation commands
 
 For tool changes:
@@ -57,3 +51,29 @@ For skill validation, use the repo-local validation tool:
 ```
 
 Run live validation gates only with explicit approval; the wrapper passes `--allow-live-pi` to `tools.skill_valid`.
+
+<!-- AIT START -->
+# Agent Issue Tracker (ait)
+
+This repo uses `ait` CLI for structured, durable, repo-local issue tracking. 
+
+## Project State
+
+- Project data lives in `.ait/`.
+- The CLI is the mutation surface; do not edit `.ait/state.sqlite` or `.ait/issues.jsonl` directly.
+- Non-view commands return JSON envelopes: success is `{"ok": true, "data": ...}`; failure is `{"ok": false, "error": ...}`.
+- Mutating commands require an actor: pass `--actor agent` or set `AIT_ACTOR`.
+
+## Usage
+
+When working with `ait`, load and follow the `ait-cli` skill.
+
+Use the skill for creating, claiming, updating, closing, listing, inspecting, validating, or resuming issues; finding ready work; managing dependencies; and any workflow needing persistent issue state.
+
+## Safety Rules
+
+- Do not run bare `ait` in automation; it opens the TUI.
+- Do not initialize, import, export, or force-close unless requested or clearly required.
+- Use `ait check` before handoff and after unusual failures.
+- On command failure, report `error.code`, `error.message`, and next safe action.
+<!-- AIT END -->

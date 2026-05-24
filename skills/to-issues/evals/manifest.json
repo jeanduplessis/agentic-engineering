@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "to-issues",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "legacy_evals": "evals.json",
+      "custom_grader": "grader.py"
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}

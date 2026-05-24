@@ -48,6 +48,7 @@ Inspect guidance/code:
 - Read `CONTEXT.md` if present.
 - Respect relevant ADRs in `docs/adr/` if present.
 - Derive public interface and behavior from bead description, acceptance criteria, project docs, and codebase.
+- Extract explicit acceptance criteria and track which criteria each TDD slice is proving.
 
 Before coding, update TDD state:
 
@@ -67,8 +68,16 @@ Implement vertical slices:
 2. Run the focused test; verify expected failure.
 3. Implement the smallest passing change.
 4. Run the focused test; verify it passes.
-5. Refactor only while green.
-6. Repeat until acceptance criteria are met.
+5. When a slice proves an acceptance criterion complete, immediately mark that criterion completed in the bead acceptance criteria, preserving criterion text/order and leaving unproven criteria unchecked:
+
+   ```bash
+   br update <task-id> \
+     --acceptance-criteria "<same criteria with newly completed items marked [x]>" \
+     --json
+   ```
+
+6. Refactor only while green.
+7. Repeat until acceptance criteria are met and marked complete.
 
 Rules:
 
@@ -117,7 +126,7 @@ For unrelated validation failures, record the failure and create a `discovered-f
 
 ## 5. Close
 
-Close only when acceptance criteria are met and relevant validation passes:
+Close only when acceptance criteria are met, completed criteria are marked in the bead, and relevant validation passes:
 
 ```bash
 br close <task-id> \

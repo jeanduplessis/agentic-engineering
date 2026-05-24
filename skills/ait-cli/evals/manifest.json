@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "ait-cli",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "start-ait-work",
+          "prompt": "I am in a repository that already has .ait/. Use ait to find ready work and begin the next implementation task. Explain the commands you would run before editing.",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            },
+            {
+              "id": "runs-check",
+              "type": "required_content",
+              "value": "ait check"
+            },
+            {
+              "id": "uses-ready-grouped",
+              "type": "required_content",
+              "value": "ait ready --grouped"
+            },
+            {
+              "id": "lists-in-progress",
+              "type": "required_content",
+              "value": "ait list --status in_progress"
+            },
+            {
+              "id": "claims-with-actor",
+              "type": "regex",
+              "pattern": "ait --actor [^\\n]+ claim <ISSUE_ID>|ait --actor [^\\n]+ claim [A-Z][A-Z0-9]{0,2}-[0-9]+"
+            }
+          ]
+        },
+        {
+          "id": "safe-mutation-boundaries",
+          "prompt": "Create an ait task for parser error handling, then describe any safety rules you must follow around .ait/ files, actors, and initialization if no .ait/ directory exists.",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            },
+            {
+              "id": "creates-via-stdin",
+              "type": "required_content",
+              "value": "ait --actor agent create --stdin"
+            },
+            {
+              "id": "does-not-edit-storage",
+              "type": "required_content",
+              "value": "Do not edit `.ait/state.sqlite` or `.ait/issues.jsonl` directly"
+            },
+            {
+              "id": "ask-before-init",
+              "type": "regex",
+              "pattern": "ask|approve|approval"
+            },
+            {
+              "id": "has-required-fields",
+              "type": "required_content",
+              "value": "issue_type"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}
