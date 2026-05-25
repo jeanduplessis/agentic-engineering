@@ -1,0 +1,14 @@
+{
+  "evals": [
+    {
+      "id": "ait-recovery-contract-from-session-feedback",
+      "prompt": "Use the epic-orchestrate skill to describe how you would improve or resume an interrupted /epic-orchestrate run. Scenario: a child implementation gate closed or updated issue AIT-123.2 before validation failed; a generated helper script later crashed on unsupported mapfile; validation found a missed parent-update path that can invalidate child records; an ait close command returned ok=false with close_incomplete_acceptance_criteria; the run may need to resume. Do not execute commands. Return the controller rules and next safe steps.",
+      "checks": [
+        {
+          "id": "non-empty-response",
+          "type": "non_empty_response"
+        }
+      ]
+    }
+  ]
+}
