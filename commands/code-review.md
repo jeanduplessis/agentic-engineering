@@ -1,5 +1,5 @@
 ---
-description: "Review current code changes and fix actionable findings"
+description: "Review current code changes and fix actionable findings after confirmation"
 argument-hint: "[scope or instructions]"
 skills:
   - code-review-workflow
@@ -91,9 +91,23 @@ Keep different root causes on the same line separate.
 
 Sort by severity (`CRITICAL`, `WARNING`, `SUGGESTION`), then file path.
 
-## 4. Fix
+## 4. Confirm before fixes
 
-After the no-edit focus-review phase, fix actionable findings:
+Pause before any fix edits or write-capable commands.
+
+Present:
+- merged findings by severity and focus area;
+- React Code Quality analyzer status;
+- proposed fixes;
+- skipped findings with brief reasons.
+
+Ask the user: `Proceed with these fixes?`
+
+Stop and wait for explicit user confirmation. If the user declines or changes scope, do not fix; follow the user's updated direction. Proceed to Step 5 only after confirmation.
+
+## 5. Fix
+
+After the no-edit focus-review phase and explicit user confirmation, fix actionable findings:
 
 - Fix every `CRITICAL` and `WARNING` finding.
 - If React Code Quality reports Analyzer Status `FAIL`, treat the review as blocked until the analyzer passes or React is proven not applicable.
@@ -105,7 +119,7 @@ For each fix:
 2. Implement the smallest safe change.
 3. Note what changed and why.
 
-## 5. Summarize
+## 6. Summarize
 
 Report:
 - issue counts by severity and focus area;
