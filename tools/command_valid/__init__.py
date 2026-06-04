@@ -13,9 +13,11 @@ INVALID_EXIT = 1
 USAGE_OR_RESOLUTION_EXIT = 2
 
 COMMAND_NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-ALLOWED_FRONTMATTER_FIELDS = frozenset({"description", "argument-hint", "model", "thinking", "skill", "skills", "restore"})
+ALLOWED_FRONTMATTER_FIELDS = frozenset({"description", "argument-hint", "model", "thinking", "skill", "skills", "restore", "agent", "subtask"})
 VALID_THINKING_LEVELS = frozenset({"off", "minimal", "low", "medium", "high", "xhigh"})
-VALID_RESTORE_VALUES = frozenset({"true", "false"})
+VALID_BOOLEAN_VALUES = frozenset({"true", "false"})
+VALID_RESTORE_VALUES = VALID_BOOLEAN_VALUES
+VALID_SUBTASK_VALUES = VALID_BOOLEAN_VALUES
 RESERVED_COMMAND_NAMES = frozenset(
     {
         "clear",
@@ -124,24 +126,54 @@ def _validate_markdown_contract(text: str, command_name: str, repo_root: Path) -
         errors.append(_error("missing_description", "Command frontmatter must include a non-empty scalar description."))
     for key in parsed:
         if key not in ALLOWED_FRONTMATTER_FIELDS:
-            errors.append(_error("unknown_frontmatter", f"Unsupported frontmatter field for Pi extended commands: {key}"))
+            errors.append(_error("unknown_frontmatter", f"Unsupported frontmatter field for shared commands: {key}"))
     thinking = parsed.get("thinking")
     if thinking and thinking not in VALID_THINKING_LEVELS:
         errors.append(_error("invalid_thinking", f"Invalid thinking value {thinking!r}; expected one of: {', '.join(sorted(VALID_THINKING_LEVELS))}."))
     restore = parsed.get("restore")
     if restore and restore not in VALID_RESTORE_VALUES:
         errors.append(_error("invalid_restore", "Invalid restore value; expected true or false."))
-    declared_skills = list(dict.fromkeys([skill for skill in [parsed.get("skill"), *skills] if skill]))
+    subtask = parsed.get("subtask")
+    if subtask and subtask not in VALID_SUBTASK_VALUES:
+        errors.append(_error("invalid_subtask", "Invalid subtask value; expected true or false."))
+    declared_skill_values = [skill for skill in [parsed.get("skill"), *skills] if skill]
+    declared_skills = list(dict.fromkeys(declared_skill_values))
+    if len(declared_skills) != len(declared_skill_values):
+        errors.append(_error("duplicate_skill", "Declared skills must not contain duplicates."))
     for skill in declared_skills:
-        if not _local_skill_exists(repo_root, skill):
+        if not COMMAND_NAME_RE.fullmatch(skill):
+            errors.append(_error("invalid_skill", f"Declared skill name must be lowercase kebab-case: {skill}"))
+        elif not _local_skill_exists(repo_root, skill):
             errors.append(_error("missing_skill", f"Declared skill does not resolve to a readable local skill: {skill}"))
+    if declared_skills and not _has_matching_required_skills_section(body, declared_skills):
+        errors.append(
+            _error(
+                "missing_required_skills_section",
+                "Commands declaring skills must include an explicit Required skills body section listing every declared skill.",
+            )
+        )
     if re.search(r"!`[^`]*`", body):
-        errors.append(_error("unsupported_body_syntax", "Unsupported legacy shell expansion syntax is not valid in clean Pi commands."))
-    if re.search(r"(?<!\\)@(?:[A-Za-z0-9_./~-]+)", body):
-        errors.append(_error("unsupported_body_syntax", "Unsupported legacy file expansion syntax is not valid in clean Pi commands."))
-    if re.search(r"\$\{@:[^}]+\}", body):
-        errors.append(_error("unsupported_placeholder", "Unsupported placeholder slicing syntax is not valid in clean Pi commands."))
+        errors.append(_error("unsupported_body_syntax", "Unsupported OpenCode shell interpolation is not valid in shared commands."))
+    if re.search(r"(?<![\\\w])@[A-Za-z0-9_./~-]+", body):
+        errors.append(_error("unsupported_body_syntax", "Unsupported OpenCode file interpolation is not valid in shared commands."))
+    if re.search(r"\$@|\$\{@:[^}]*\}", body):
+        errors.append(_error("unsupported_placeholder", "Unsupported argument placeholder; use $ARGUMENTS or simple positional placeholders such as $1."))
     return errors
+
+
+def _has_matching_required_skills_section(body: str, declared_skills: list[str]) -> bool:
+    match = re.search(r"(?im)^#{1,6}\s+Required skills\s*$", body)
+    if not match:
+        return False
+    remainder = body[match.end() :]
+    next_heading = re.search(r"(?m)^#{1,6}\s+", remainder)
+    section = remainder[: next_heading.start()] if next_heading else remainder
+    listed = [
+        item.group(1)
+        for line in section.splitlines()
+        if (item := re.fullmatch(r"\s*[-*+]\s+`?([a-z0-9]+(?:-[a-z0-9]+)*)`?\s*", line))
+    ]
+    return declared_skills == listed
 
 
 def _parse_frontmatter(text: str, command_name: str) -> tuple[dict[str, str], list[str], str, list[dict[str, str]]]:
@@ -169,6 +201,8 @@ def _parse_frontmatter(text: str, command_name: str) -> tuple[dict[str, str], li
             index += 1
             continue
         key, value = match.group(1), match.group(2).strip()
+        if key in values:
+            errors.append(_error("duplicate_frontmatter", f"Duplicate frontmatter field in /{command_name}: {key}"))
         values[key] = _unquote_scalar(value)
         if key == "skills" and value != "":
             errors.append(_error("non_scalar_frontmatter", "Frontmatter field must be a YAML list: skills"))
@@ -238,9 +272,8 @@ def main(
     stdout: TextIO | None = None,
     stderr: TextIO | None = None,
 ) -> int:
-    stdout = stdout or sys.stdout
-    stderr = stderr or sys.stderr
-    parser = argparse.ArgumentParser(description="Validate one Pi extended command name.", add_help=True)
+    output = stdout if stdout is not None else sys.stdout
+    parser = argparse.ArgumentParser(description="Validate one shared Pi/OpenCode command name.", add_help=True)
     parser.add_argument("command_name", nargs="?", help="Command name without leading slash or .md suffix")
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help="Repository root; defaults to current directory")
     parser.add_argument("--commands-dir", type=Path, help="Command library directory; defaults to <repo-root>/commands")
@@ -258,10 +291,10 @@ def main(
         )
     )
     if args.json:
-        stdout.write(json.dumps(result.as_dict(), separators=(",", ":"), sort_keys=True) + "\n")
+        output.write(json.dumps(result.as_dict(), separators=(",", ":"), sort_keys=True) + "\n")
     else:
-        stdout.write(format_friendly(result))
-    stdout.flush()
+        output.write(format_friendly(result))
+    output.flush()
     return code
 
 
@@ -269,7 +302,9 @@ __all__ = [
     "ALLOWED_FRONTMATTER_FIELDS",
     "COMMAND_NAME_RE",
     "RESERVED_COMMAND_NAMES",
+    "VALID_BOOLEAN_VALUES",
     "VALID_RESTORE_VALUES",
+    "VALID_SUBTASK_VALUES",
     "VALID_THINKING_LEVELS",
     "CommandValidationOptions",
     "CommandValidationResult",

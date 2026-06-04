@@ -6,6 +6,13 @@ skills:
   - beads
 ---
 
+## Required skills
+
+- `epic-implement`
+- `beads`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
 Implement one existing epic bead using the loaded `epic-implement` skill as the authoritative workflow.
 
 Args: $ARGUMENTS

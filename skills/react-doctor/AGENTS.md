@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Maintain `SKILL.md` as the runtime contract for using the `react-doctor` CLI after React code changes and during React codebase cleanup. The skill should tell Pi agents when to run the analyzer, which command to use, and how to respond to score regressions or reported issues.
+Maintain `SKILL.md` as the shared Pi/OpenCode runtime contract for using the `react-doctor` CLI after React code changes and during React codebase cleanup. The skill should tell agents when to run the analyzer, which command to use, and how to respond to score regressions or reported issues.
 
 ## How the skill works
 
@@ -15,7 +15,7 @@ Keep the commands exact unless the upstream `react-doctor` CLI contract changes.
 
 ## Eval and validation
 
-`evals/manifest.json` declares workflow smoke cases for the changed-code and cleanup paths. The cases ask for no-command plans so live Pi validation can check the skill contract without installing or running the external analyzer.
+`evals/manifest.json` declares workflow smoke cases for the changed-code and cleanup paths. The cases ask for no-command plans so live harness validation can check the skill contract without installing or running the external analyzer.
 
 Run deterministic validation from the repository root:
 
@@ -23,10 +23,10 @@ Run deterministic validation from the repository root:
 python3 -m tools.skill_valid skills/react-doctor
 ```
 
-Run the full local validity wrapper only with approval for live Pi/model execution:
+Run live harness/model validation only with explicit approval:
 
 ```sh
-./tools/skill_valid/skill_validate.sh skills/react-doctor
+./tools/skill_valid/skill_validate.sh skills/react-doctor --allow-live --harness kilo
 ```
 
 ## Change guidelines

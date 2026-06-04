@@ -32,9 +32,25 @@ def main() -> None:
     parser.add_argument("suite", help="Suite name to run")
     parser.add_argument("--results", type=Path, default=Path("skill-eval-results"), help="Result directory")
     parser.add_argument("--require-real", action="store_true", help="Reject static/replay harness configurations")
+    parser.add_argument("--allow-live", action="store_true", help="Explicitly allow real harness/model execution")
+    parser.add_argument("--allow-live-pi", action="store_true", help="Deprecated alias for --allow-live")
     args = parser.parse_args()
 
-    summary = run_suite(args.manifest, args.suite, args.results, require_real=args.require_real)
+    configurations = None
+    if args.allow_live or args.allow_live_pi:
+        from .manifest import load_manifest
+
+        configurations = {
+            name: {**config, "allow_live": True}
+            for name, config in load_manifest(args.manifest).configurations.items()
+        }
+    summary = run_suite(
+        args.manifest,
+        args.suite,
+        args.results,
+        configurations=configurations,
+        require_real=args.require_real,
+    )
     print(json.dumps(summary, indent=2, sort_keys=True))
 
 

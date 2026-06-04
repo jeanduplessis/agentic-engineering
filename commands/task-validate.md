@@ -5,6 +5,12 @@ skills:
   - beads
 ---
 
+## Required skills
+
+- `beads`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
 Validate one bead task by proving whether each acceptance criterion is met.
 
 Arguments: $ARGUMENTS

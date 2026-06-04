@@ -10,7 +10,7 @@ def grade(response: str, case: Any = None, context: dict[str, Any] | None = None
         _result(
             "epic_orchestrate.parent_only_closure",
             _has_any(lower, "parent closes", "parent-owned closure", "parent only", "only the parent")
-            and _has_any(lower, "must not close", "do not close", "child gates must not", "children must not")
+            and _has_any(lower, "must not close", "do not close", "gate executors must not")
             and "after" in lower
             and _has_any(lower, "validation", "review"),
             "requires parent-only issue closure after validation/review gates",
@@ -60,6 +60,25 @@ def grade(response: str, case: Any = None, context: dict[str, Any] | None = None
             _has_any(lower, "force-close", "force close", "--force")
             and _has_any(lower, "explicit", "approval", "approve", "without user"),
             "requires no force-close without explicit approval",
+            None,
+        ),
+        _result(
+            "epic_orchestrate.harness_neutral_gate_execution",
+            _has_any(lower, "native subagent", "subagent")
+            and _has_any(lower, "current harness", "harness runner", "non-interactive runner")
+            and _has_any(lower, "current session", "sequential fallback", "sequentially")
+            and _has_any(lower, "pi is optional", "pi optional", "pi self-invocation is optional", "pi executable or native subagent is available")
+            and _has_any(lower, "same gate", "same prompt", "same contract", "preserve gate"),
+            "requires optional runners and complete sequential current-session fallback",
+            None,
+        ),
+        _result(
+            "epic_orchestrate.canonical_template_precedence",
+            _has_any(lower, "commands/tdd-task.md", "commands/<name>.md", "commands/")
+            and _has_any(lower, "first", "before", "precedence", "prefer", "canonical")
+            and ".pi/prompts" in lower
+            and _has_any(lower, "optional", "fallback", "after"),
+            "requires canonical commands template before optional Pi locations",
             None,
         ),
     ]

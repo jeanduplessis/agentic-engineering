@@ -20,14 +20,17 @@ python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow \
   --require-real
 ```
 
-Run a live Pi evaluation:
+Run a live evaluation through manifest-selected real harness:
 
 ```bash
-SKILL_EVAL_ALLOW_LIVE_PI=1 \
 python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow \
   --results /tmp/custom-command-real \
-  --require-real
+  --require-real \
+  --allow-live
 ```
+
+`SKILL_EVAL_ALLOW_LIVE=1` provides equivalent harness-neutral opt-in. `--allow-live-pi` and
+`SKILL_EVAL_ALLOW_LIVE_PI=1` remain compatibility aliases.
 
 Run unit tests for the framework:
 
@@ -52,7 +55,7 @@ python3 -m tools.skill_eval promote-regressions \
   but the runner reports them as unsupported until those harnesses exist.
 
 - **harness modes**: `static` emits configured text for plumbing smoke tests; `replay` reuses prior captured
-  output; `real` invokes an agent harness such as Pi. Static/replay outputs are synthetic.
+  output; `real` invokes an agent harness such as Pi or OpenCode-compatible Kilo. Static/replay outputs are synthetic.
 
 - **configurations**: named execution variants such as `with_skill` and `without_skill`. For Pi, `with_skill`
   force-loads the target skill with `--skill`; `without_skill` runs with `--no-skills` and omits the target
@@ -115,9 +118,15 @@ The Pi harness runs non-interactively with isolation flags:
 pi --no-session --no-context-files --no-extensions --no-prompt-templates --no-skills [--skill <skill>] -p <prompt>
 ```
 
-Live Pi execution is gated. Enable it with either config `allow_live: true` or the environment variable
-`SKILL_EVAL_ALLOW_LIVE_PI=1`. If Pi credentials, provider config, or the executable are unavailable, runs are
-skipped or marked as process failures rather than faking outputs.
+Live execution is gated. Enable it with config `allow_live: true`, CLI `--allow-live`, or environment variable
+`SKILL_EVAL_ALLOW_LIVE=1`. Legacy Pi-specific opt-ins remain aliases. If credentials, provider config, or the
+executable are unavailable, runs are skipped or marked as process failures rather than faking outputs.
+
+### Real Kilo
+
+The `kilo` harness uses OpenCode-compatible `kilo run --pure --format default`. Forced skills are attached with
+`--file <SKILL.md>` and an explicit force-load instruction because Kilo/OpenCode exposes no Pi-style `--skill`
+run flag. Provider and model become `--model provider/model`; thinking maps to `--variant`.
 
 Use `--require-real` for benchmark-quality runs. It rejects static/replay configurations before execution.
 

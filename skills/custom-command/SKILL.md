@@ -1,157 +1,155 @@
 ---
 name: custom-command
-description: Create, port, audit, and edit Pi Markdown prompt templates and slash commands. Use when the user asks for a Pi prompt template, slash command, command file, prompt-template file, .pi/prompts file, global Pi prompt, package prompt entry, command migration, or prompt-template syntax audit. Focuses on Pi locations, frontmatter, argument placeholders, package discovery, and legacy syntax cleanup.
+description: Create, port, audit, and edit shared Pi/OpenCode Markdown commands or harness-local prompt templates. Use when working with slash commands, command files, prompt-template files, shared command sources, .pi/prompts, .opencode/commands, package prompt entries, command migration, or prompt-template syntax audits. Covers canonical ownership, symlink activation, portable metadata, skill loading, and shared argument placeholders.
 ---
 
 # Custom Command
 
-Author Pi prompt templates: Markdown snippets invoked as slash commands. Filename stem becomes the slash command name.
+Author Markdown commands, including Pi prompt templates, for Pi, OpenCode, or both. Filename stem becomes command name.
 
-## Goal
+## Decide scope first
 
-Produce Pi-native prompt templates for one of these locations:
+Classify command before choosing syntax or location:
 
-- Global: `~/.pi/agent/prompts/<name>.md`
-- Project: `.pi/prompts/<name>.md`
-- Package conventional directory: `prompts/<name>.md`
-- Package manifest entry: `package.json` `pi.prompts`
-- This repo: `commands/<name>.md`, exposed by root `package.json` `pi.prompts`
-- CLI one-off: `pi --prompt-template <path>`
+- **Shared repo command:** intended to behave the same in Pi and OpenCode. Keep one canonical source.
+  In this repo, default canonical source is `commands/<name>.md`.
+- **Harness-local one-off:** intentionally uses one harness's behavior or belongs only to one user/project setup. Store it in that harness's native prompt directory; do not promote it to this repo's shared `commands/` library.
 
-If the user wants a file installed and no target is specified, ask one concise clarification. For this repo, default to `commands/<name>.md`.
+If user asks to install a harness-local file but does not identify Pi or OpenCode, ask one concise clarification. Otherwise default this repo command work to a shared source under `commands/`.
 
-## Pi template shape
+## Canonical source and activation
+
+For shared commands:
+
+1. Edit one canonical Markdown source, normally this repo's `commands/<name>.md`.
+2. Expose that same source to each harness through package discovery or symlinks.
+3. Never maintain generated, built, copied, or hand-synchronized harness variants.
+
+This repo's root Pi package manifest already exposes `commands/*.md`. Activate a shared source elsewhere with symlinks when needed:
+
+- Pi project: `.pi/prompts/<name>.md`
+- Pi global: `~/.pi/agent/prompts/<name>.md`
+- OpenCode project: `.opencode/commands/<name>.md`
+- OpenCode global: `~/.config/opencode/commands/<name>.md`
+
+Use relative symlinks for project-local activation when practical. Before proposing a symlink, verify target harness discovers that directory and does not require a regular file.
+
+Harness-local one-offs may live directly in native locations above. Pi also supports package `pi.prompts` entries and `pi --prompt-template <path>`.
+
+## Shared command shape
+
+Use a flat lowercase kebab-case `.md` filename and behavior-complete body:
 
 ```markdown
 ---
-description: "Short description shown in Pi autocomplete"
-argument-hint: "[optional args]"
+description: "Short description shown in command autocomplete"
+argument-hint: "[optional input]"
 ---
 
-Prompt body. User input: $ARGUMENTS
+Perform the requested task.
+Raw user input: $ARGUMENTS
 ```
 
 Rules:
 
-- Use flat lowercase kebab-case filenames with `.md`.
-- Keep frontmatter scalar YAML.
-- `description` is optional in Pi but required for clean repo templates.
-- `argument-hint` is optional autocomplete help; use `<required>` and `[optional]` notation.
-- The body is the prompt Pi inserts/executes.
+- Use valid scalar YAML. `description` is portable baseline metadata.
+- `argument-hint` is harmless UI metadata only when every target harness accepts or safely ignores it.
+- Shared body must preserve baseline behavior if any harness ignores nonessential metadata.
+- Do not put behavior-changing routing metadata such as `agent`, `model`, or `subtask` in shared sources.
+- Additional harness-specific metadata is allowed only after verifying other target harnesses parse and safely ignore it. Never rely on it for core behavior.
 
-## Arguments
+## Skills metadata
 
-Pi prompt templates support:
+`skill` or `skills` metadata may help a supporting harness, but is not portable command behavior. Whenever a shared command includes skills metadata, repeat the requirement explicitly in body:
 
-- `$1`, `$2`, ... positional arguments.
-- `$@` or `$ARGUMENTS` for all args joined.
-- `${@:N}` for args from position `N` onward, 1-indexed.
-- `${@:N:L}` for `L` args starting at position `N`.
+```markdown
+---
+description: "Review changes"
+skills:
+  - code-review-workflow
+---
 
-Guidance:
+Load and follow the `code-review-workflow` skill before reviewing changes.
+Review scope: $ARGUMENTS
+```
 
-- Prefer `$ARGUMENTS` for freeform text, paths with spaces, or arbitrary tails.
-- Use `$1` only when the first argument has a fixed meaning.
-- Use `${@:2}` when `$1` is a required target and the rest are freeform notes.
-- State ambiguity behavior in the prompt: missing/ambiguous required args should trigger one concise clarification and stop.
+Body instruction is required even when current activation injects skill automatically. Command must remain understandable and behavior-complete when metadata is ignored.
 
-## Pi-native workflow
+## Shared arguments
 
-1. Identify command name, purpose, target location, and argument contract.
-2. Choose placeholders: `$ARGUMENTS` by default; `$1`/slicing only for clear fixed positions.
-3. Write valid scalar frontmatter with `description` and optional `argument-hint`.
-4. Make the body executable by a Pi agent using normal tools; do not depend on pre-expanded shell output or file inclusion.
-5. Validate filename, frontmatter, placeholders, and install/discovery path.
-6. If writing the file, create/update the requested path and summarize it.
+Use only shared placeholder intersection in canonical shared sources:
 
-## Legacy migration notes
+- `$ARGUMENTS` for complete raw/freeform input.
+- `$1`, `$2`, and other simple positional arguments when each position has a fixed meaning.
 
-When porting old command files to Pi:
+Do not use `$@`, `${@:N}`, or `${@:N:L}` in shared sources. Do not use slicing to represent a freeform tail. Instead expose `$ARGUMENTS` and tell agent how to interpret first fixed value and remaining text, or redesign contract around bounded simple positions.
 
-- Remove unsupported frontmatter such as `agent`, `subtask`, and legacy model-routing fields unless a Pi-specific extension explicitly owns them.
-- Replace shell interpolation like ``!`npm test` `` with instructions to run the command.
-- Replace template file inclusion like `@src/file.ts` with instructions to read the supplied path.
-- Keep only Pi-supported frontmatter for normal prompt templates: `description` and `argument-hint`.
-- Preserve behavior by making implicit pre-expanded context explicit in the prompt body.
+State missing or ambiguous required-argument behavior in body: ask one concise clarification and stop.
 
-## File and naming rules
+Harness-local one-offs may use native placeholders when user intentionally accepts lock-in.
 
-- Use `.md` extension.
-- Use flat lowercase kebab-case names: `fix-tests.md`, `pr-review.md`.
-- Avoid names that collide with Pi built-in slash commands unless the user intentionally overrides them.
-- Pi default prompt discovery is non-recursive. Use explicit settings/package entries for nested paths.
+## Shared workflow
 
-## Output format when creating a template
+- Classify command as shared repo command or harness-local one-off.
+- Identify name, purpose, canonical source, activation paths, and argument contract.
+- Choose `$ARGUMENTS` by default or simple positional placeholders for fixed meanings.
+- Keep shared behavior independent of harness-specific metadata.
+- Add explicit body skill loading for every `skill` or `skills` metadata entry.
+- Use normal agent tools, not pre-expanded shell output or implicit file inclusion.
+- Validate filename, frontmatter, placeholders, baseline behavior, and symlink/package activation.
 
-Unless the user explicitly asks you to write or install files, return:
+## Migration and audit rules
 
-1. Recommended filename.
-2. Complete Markdown contents.
-3. Pi install/discovery path(s).
-4. Short validation note naming placeholders and any migrated legacy syntax.
+When making a command shared between Pi and OpenCode: Remove unsupported frontmatter such as `agent`, `subtask`, and legacy model-routing fields when they affect behavior.
 
-If writing files directly, create the requested file(s), then summarize written paths.
-For returned Markdown commands with fenced code blocks, use a four-backtick outer fence so nested triple-backtick examples remain valid Markdown.
+- Move canonical ownership to `commands/<name>.md` in this repo unless user requests another shared source.
+- Remove behavior-changing harness metadata such as `agent`, `model`, and `subtask`; express required behavior in body.
+- Keep harmless harness metadata only when ignored safely and body retains baseline behavior.
+- Add explicit body skill loading whenever `skill` or `skills` metadata remains.
+- Replace shell interpolation such as ``!`npm test` `` with instructions to run command.
+- Replace implicit file inclusion such as `@src/file.ts` with instructions to read supplied path.
+- Replace `$@` and argument slicing with `$ARGUMENTS` or simple fixed positional arguments.
+- Replace copied/generated harness variants with symlinks to canonical source.
 
-## Pi prompt-template checklist
+For harness-local one-offs, audit against target harness's native contract instead; label lock-in clearly and do not claim source is shared.
 
+## Output when creating command
+
+Unless user explicitly asks to write/install files, return:
+
+1. Scope classification: shared repo command or named harness-local one-off.
+2. Canonical filename/path and complete Markdown contents.
+3. Activation paths; recommend symlinks for shared sources.
+4. Validation note covering metadata, skill loading, placeholders, and migrated syntax.
+
+If writing files, create only requested canonical or harness-local source. Do not create generated harness variants. For returned Markdown containing nested fences, use four-backtick outer fence.
+
+## Checklist
+
+- [ ] Scope is explicitly shared or harness-local.
+- [ ] Shared repo source defaults to `commands/<name>.md` in this repo.
 - [ ] Filename is flat lowercase kebab-case and ends with `.md`.
-- [ ] Frontmatter is valid scalar YAML.
-- [ ] Frontmatter uses only `description` and optional `argument-hint` for normal Pi templates.
-- [ ] The argument contract uses `$ARGUMENTS`, `$@`, `$1`, or Pi slicing deliberately.
-- [ ] Missing/ambiguous required arguments have a concise clarification path.
-- [ ] The body does not rely on legacy shell interpolation or template file inclusion.
-- [ ] The template is discoverable through a Pi prompt directory, package `pi.prompts`, settings, or CLI flag.
+- [ ] Frontmatter is valid YAML; shared baseline does not depend on harness-specific metadata.
+- [ ] Skills metadata has matching explicit body skill-loading instruction.
+- [ ] Shared placeholders are `$ARGUMENTS` and/or simple positional arguments; no `$@` or slicing.
+- [ ] Missing or ambiguous required arguments have concise clarification path.
+- [ ] Body does not rely on shell pre-expansion or implicit file inclusion.
+- [ ] Shared activation uses package discovery or symlinks, never generated variants.
 
-## Examples
+## Shared example
 
-### Freeform command
-
-Filename: `review-changes.md`
+Canonical path: `commands/pr-review.md`
 
 ```markdown
 ---
-description: "Review code changes with emphasis on correctness and maintainability"
-argument-hint: "[scope or instructions]"
+description: "Review a pull request"
+argument-hint: "<PR URL> [extra instructions]"
 ---
 
-Review the requested changes.
+Review pull request at $1 for bugs, missing tests, security risks, and maintainability concerns.
+Interpret remaining text from raw input as optional extra instructions: $ARGUMENTS
 
-Scope or instructions: $ARGUMENTS
-
-If no scope is provided, inspect the current working tree changes.
-Focus on bugs, missing tests, security risks, and maintainability concerns.
+If pull request URL is missing or ambiguous, ask one concise clarification and stop.
 ```
 
-### Fixed first argument plus freeform tail
-
-Filename: `component.md`
-
-```markdown
----
-description: "Create a React component"
-argument-hint: "<name> [features...]"
----
-
-Create a React component named $1.
-
-Requested features: ${@:2}
-
-If the component name is missing or ambiguous, ask one concise clarification and stop.
-```
-
-### Legacy shell interpolation migrated to Pi instructions
-
-Before:
-
-```markdown
-Here are current test results:
-!`npm test`
-```
-
-After:
-
-```markdown
-Run `npm test`, summarize failures, make the smallest safe fix, and rerun the relevant tests.
-User focus: $ARGUMENTS
-```
+Activate same source for OpenCode with symlink at `.opencode/commands/pr-review.md`; Pi discovers it through this repo's package manifest.

@@ -18,10 +18,10 @@ Run deterministic validation from the repository root:
 python3 -m tools.skill_valid skills/tdd
 ```
 
-Run live Pi validation only with explicit approval:
+Run live harness validation only with explicit approval:
 
 ```sh
-python3 -m tools.skill_valid skills/tdd --allow-live-pi
+python3 -m tools.skill_valid skills/tdd --allow-live --harness kilo
 ```
 
 ## Change guidelines

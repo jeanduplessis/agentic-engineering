@@ -182,7 +182,7 @@ class SkillValidTests(unittest.TestCase):
             self.assertEqual(calls["eval"], [])
             self.assertNotIn("failure_artifacts", result)
 
-    def test_missing_live_opt_in_fails_after_cheap_gates_and_before_live_calls(self):
+    def test_missing_live_opt_in_returns_deterministic_validity_without_live_calls(self):
         with self.make_repo() as (tmp, root):
             target = self.write_valid_skill(root)
             deps, calls = self.passing_deps()
@@ -192,15 +192,32 @@ class SkillValidTests(unittest.TestCase):
                 deps=deps,
             )
 
-            self.assertEqual(code, 1)
+            self.assertEqual(code, 0)
+            self.assertTrue(result["valid"])
             self.assertEqual(result["gates"]["target"]["status"], "passed")
             self.assertEqual(result["gates"]["eval_manifest"]["status"], "passed")
             self.assertEqual(result["gates"]["agents_md"]["status"], "passed")
             self.assertEqual(result["gates"]["llm_optimal_check"]["status"], "passed")
-            self.assertEqual(result["gates"]["live_opt_in"]["status"], "failed")
+            self.assertEqual(result["gates"]["live_opt_in"]["status"], "passed")
+            self.assertIn("deterministic", result["gates"]["live_opt_in"]["message"])
             self.assertEqual(result["gates"]["validate_skills"]["status"], "not_run")
             self.assertEqual(calls["pi"], [])
             self.assertEqual(calls["eval"], [])
+
+    def test_live_opt_in_accepts_harness_neutral_option_and_environment_convention(self):
+        for option_kwargs, env in [({"allow_live": True}, {}), ({}, {"SKILL_EVAL_ALLOW_LIVE": "1"})]:
+            with self.subTest(option_kwargs=option_kwargs, env=env), self.make_repo() as (tmp, root):
+                target = self.write_valid_skill(root)
+                deps, calls = self.passing_deps()
+
+                code, result = validate_skill(
+                    ValidationOptions(target, repo_root=root, env=env, **option_kwargs),
+                    deps=deps,
+                )
+
+                self.assertEqual(code, 0)
+                self.assertTrue(result["valid"])
+                self.assertEqual(len(calls["pi"]), 1)
 
     def test_live_opt_in_accepts_existing_skill_eval_environment_convention(self):
         with self.make_repo() as (tmp, root):
@@ -216,6 +233,23 @@ class SkillValidTests(unittest.TestCase):
             self.assertTrue(result["valid"])
             self.assertEqual(len(calls["pi"]), 1)
             self.assertEqual([call["suite_name"] for call in calls["eval"]], ["workflow", "regression"])
+
+    def test_missing_eval_manifest_blocks_validation_before_live_work(self):
+        with self.make_repo() as (tmp, root):
+            target = self.write_valid_skill(root)
+            (target / "evals" / "manifest.json").unlink()
+            deps, calls = self.passing_deps()
+
+            code, result = validate_skill(ValidationOptions(target, repo_root=root, allow_live=True), deps=deps)
+
+            self.assertEqual(code, 1)
+            self.assertFalse(result["valid"])
+            self.assertEqual(result["gates"]["eval_manifest"]["status"], "failed")
+            self.assertIn("Missing eval manifest", result["gates"]["eval_manifest"]["message"])
+            self.assertEqual(result["gates"]["validate_skills"]["status"], "not_run")
+            self.assertEqual(result["gates"]["live_eval"]["status"], "not_run")
+            self.assertEqual(calls["pi"], [])
+            self.assertEqual(calls["eval"], [])
 
     def test_eval_manifest_structural_gate_passes_and_ignores_unsupported_suite_types(self):
         with self.make_repo() as (tmp, root):
@@ -241,7 +275,7 @@ class SkillValidTests(unittest.TestCase):
             self.assertEqual(result["gates"]["target"]["status"], "passed")
             self.assertIn(result["gates"]["skill_spec"]["status"], {"passed", "warn"})
             self.assertEqual(result["gates"]["eval_manifest"]["status"], "failed")
-            self.assertIn("evals/manifest.json", result["gates"]["eval_manifest"]["message"])
+            self.assertIn("Missing eval manifest", result["gates"]["eval_manifest"]["message"])
             self.assertEqual(result["gates"]["agents_md"]["status"], "failed")
             self.assertIn("AGENTS.md", result["gates"]["agents_md"]["message"])
             self.assertEqual(result["gates"]["llm_optimal_check"]["status"], "passed")
@@ -320,7 +354,6 @@ class SkillValidTests(unittest.TestCase):
         def remove_manifest(root, target):
             (target / "evals" / "manifest.json").unlink()
 
-        cases.append(("missing eval manifest", remove_manifest, "manifest"))
 
         def invalid_json(root, target):
             (target / "evals" / "manifest.json").write_text("{")
@@ -365,12 +398,12 @@ class SkillValidTests(unittest.TestCase):
 
         cases.append(("missing with_skill", no_with_skill, "with_skill"))
 
-        def with_skill_not_pi(root, target):
+        def with_skill_not_real(root, target):
             data = json.loads((target / "evals" / "manifest.json").read_text())
             data["configurations"]["with_skill"]["harness"] = "static"
             (target / "evals" / "manifest.json").write_text(json.dumps(data))
 
-        cases.append(("with_skill not pi", with_skill_not_pi, "Pi harness"))
+        cases.append(("with_skill not real", with_skill_not_real, "supported real harness"))
 
         def with_skill_not_forced(root, target):
             data = json.loads((target / "evals" / "manifest.json").read_text())
@@ -512,6 +545,37 @@ class SkillValidTests(unittest.TestCase):
             self.assertEqual(calls["eval"], [])
             self.assertEqual(result["gates"]["validate_skills"]["status"], "not_run")
             self.assertEqual(result["gates"]["live_eval"]["status"], "not_run")
+
+    def test_kilo_harness_builds_open_code_compatible_live_commands(self):
+        with self.make_repo() as (tmp, root):
+            target = self.write_valid_skill(root)
+            deps, calls = self.passing_deps()
+
+            code, result = validate_skill(
+                ValidationOptions(
+                    target,
+                    repo_root=root,
+                    allow_live=True,
+                    harness="kilo",
+                    harness_executable="kilo-test",
+                    provider="openrouter",
+                    model="gpt-test",
+                    thinking="low",
+                ),
+                deps=deps,
+            )
+
+            self.assertEqual(code, 0)
+            command = calls["pi"][0]["command"]
+            self.assertEqual(command[:4], ["kilo-test", "run", "--pure", "--format"])
+            self.assertIn("--file", command)
+            self.assertIn("openrouter/gpt-test", command)
+            self.assertIn("--variant", command)
+            for call in calls["eval"]:
+                config = call["configurations"]["with_skill"]
+                self.assertEqual(config["harness"], "kilo")
+                self.assertEqual(config["executable"], "kilo-test")
+                self.assertTrue(config["allow_live"])
 
     def test_validate_skills_pi_command_uses_wrapper_prompt_read_only_tools_and_overrides(self):
         with self.make_repo() as (tmp, root):

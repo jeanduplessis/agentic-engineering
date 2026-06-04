@@ -27,4 +27,4 @@ The manifest has no copy fixtures, custom grader, or legacy eval assets.
 - Keep `SKILL.md` concise and LLM-facing; avoid adding background theory that does not affect execution.
 - Update `evals/manifest.json` when the required response contract changes.
 - Prefer deterministic checks in `evals/manifest.json`; add skill-local grading only if the template contract cannot be checked with built-ins.
-- Preserve the repo-wide Pi-only contract; avoid non-Pi compatibility requirements.
+- Preserve equivalent Pi/OpenCode behavior; keep harness-specific capability optional with a shared fallback.

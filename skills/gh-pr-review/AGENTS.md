@@ -18,7 +18,7 @@ Run the full validation wrapper from the repository root:
 ./tools/skill_valid/skill_validate.sh skills/gh-pr-review
 ```
 
-This invokes `tools.skill_valid` and may run live Pi/model gates when deterministic prerequisites pass.
+This invokes deterministic `tools.skill_valid`; pass `--allow-live` and select a supported harness only with explicit approval.
 
 ## Change guidelines
 

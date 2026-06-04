@@ -27,9 +27,10 @@ React Code Quality may run the required `react-doctor` static analyzer.
 
 1. Load this skill and `references/scope.md`.
 2. Resolve scope and emit a `Resolved Review Scope` block.
-3. Launch the seven reviewer sub-agents in parallel, passing each the same scope block.
-4. Each sub-agent loads this skill, `references/reviewer-core.md`, `references/output.md`, and one focus reference.
-5. Sub-agents skip `references/scope.md` because the caller already resolved scope.
+3. When native sub-agents are available, launch seven reviewer sub-agents concurrently and pass each the same scope block. Otherwise run the seven focus reviews sequentially in the current session as distinct read-only reviewer roles.
+4. Each focus execution loads this skill, `references/reviewer-core.md`, `references/output.md`, and one focus reference.
+5. Focus executions skip `references/scope.md` because the caller already resolved scope.
+6. Harness-specific parallel self-invocation is optional acceleration only; failure or absence must fall back to native sub-agents or sequential current-session review without weakening any focus.
 
 ### Path B: direct `@review-*` sub-agent
 

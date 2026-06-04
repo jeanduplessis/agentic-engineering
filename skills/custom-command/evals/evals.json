@@ -3,99 +3,73 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Create a Pi slash command called fix-tests. It should run the relevant test suite, diagnose failures, make the smallest safe fix, and rerun tests. I want to pass an optional test command or focus area.\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox. If you write a file, summarize the path and include Pi install or discovery paths in your response.",
-      "expected_output": "A complete Pi Markdown prompt template for fix-tests, plus Pi install/discovery paths and a validation note.",
+      "prompt": "Create a Pi slash command called fix-tests in this repo for shared Pi and OpenCode use. It should run relevant tests, diagnose failures, make the smallest safe fix, and rerun tests. Accept an optional test command or focus area. Explain canonical ownership and activation.\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox as canonical source. If you write a file, summarize the path and activation guidance.",
+      "expected_output": "A complete Pi Markdown prompt template compatible with shared Pi/OpenCode use, canonical source commands/fix-tests.md, portable arguments, and package or symlink activation guidance without generated variants.",
       "files": [],
       "expectations": [
-        "The recommended filename is flat, kebab-case, and ends with .md.",
-        "The command uses valid scalar YAML frontmatter with a description field.",
-        "The prompt uses $ARGUMENTS for the optional test command or focus area.",
-        "The output does not rely on unsupported behavior frontmatter such as agent, model, or subtask.",
-        "The output includes Pi install or discovery paths."
+        "The response classifies this as a shared repo command.",
+        "The canonical source is commands/fix-tests.md.",
+        "The command uses valid YAML frontmatter with description.",
+        "The command uses $ARGUMENTS for optional input and does not use $@ or slicing.",
+        "The response recommends package discovery or symlink activation for Pi/OpenCode and does not recommend generated variants."
       ],
-      "checks": [
-        {
-          "id": "response.non_empty",
-          "type": "non_empty_response"
-        }
-      ]
+      "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     },
     {
       "id": 2,
-      "prompt": "Please audit this legacy command and rewrite it as a Pi prompt template. The Pi command must accept an optional coverage command or focus area from the user via `$ARGUMENTS` and explain how it is interpreted:\n\n```md\n---\ndescription: Analyze coverage\nagent: build\nmodel: legacy-provider/legacy-model\n---\n\nHere are the current test results:\n!`npm test -- --coverage`\n\nBased on these results, suggest improvements to increase coverage.\n```\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox. If you write a file, summarize the path and include Pi install or discovery paths in your response.",
-      "expected_output": "A migration audit explaining the unsupported legacy parts and a rewritten Pi prompt template that preserves coverage-analysis behavior, accepts an optional coverage command or focus area through `$ARGUMENTS`, and avoids pre-expanded shell output.",
+      "prompt": "Audit and rewrite this as one shared Pi/OpenCode command source. Preserve coverage analysis, accept an optional coverage command or focus area, and keep skills metadata only if safe. Explain migration and activation.\n\n```md\n---\ndescription: Analyze coverage\nagent: build\nmodel: legacy-provider/legacy-model\nskills:\n  - coverage-review\n---\n\nHere are current results:\n!`npm test -- --coverage`\n\nAnalyze @coverage/lcov.info and use ${@:2} for extra focus.\n```\n\nToday we build separate Pi and OpenCode copies from this file.\n\nEval contract: You may either return complete Markdown command contents or write canonical command file in sandbox. If writing a file, summarize path and activation guidance.",
+      "expected_output": "A migration audit and shared command that removes behavior routing, pre-expansion, implicit inclusion, slicing, and generated variants; retained skills metadata has explicit body skill loading.",
       "files": [],
       "expectations": [
-        "The audit identifies agent and model as unsupported frontmatter for normal Pi prompt templates.",
-        "The audit identifies !`...` shell output interpolation as unsupported legacy pre-expansion.",
-        "The rewritten command asks the agent to run or infer the coverage command instead of embedding !`...`.",
-        "The rewritten command accepts an optional coverage command or focus area through $ARGUMENTS.",
-        "The rewritten command explains how to interpret $ARGUMENTS when present and what default coverage command to use when absent.",
-        "The rewritten command keeps the same core purpose: analyze coverage and suggest improvements."
+        "The audit rejects agent and model behavior metadata for shared source.",
+        "The rewrite replaces shell interpolation and implicit @file inclusion with explicit body instructions.",
+        "The rewrite replaces slicing with $ARGUMENTS or simple positional arguments.",
+        "If skills metadata remains, body explicitly instructs agent to load and follow coverage-review skill.",
+        "The response recommends one canonical source plus symlink or package activation instead of built variants."
       ],
-      "checks": [
-        {
-          "id": "response.non_empty",
-          "type": "non_empty_response"
-        }
-      ]
+      "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     },
     {
       "id": 3,
-      "prompt": "Make a Pi command named pr-review. Usage should be `/pr-review <PR-URL> [extra instructions]`. It should review the PR with focus on bugs, tests, security, and maintainability. Use Pi argument placeholders so the PR URL is the first argument and the remaining words are extra instructions. If the args are ambiguous it should ask a brief clarification.\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox. If you write a file, summarize the path and include Pi install or discovery paths in your response.",
-      "expected_output": "A Pi pr-review Markdown prompt template that handles a PR URL with $1 and optional freeform instructions with Pi slicing.",
+      "prompt": "Make shared repo command pr-review for Pi and OpenCode. Usage is `/pr-review <PR-URL> [extra instructions]`. Keep PR URL as fixed first argument while preserving optional freeform instructions using only shared placeholders. If ambiguous, ask brief clarification. Explain canonical source and activation.\n\nEval contract: You may either return complete Markdown command contents or write canonical command file in sandbox. If writing a file, summarize path and activation guidance.",
+      "expected_output": "A shared pr-review command using $1 and $ARGUMENTS without $@ or slicing, plus canonical source and symlink/package activation guidance.",
       "files": [],
       "expectations": [
-        "The command uses $1 for the PR URL.",
-        "The command uses ${@:2} or equivalent Pi-supported slicing for optional freeform instructions.",
-        "The prompt includes a concise clarification path for ambiguous arguments.",
-        "The output uses Pi-supported frontmatter only.",
-        "The output includes Pi install or discovery paths."
+        "The command uses $1 for PR URL and $ARGUMENTS to interpret raw input or optional tail.",
+        "The shared source does not use $@ or slicing such as ${@:2}.",
+        "The prompt includes concise clarification behavior.",
+        "The canonical source is commands/pr-review.md.",
+        "The response recommends symlink or package activation rather than generated variants."
       ],
-      "checks": [
-        {
-          "id": "response.non_empty",
-          "type": "non_empty_response"
-        }
-      ]
+      "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     },
     {
       "id": 4,
-      "prompt": "I want a Pi command called review-file. It should review a file path I pass in for performance issues. Can we use @src/foo.ts in the body so it auto-includes the file?\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox. If you write a file, summarize the path and include Pi install or discovery paths in your response.",
-      "expected_output": "A review-file Pi prompt template that explains why @file inclusion should not be required for template behavior, and instead accepts the target file path via arguments.",
+      "prompt": "Create a personal OpenCode-only command named inspect-session. It intentionally relies on an OpenCode-only feature and should not enter this repo shared command library. Accept optional user focus. Explain where it belongs and why it is not a shared repo command.\n\nEval contract: Return complete Markdown contents and install path, or write the harness-local command in sandbox and summarize it.",
+      "expected_output": "A clearly labeled OpenCode harness-local one-off installed in an OpenCode-native command directory, not commands/.",
       "files": [],
       "expectations": [
-        "The response explains that @path file inclusion should not be required for core Pi prompt-template behavior.",
-        "The command accepts the file path through $1 or $ARGUMENTS.",
-        "The prompt instructs the agent to read the supplied path before reviewing it.",
-        "The core review behavior remains explicit in the prompt body.",
-        "The output includes Pi install or discovery paths."
+        "The response classifies command as an OpenCode harness-local one-off.",
+        "The command is not assigned canonical ownership under this repo commands/.",
+        "The response names an OpenCode-native command location.",
+        "The command body remains explicit about requested task.",
+        "The response does not recommend generated Pi/OpenCode variants."
       ],
-      "checks": [
-        {
-          "id": "response.non_empty",
-          "type": "non_empty_response"
-        }
-      ]
+      "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     },
     {
       "id": 5,
-      "prompt": "Audit this Pi prompt template. Keep it Pi-native and preserve its fixed first argument plus freeform tail semantics.\n\n```md\n---\ndescription: Scaffold a React component\nargument-hint: \"<name> [features...]\"\n---\n\nCreate a React component named $1 with features: ${@:2}\n```\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox. If you write a file, summarize the path and include Pi install or discovery paths in your response.",
-      "expected_output": "A Pi-native audit or revised template that preserves $1 for the component name and Pi slicing for the feature tail.",
+      "prompt": "Create shared repo command code-review using metadata `skills: [code-review-workflow]`. OpenCode may ignore that metadata, so keep baseline behavior intact in both Pi and OpenCode. Accept optional review scope and explain activation.\n\nEval contract: You may either return complete Markdown command contents or write canonical command file in sandbox. If writing a file, summarize path and activation guidance.",
+      "expected_output": "A shared command retaining harmless skills metadata only with explicit body skill loading and behavior-complete fallback, plus portable placeholders and symlink/package activation.",
       "files": [],
       "expectations": [
-        "The response treats $1 as a Pi-supported positional argument.",
-        "The response treats ${@:2} as Pi-supported slicing.",
-        "The command preserves fixed first argument plus freeform tail semantics.",
-        "argument-hint is retained as Pi autocomplete help.",
-        "The output includes Pi install or discovery paths if returning an installable template."
+        "The canonical source is commands/code-review.md.",
+        "The body explicitly instructs agent to load and follow code-review-workflow skill.",
+        "The body preserves baseline review behavior if skills metadata is ignored.",
+        "The command uses $ARGUMENTS and no $@ or slicing.",
+        "The response explains safely ignored metadata and recommends symlink or package activation."
       ],
-      "checks": [
-        {
-          "id": "response.non_empty",
-          "type": "non_empty_response"
-        }
-      ]
+      "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     }
   ]
 }

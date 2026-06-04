@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -12,7 +13,7 @@ WRAPPER = ROOT / "tools" / "skill_valid" / "skill_validate.sh"
 
 
 class SkillValidateWrapperTests(unittest.TestCase):
-    def run_wrapper_with_fake_skill_valid(self, payload: dict, *, exit_code: int = 0):
+    def run_wrapper_with_fake_skill_valid(self, payload: dict, *, exit_code: int = 0, wrapper_args=(), extra_env=None):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             target = tmp_path / "skills" / "demo"
@@ -23,6 +24,7 @@ class SkillValidateWrapperTests(unittest.TestCase):
             stub.write_text(
                 "#!/usr/bin/env bash\n"
                 "if [[ \"$1\" == \"-m\" && \"$2\" == \"tools.skill_valid\" ]]; then\n"
+                "  printf '%s\\n' \"$*\" > \"$FAKE_SKILL_VALID_ARGS\"\n"
                 "  printf '%s\\n' \"$FAKE_SKILL_VALID_JSON\"\n"
                 "  exit \"${FAKE_SKILL_VALID_EXIT:-0}\"\n"
                 "fi\n"
@@ -37,15 +39,36 @@ class SkillValidateWrapperTests(unittest.TestCase):
                     "PATH": f"{fake_bin}{os.pathsep}{env.get('PATH', '')}",
                     "FAKE_SKILL_VALID_JSON": json.dumps(payload, separators=(",", ":")),
                     "FAKE_SKILL_VALID_EXIT": str(exit_code),
+                    "FAKE_SKILL_VALID_ARGS": str(tmp_path / "args.txt"),
                 }
             )
-            return subprocess.run(
-                [str(WRAPPER), str(target)],
+            env.update(extra_env or {})
+            completed = subprocess.run(
+                [str(WRAPPER), str(target), *wrapper_args],
                 cwd=ROOT,
                 env=env,
                 text=True,
                 capture_output=True,
             )
+            return SimpleNamespace(
+                returncode=completed.returncode,
+                stdout=completed.stdout,
+                stderr=completed.stderr,
+                skill_valid_args=(tmp_path / "args.txt").read_text(),
+            )
+
+    def test_wrapper_does_not_enable_live_execution_unconditionally(self):
+        payload = {"valid": False, "target": "skills/demo", "gates": {}}
+
+        default_run = self.run_wrapper_with_fake_skill_valid(payload, exit_code=1)
+        live_run = self.run_wrapper_with_fake_skill_valid(payload, exit_code=1, wrapper_args=("--allow-live", "--harness", "kilo"))
+        env_live_run = self.run_wrapper_with_fake_skill_valid(payload, exit_code=1, extra_env={"SKILL_VALID_ALLOW_LIVE": "1"})
+
+        self.assertNotIn("--allow-live", default_run.skill_valid_args)
+        self.assertIn("Deterministic validation only", default_run.stderr)
+        self.assertIn("--allow-live", live_run.skill_valid_args)
+        self.assertIn("--harness kilo", live_run.skill_valid_args)
+        self.assertIn("--allow-live", env_live_run.skill_valid_args)
 
     def test_friendly_wrapper_renders_llm_optimal_warn_findings_as_non_blocking(self):
         payload = {

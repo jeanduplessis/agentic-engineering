@@ -1,15 +1,15 @@
 # skill_valid
 
-`skill_valid` validates one repo-local Pi skill through deterministic Pi compatibility/resource gates,
-maintenance-doc gates, a deterministic LLM optimization-readiness gate, a live validate-skills qualitative review,
-and live behavior evals.
+`skill_valid` validates one repo-local skill through deterministic compatibility/resource gates, maintenance-doc
+gates, and a deterministic LLM optimization-readiness gate. Optional live validation adds a validate-skills
+qualitative review and behavior evals through Pi or OpenCode-compatible Kilo.
 
 ## Usage
 
 Machine-readable JSON:
 
 ```sh
-python3 -m tools.skill_valid skills/<skill-name> --allow-live-pi
+python3 -m tools.skill_valid skills/<skill-name>
 ```
 
 Friendly human summary:
@@ -18,23 +18,27 @@ Friendly human summary:
 ./tools/skill_valid/skill_validate.sh skills/<skill-name>
 ```
 
-The wrapper invokes `python3 -m tools.skill_valid <skill-dir> --allow-live-pi`, renders gate statuses, prints
-`llm_optimal_check` findings inline, and preserves the underlying exit code. Set `SKILL_VALIDATE_RAW_JSON=1`
-to append raw JSON or `SKILL_VALIDATE_VERBOSE=1` to show `skill_valid` stderr logs.
+The wrapper invokes deterministic validation by default, renders gate statuses, prints `llm_optimal_check`
+findings inline, and preserves the underlying exit code. Pass `--allow-live` (or set `SKILL_VALID_ALLOW_LIVE=1`)
+to enable live gates. Set `SKILL_VALIDATE_RAW_JSON=1` to append raw JSON or `SKILL_VALIDATE_VERBOSE=1` to show
+`skill_valid` stderr logs.
 
 Optional live execution overrides are applied to both live gates:
 
 ```sh
 python3 -m tools.skill_valid skills/<skill-name> \
-  --allow-live-pi \
+  --allow-live \
+  --harness kilo \
   --provider openrouter \
   --model gpt-5 \
   --thinking low
 ```
 
-`--allow-live-pi` or `SKILL_EVAL_ALLOW_LIVE_PI=1` is required before any live Pi/model work runs.
-Deterministic failures are accumulated so the JSON reports multiple missing requirements at once; those
-failures do not create live-run artifacts or call Pi. The `llm_optimal_check` gate may return `warn`; warnings
+`--allow-live` or `SKILL_EVAL_ALLOW_LIVE=1` is required before live harness/model work runs. `--allow-live-pi`
+and `SKILL_EVAL_ALLOW_LIVE_PI=1` remain backwards-compatible aliases. Without live opt-in, passing deterministic
+gates produce a valid result and live gates remain `not_run`. Deterministic failures are accumulated so the JSON
+reports multiple missing requirements at once; those
+failures do not create live-run artifacts or call a harness. The `llm_optimal_check` gate may return `warn`; warnings
 are visible but non-blocking.
 
 ## stdout JSON contract
@@ -91,19 +95,19 @@ Exit code is `0` only when `valid` is `true`. Gate statuses are `passed`, `warn`
 
 2. `skill_spec` — parses `SKILL.md` without external dependencies.
 
-   - Runs deterministic Pi skill compatibility, resource-reference, and repo-contract checks.
-   - Pi loadability and repo-contract violations fail.
+   - Runs deterministic shared Pi/OpenCode skill compatibility, resource-reference, and repo-contract checks.
+   - Shared loadability and repo-contract violations fail.
    - Deterministic best-practice concerns warn without blocking validity, such as weak trigger wording or
-     list-form `allowed-tools`.
-   - Pi-supported fields include `disable-model-invocation`; obsolete harness-specific fields fail only when not part of Pi's documented skill metadata.
+      list-form `allowed-tools`.
+   - Safely ignored Pi capability fields such as `disable-model-invocation` are allowed only when baseline behavior does not depend on them.
 
-3. `eval_manifest` — `evals/manifest.json` must load through `tools.skill_eval`, declare a non-empty
-   `workflow` suite, align skill name/path with the target, define a Pi `with_skill` configuration with
-   force-skill enabled, and reference existing eval assets.
+3. `eval_manifest` — required `evals/manifest.json` must load through `tools.skill_eval`, declare a non-empty
+   `workflow` suite, align skill name/path with the target, define a supported real-harness `with_skill`
+   configuration with force-skill enabled, and reference existing eval assets. Missing or invalid manifests fail before live work.
 
 4. `agents_md` — skill-local `AGENTS.md` must include Purpose, How the skill works, Eval and validation,
-   Change guidelines, plus concrete references to `SKILL.md`, `evals/manifest.json`, and manifest-declared
-   eval assets when a manifest could be loaded.
+   Change guidelines, plus concrete references to `SKILL.md`, `evals/manifest.json`, and manifest-declared eval assets.
+
 
 5. `llm_optimal_check` — runs `tools.llm_optimal_check.check_path` on only the target skill's `SKILL.md`.
 
@@ -114,17 +118,19 @@ Exit code is `0` only when `valid` is `true`. Gate statuses are `passed`, `warn`
    - Details embed a compact report with status, score, useful metrics, and all findings, excluding bulky
      preview/body fields.
 
-6. `live_opt_in` — requires `--allow-live-pi` or `SKILL_EVAL_ALLOW_LIVE_PI=1`.
+6. `live_opt_in` — records whether live validation was explicitly enabled. Without opt-in, deterministic
+   validity is decided here and live gates remain `not_run`.
 
-7. `validate_skills` — runs Pi with only the validate-skills skill and read-only tools. The wrapper prompt in
-   `WRAPPER_PROMPT.md` requires a final `SKILL_VALID_RESULT=<json>` sentinel.
+7. `validate_skills` — when enabled, runs the selected Pi or Kilo harness with the validate-skills instructions.
+   The wrapper prompt in `WRAPPER_PROMPT.md` requires a final `SKILL_VALID_RESULT=<json>` sentinel.
 
-8. `live_eval` — runs `tools.skill_eval.runner.run_suite` in-process for `workflow` and optional `regression`,
-   using only a generated live `with_skill` configuration and `require_real=True`.
+8. `live_eval` — when enabled, runs `tools.skill_eval.runner.run_suite` in-process for
+   `workflow` and optional `regression`, using only a generated live `with_skill` configuration and
+   `require_real=True`.
 
 `skill_spec`, `eval_manifest`, `agents_md`, `llm_optimal_check`, and `live_opt_in` are all checked before live
-gates so the result reports deterministic prerequisites together. The live gates run only when those
-prerequisite gates pass or warn.
+gates so the result reports deterministic prerequisites together. Live gates run only when those prerequisite
+gates pass or warn and live validation was explicitly enabled.
 
 ## Failure artifacts
 

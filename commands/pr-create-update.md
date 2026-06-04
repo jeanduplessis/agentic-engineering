@@ -5,6 +5,12 @@ skills:
   - pr-create
 ---
 
+## Required skills
+
+- `pr-create`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
 Create or update the current branch's GitHub PR.
 
 User instructions: $ARGUMENTS

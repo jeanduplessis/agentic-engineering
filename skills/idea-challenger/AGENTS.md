@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`idea-challenger` is a Pi-native skill for skeptical pre-commitment evaluation of product/software engineering ideas. `SKILL.md` is the installable behavior contract. It helps users decide whether an idea should be pursued, conditionally pursued, revised, deferred, or rejected before planning or implementation starts.
+`idea-challenger` is a shared Pi/OpenCode skill for skeptical pre-commitment evaluation of product/software engineering ideas. `SKILL.md` is the installable behavior contract. It helps users decide whether an idea should be pursued, conditionally pursued, revised, deferred, or rejected before planning or implementation starts.
 
 ## How the skill works
 
@@ -29,7 +29,7 @@ python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
 python3 -m unittest tools.skill_valid.tests.test_skill_validate_wrapper -v
 ```
 
-Run live Pi evals or live skill validation only with explicit user approval.
+Run live harness evals or live skill validation only with explicit user approval.
 
 ## Change guidelines
 

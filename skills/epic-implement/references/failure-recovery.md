@@ -24,14 +24,14 @@ On resume:
 
 ## Common failure modes
 
-### Child closed bead before validation failed
+### Gate executor closed bead before validation failed
 
-Corrective rule: implementation children must not close beads. Parent closure happens after all gates pass.
+Corrective rule: implementation gate executors must not close beads. Parent closure happens after all gates pass.
 
 If it already happened:
 
 1. report inconsistent state;
-2. run corrective child implementation gate with the validator blocker as context;
+2. run a corrective implementation gate with the validator blocker as context;
 3. rerun validation/review;
 4. commit only after state is safe and gates pass.
 
@@ -40,19 +40,25 @@ If it already happened:
 Do not continue blindly.
 
 1. inspect worktree;
-2. inspect child gate outputs;
+2. inspect gate outputs;
 3. patch or discard helper script;
 4. preflight with `bash -n`;
 5. resume from durable append-only state.
 
 ### Validation finds missed invariant path
 
-Run a corrective implementation child with the exact validator blocker as context.
+Run a corrective implementation gate with the exact validator blocker as context.
 
 Validation should include both:
 
 - direct affected operation;
 - later mutation that can invalidate existing related data.
+
+### Gate runner unavailable or failed
+
+Try native subagent support, then the current harness runner. If neither works, complete the gate sequentially in the current session using the same prompt, contract, footer, and output path. Pi self-invocation is optional and its absence is not a blocker.
+
+Stop instead of falling back only when repository state is unsafe or the failed executor may have left ambiguous mutations.
 
 ### Prompt template unavailable
 
@@ -61,7 +67,7 @@ Use the embedded fallback contract.
 Log:
 
 - gate name;
-- searched repo paths;
-- searched user paths;
-- installed-package discovery attempt;
+- canonical `commands/<name>.md` lookup;
+- searched current-harness and repo prompt paths;
+- optional Pi location/package discovery attempt;
 - fallback contract used.

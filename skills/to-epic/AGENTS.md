@@ -19,7 +19,7 @@ python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
 python3 -m tools.skill_eval skills/to-epic/evals/manifest.json workflow --results /tmp/to-epic-eval --require-real
 ```
 
-Run live Pi validation only with explicit approval.
+Run live harness validation only with explicit approval.
 
 ## Change guidelines
 

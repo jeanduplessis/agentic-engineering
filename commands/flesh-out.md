@@ -5,6 +5,12 @@ skills:
   - flesh-out
 ---
 
+## Required skills
+
+- `flesh-out`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
 Context target: <context-target>$ARGUMENTS</context-target>.
 
 Resolve context target:

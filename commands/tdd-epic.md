@@ -6,6 +6,13 @@ skills:
   - beads
 ---
 
+## Required skills
+
+- `tdd`
+- `beads`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
 Orchestrate TDD for an epic bead and descendants with `br`.
 
 Arguments: $ARGUMENTS

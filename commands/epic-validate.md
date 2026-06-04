@@ -5,6 +5,12 @@ skills:
   - beads
 ---
 
+## Required skills
+
+- `beads`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
 Validate documented epic requirements against implemented code.
 
 Arguments: $ARGUMENTS

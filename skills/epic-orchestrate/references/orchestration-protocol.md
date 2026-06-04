@@ -1,5 +1,11 @@
 # Orchestration Protocol
 
+## Gate execution
+
+Run every gate to completion in workflow order. Use native subagents first when the current harness exposes them, then the current harness's non-interactive runner, then sequential current-session execution as the required fallback. Pi self-invocation is optional acceleration, never a dependency.
+
+Current-session fallback must preserve the same gate prompt, permissions, output footer, and parent interpretation. Return to the parent role before lifecycle mutation, staging, or commits. Do not parallelize gates sharing a worktree or depending on earlier output. Record each gate's execution method and output path.
+
 ## Queue
 
 Refresh before each issue:
@@ -58,7 +64,7 @@ Close with a concrete reason:
 ait --actor agent close <issue-id> --reason "Delivered <summary>; validated with <commands>."
 ```
 
-If a child closes or mutates an issue that was open when selected, stop and report inconsistent state.
+If a gate executor closes or mutates an issue that was open when selected, stop and report inconsistent state.
 
 If close fails with `close_incomplete_acceptance_criteria` or `close_open_children`, finish or update the listed blockers; do not force-close without explicit user approval.
 

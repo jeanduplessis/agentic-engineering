@@ -2,32 +2,36 @@
 
 ## Purpose
 
-Maintain `SKILL.md` as the Pi prompt-template authoring and migration guide. Optimize for Pi slash commands, prompt-template discovery, argument placeholders, and legacy syntax cleanup.
+Maintain `SKILL.md` as shared Pi/OpenCode command-authoring guidance. Optimize for one canonical shared source, portable baseline behavior, explicit body skill loading, safe placeholders, and symlink activation. Keep harness-local one-offs distinct from shared repo commands.
 
 ## How the skill works
 
-`SKILL.md` defines Pi template locations, frontmatter, argument placeholders, migration rules, naming rules, output format, checklist, and examples. Keep the default path Pi-native: `description`, optional `argument-hint`, Markdown body text, `$ARGUMENTS`/`$@`/`$1`/slicing, and flat kebab-case `.md` filenames.
+- Default commands owned by this repo to canonical `commands/<name>.md` shared sources.
+- Permit harness-specific metadata only when every other target safely ignores it and body preserves baseline behavior.
+- Require explicit body instruction to load/follow skills whenever `skill` or `skills` metadata appears.
+- Restrict shared sources to `$ARGUMENTS` and simple positional placeholders; reject `$@` and slicing.
+- Prohibit built, generated, copied, or hand-synchronized harness variants; recommend package discovery or symlinks.
+- Allow native harness-specific syntax only for clearly labeled harness-local one-offs.
 
 ## Eval and validation
 
-`evals/manifest.json` declares workflow, trigger, and capability suites. Workflow cases come from `evals/evals.json`; `evals/grader.py` grades generated Pi templates for filenames, frontmatter, supported placeholders, absence of legacy pre-expansion, and Pi install/discovery guidance.
+`evals/manifest.json` declares workflow, trigger, and capability suites. Workflow cases come from `evals/evals.json`; `evals/grader.py` grades generated commands for canonical ownership, portable metadata, explicit skill loading, shared placeholders, absence of legacy pre-expansion, and symlink activation guidance.
 
-Run deterministic tests from the repo root after changes:
+Run deterministic checks from repo root:
 
 ```sh
 python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
+python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow --results /tmp/custom-command-eval --require-real
+python3 -m tools.llm_optimal_check skills/custom-command/SKILL.md
 ```
 
-Run the full local validity wrapper only with live Pi/model execution approval:
-
-```sh
-./tools/skill_valid/skill_validate.sh skills/custom-command
-```
+No-live `--require-real` run must skip honestly. Run live harness eval only with explicit approval.
 
 ## Change guidelines
 
-- Keep the skill Pi-only unless the repo-wide contract changes.
-- Update `evals/evals.json`, `evals/grader.py`, and `tools/skill_eval/tests/test_skill_eval.py` when changing expected prompt-template output, migration rules, or checklist behavior.
-- Keep `evals/manifest.json` aligned with the skill name and eval assets when adding or removing suites.
-- Keep examples Pi-native and executable without hidden pre-expansion.
-- Prefer concise direct instructions to broad commentary agents cannot execute.
+- Change files only within `skills/custom-command/` unless user expands scope.
+- Keep shared guidance compatible with both Pi and OpenCode; do not infer portability from one harness accepting syntax.
+- Update `evals/evals.json` and `evals/grader.py` together when changing command-output contract.
+- Keep `evals/manifest.json` aligned with skill name and eval assets.
+- Keep examples behavior-complete without metadata injection, shell pre-expansion, implicit file inclusion, or generated variants.
+- Prefer concise executable instructions.

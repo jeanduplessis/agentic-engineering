@@ -3,11 +3,9 @@ description: "Read-only analysis of a PR for logic bugs, review comments, and im
 argument-hint: "<PR_URL|PR_NUMBER> [focus...]"
 ---
 
-Analyze PR: $1
+Arguments: $ARGUMENTS
 
-Extra focus/instructions: ${@:2}
-
-If PR target is missing or ambiguous, ask one concise clarification and stop.
+Interpret the first argument as the PR URL or PR number. Interpret all remaining arguments as extra focus/instructions. Preserve quoted or space-containing focus text. If PR target is missing or ambiguous, ask one concise clarification and stop.
 
 Process:
 

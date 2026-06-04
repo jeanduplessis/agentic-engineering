@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const KNOWN_FRONTMATTER_FIELDS = new Set(["description", "argument-hint", "model", "thinking", "skill", "skills", "restore"]);
+const KNOWN_FRONTMATTER_FIELDS = new Set(["description", "argument-hint", "model", "thinking", "skill", "skills", "restore", "agent", "subtask"]);
 const VALID_THINKING_LEVELS = new Set(["off", "minimal", "low", "medium", "high", "xhigh"]);
 
 export type ParsedCommand = {
@@ -97,7 +97,7 @@ export function parseCommandFile(path: string, name: string, content: string): P
 }
 
 export function discoverCommands(commandDir: string): ParsedCommand[] {
-	let entries;
+	let entries: ReturnType<typeof readdirSync>;
 	try {
 		entries = readdirSync(commandDir, { withFileTypes: true });
 	} catch {
@@ -390,6 +390,6 @@ function identitiesMatch(left: SkillIdentity | undefined, right: SkillIdentity |
 function unsupportedSyntaxWarnings(name: string, body: string): string[] {
 	const warnings: string[] = [];
 	if (/!`[^`]*`/.test(body)) warnings.push(`Unsupported shell expansion syntax is passed through in /${name}.`);
-	if (/(^|\s)@[A-Za-z0-9_./~-]+/.test(body)) warnings.push(`Unsupported file expansion syntax is passed through in /${name}.`);
+	if (/(?<![\\\w])@[A-Za-z0-9_./~-]+/.test(body)) warnings.push(`Unsupported file expansion syntax is passed through in /${name}.`);
 	return warnings;
 }

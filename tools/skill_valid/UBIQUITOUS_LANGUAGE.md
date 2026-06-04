@@ -8,20 +8,20 @@
 - **Target Skill**: The single **Skill** being validated in one `skill_valid` run. Avoid aliases: Subject,
   candidate, target directory.
 
-- **Skill Validity**: The final boolean judgment that a **Target Skill** satisfies every required **Validation
-  Gate**. Avoid aliases: Quality, compliance, certification.
+- **Skill Validity**: The final boolean judgment that a **Target Skill** satisfies every gate required by the
+  selected deterministic or live validation mode. Avoid aliases: Quality, compliance, certification.
 
 - **Validation Gate**: A required check that must pass or emit an allowed warning before the **Target Skill**
   can be considered valid. Avoid aliases: Step, phase, check.
 
-- **Cheap Gate**: A deterministic **Validation Gate** that does not call live Pi. Avoid aliases: Local check,
-  static check.
+- **Cheap Gate**: A deterministic **Validation Gate** that does not call a live harness. Avoid aliases: Local
+  check, static check.
 
-- **Live Gate**: A **Validation Gate** that depends on a live Pi invocation. Avoid aliases: Model check,
-  online check.
+- **Live Gate**: A **Validation Gate** that depends on a live agent harness invocation. Avoid aliases: Model
+  check, online check.
 
 - **Skill Spec Gate**: The deterministic **Cheap Gate** keyed `skill_spec` that parses `SKILL.md` and checks
-  Pi skill compatibility, resource references, and repo-contract rules before live review. Avoid aliases: Static
+  shared Pi/OpenCode skill compatibility, resource references, and repo-contract rules before live review. Avoid aliases: Static
   skill lint, spec validator.
 
 - **Prerequisite Accumulation**: The validation policy of checking all deterministic prerequisite gates before
@@ -69,7 +69,7 @@
 - **Unsupported Suite**: A represented but non-executable suite that does not affect **Skill Validity** in v1.
   Avoid aliases: Ignored suite, metadata suite.
 
-- **With-Skill Configuration**: The eval configuration that runs live Pi with the **Target Skill**
+- **With-Skill Configuration**: The eval configuration that runs a supported live harness with the **Target Skill**
   force-loaded. Avoid aliases: Candidate config, enabled config.
 
 - **Live Eval Gate**: The **Live Gate** that runs required eval suites through `tools.skill_eval` using only
@@ -97,7 +97,7 @@
 - **Failure Artifacts**: Temporary child-run files preserved only when validation fails so failures can be
   debugged. Avoid aliases: Results, report bundle.
 
-- **Live Opt-In**: The explicit user permission required before `skill_valid` may spend live Pi/model calls.
+- **Live Opt-In**: The explicit user permission required before `skill_valid` may spend live harness/model calls.
   Avoid aliases: Enable flag, allow live.
 
 - **LLM Optimal Check Gate**: The deterministic gate keyed `llm_optimal_check` that runs
@@ -109,15 +109,15 @@
 
 ## Relationships
 
-- A **Target Skill** has exactly one **Eval Manifest** for `skill_valid` v1.
+- A **Target Skill** must have exactly one **Eval Manifest**. Missing or invalid manifests block validation before live work.
 
 - A **Target Skill** must have exactly one **Skill AGENTS.md** that satisfies all required **Maintenance Sections**.
 
-- A **Skill Validity** result is true only when every required **Validation Gate** passes or emits an allowed **Warn Gate Status**.
+- A **Skill Validity** result is true only when every gate required by selected validation mode passes or emits an allowed **Warn Gate Status**.
 
-- **Prerequisite Accumulation** reports deterministic missing requirements together before any live Pi/model call.
+- **Prerequisite Accumulation** reports deterministic missing requirements together before any live harness/model call.
 
-- The **Skill Spec Gate** owns deterministic Pi SKILL.md compatibility/resource validation; the **Validate-Skills Gate** owns qualitative judgment after live opt-in.
+- The **Skill Spec Gate** owns deterministic shared Pi/OpenCode SKILL.md compatibility/resource validation; the **Validate-Skills Gate** owns qualitative judgment after live opt-in.
 
 - The **LLM Optimal Check Gate** analyzes only `SKILL.md` in v1; `warn` is non-blocking, while `fail` and tool errors block live gates.
 

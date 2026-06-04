@@ -12,16 +12,16 @@ Maintain `SKILL.md` as the router for deterministic review of local repository c
 
 `evals/manifest.json` declares the workflow smoke eval. It force-loads `SKILL.md` and asks an inline `@review-logic` scenario to produce the required review-summary and Evidence / Trace / Impact fields.
 
-Run deterministic validation from the repository root without live Pi/model gates:
+Run deterministic validation from the repository root without live harness/model gates:
 
 ```sh
 python3 -m tools.skill_valid skills/code-review-workflow
 ```
 
-Run the full local validity wrapper only with approval for live Pi/model execution:
+Run live harness/model validation only with explicit approval:
 
 ```sh
-./tools/skill_valid/skill_validate.sh skills/code-review-workflow
+./tools/skill_valid/skill_validate.sh skills/code-review-workflow --allow-live --harness kilo
 ```
 
 ## Change guidelines
@@ -31,3 +31,4 @@ Run the full local validity wrapper only with approval for live Pi/model executi
 - Keep the analyzer exception narrow: only React Code Quality may run `npx -y react-doctor@latest . --verbose --diff`, and only when React is applicable.
 - Update `evals/manifest.json` when the routing contract or required output shape changes.
 - Keep command and reference mentions aligned with the skill name `code-review-workflow`.
+- Preserve equivalent Pi/OpenCode execution: native sub-agents and harness-specific parallelism are optional; sequential current-session focus review is required fallback.

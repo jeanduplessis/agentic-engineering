@@ -5,6 +5,14 @@ skills:
   - code-review-workflow
 ---
 
+## Required skills
+
+- `code-review-workflow`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
+Treat the loaded `code-review-workflow` skill directory as the skill root. Resolve every review reference below from its `references/` directory, never relative to the repository or command file; for example, `security.md` means `<loaded-skill-root>/references/security.md`.
+
 Review current changes or requested subset; fix actionable issues.
 
 Arguments: $ARGUMENTS
@@ -54,24 +62,18 @@ Reviewer-core constraints:
 
 ### Execution compatibility
 
-No native sub-agent support required.
+Use the best available harness-neutral execution path:
 
-If visible sub-agents exist:
-- You may delegate one focus review per sub-agent.
+1. If the current harness provides native sub-agents, delegate one focus review per sub-agent and run them concurrently when supported.
+2. Otherwise, run all seven focus reviews sequentially in the current session.
 
-Pi default:
-- Use tmux-backed parallel self-invocation.
-- Create a temporary directory outside the repo.
-- Write one prompt and output file per focus.
-- Start one tmux window/pane per focus.
-- Run all seven Pi review passes concurrently.
-- For each pass, run print mode without edit/write tools:
+Optional Pi/tmux acceleration:
+- When running under Pi and both Pi self-invocation and tmux are available, you may use tmux-backed parallel self-invocation instead of the harness-neutral paths.
+- Create a temporary directory outside the repo; write one prompt and output file per focus; start one tmux window/pane per focus.
+- Run each pass in print mode without edit/write tools:
   `pi --tools read,bash,grep,find,ls -p "Run this code-review focus pass from stdin" < "$prompt_file" > "$output_file"`
-- Do not provide `edit` or `write`.
-- Use only read-only git/bash inspection commands, except React Code Quality must run `npx -y react-doctor@latest . --verbose --diff` when React is applicable.
-
-Fallback:
-- If tmux or Pi self-invocation is unavailable, run seven focus reviews sequentially in the current session.
+- Use only read-only git/bash inspection commands, except React Code Quality must run the latest `react-doctor` package with `npx -y`, passing `. --verbose --diff`, when React is applicable.
+- If this acceleration path fails or is unavailable, use native sub-agents or sequential execution; do not block the review.
 
 For delegated or self-invoked reviews, pass only:
 1. `Resolved Review Scope` block.

@@ -1,31 +1,32 @@
-# AGENTS.md — Pi agent resource context
+# AGENTS.md — agent resource context
 
-This repository (`~/.agents`) is a local Pi resource package: downstream-owned skills,
-Pi prompt templates, system-prompt fragments, and repo-level validation/eval tooling.
+This repository (`~/.agents`) is a local agent resource package: downstream-owned skills,
+shared Pi/OpenCode commands, system-prompt fragments, adapters, and repo-level validation/eval tooling.
 
-Pi is the only supported harness target. Optimize tracked resources for Pi behavior and vocabulary.
-Do not preserve compatibility with non-Pi harnesses except where required for license or provenance text.
+Pi and OpenCode are equal baseline harness targets. All canonical resources must preserve equivalent behavior in both. Harness-specific metadata, adapters, and acceleration are allowed only when other harnesses ignore them safely and the source retains a complete shared fallback.
 
 ## Directory map
 
-- `skills/` — downstream-owned Pi skills. Read `skills/AGENTS.md` before adding or changing skills.
+- `skills/` — downstream-owned shared-harness skills. Read `skills/AGENTS.md` before adding or changing skills.
 
-- `commands/` — Pi Markdown prompt templates exposed as slash commands via `package.json` `pi.prompts`.
+- `commands/` — canonical shared Pi/OpenCode Markdown command source, exposed to Pi through `package.json` and adapters through symlinks. Never create generated adapter copies.
+
+- `extensions/extended-commands/` — permissive Pi adapter over canonical commands; activation is an untracked Pi discovery symlink.
 
 - `prompts/` — system-prompt resources only. `prompts/APPEND_SYSTEM.md` is the repo-owned append-system fragment and is not a slash command.
 
-- `tools/` — Python tooling for token counting, LLM-optimization checks, Pi skill evals, and Pi skill validation.
+- `tools/` — Python tooling for token counting, LLM-optimization checks, shared-harness skill evals, and skill validation.
   Read `tools/AGENTS.md` and any tool-local `AGENTS.md` before editing.
 
 ## Working conventions
 
 - Keep LLM-facing Markdown concise, explicit, and easy to execute. Avoid clever indirection when direct instructions work.
 
-- Prefer Pi package, skill, prompt-template, context-file, and system-prompt terminology.
+- Prefer Pi package, skill, prompt-template, context-file, and system-prompt terminology only for Pi-specific capabilities; use harness-neutral terms for shared contracts.
 
 - Prefer repo-level shared tools over one-off scripts. If a public tool contract changes, update its README, `AGENTS.md`, and tests together.
 
-- Use deterministic validation by default. Do not run live Pi/model-backed evals unless the user explicitly requests or approves them.
+- Use deterministic validation by default. Do not run live harness/model-backed evals unless the user explicitly requests or approves them.
 
 - Respect nested `AGENTS.md` files; the closest one to the files being changed has the most specific guidance.
 
@@ -50,7 +51,7 @@ For skill validation, use the repo-local validation tool:
 ./tools/skill_valid/skill_validate.sh skills/<skill-name>
 ```
 
-Run live validation gates only with explicit approval; the wrapper passes `--allow-live-pi` to `tools.skill_valid`.
+Run live validation gates only with explicit approval; pass `--allow-live` and select the intended supported harness when needed.
 
 <!-- AIT START -->
 # Agent Issue Tracker (ait)

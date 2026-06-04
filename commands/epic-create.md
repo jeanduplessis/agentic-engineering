@@ -6,6 +6,13 @@ skills:
   - beads
 ---
 
+## Required skills
+
+- `to-prd`
+- `beads`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
 Create an epic bead using the loaded `to-prd` skill as the authoritative workflow.
 
 Source: $ARGUMENTS

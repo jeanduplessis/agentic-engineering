@@ -186,12 +186,13 @@ class SmellTestCliTests(unittest.TestCase):
 
     def test_skill_documentation_presents_smell_test_as_optional_aid(self):
         skill = (ROOT / "skills" / "llm-optimized-rewrite" / "SKILL.md").read_text(encoding="utf-8")
+        normalized = " ".join(skill.split())
 
         self.assertIn("scripts/smell_test.py", skill)
-        self.assertIn("optional candidate-discovery aid", skill)
-        self.assertIn("does not replace semantic verification", skill)
-        self.assertIn("exact token counts", skill)
-        self.assertIn("user confirmation", skill)
+        self.assertIn("optional candidate-discovery aid", normalized)
+        self.assertIn("does not replace semantic verification", normalized)
+        self.assertIn("exact token counts", normalized)
+        self.assertIn("user confirmation", normalized)
 
     def test_shell_wrapper_renders_friendly_summary_and_optional_raw_json(self):
         with tempfile.TemporaryDirectory() as tmp:

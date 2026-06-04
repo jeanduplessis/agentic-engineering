@@ -20,7 +20,7 @@ Run the local validity gate from the repository root:
 ./tools/skill_valid/skill_validate.sh skills/improve-codebase-architecture
 ```
 
-This wrapper allows live Pi/model gates. For a deterministic optimization check before live validation, run:
+This wrapper is deterministic by default; pass `--allow-live` and select a supported harness only with explicit approval. For a deterministic optimization check, run:
 
 ```sh
 python3 -m tools.llm_optimal_check skills/improve-codebase-architecture/SKILL.md

@@ -2,7 +2,7 @@
   "evals": [
     {
       "id": "ait-recovery-contract-from-session-feedback",
-      "prompt": "Use the epic-orchestrate skill to describe how you would improve or resume an interrupted /epic-orchestrate run. Scenario: a child implementation gate closed or updated issue AIT-123.2 before validation failed; a generated helper script later crashed on unsupported mapfile; validation found a missed parent-update path that can invalidate child records; an ait close command returned ok=false with close_incomplete_acceptance_criteria; the run may need to resume. Do not execute commands. Return the controller rules and next safe steps.",
+      "prompt": "Use the epic-orchestrate skill to describe how you would improve or resume an interrupted /epic-orchestrate run. Scenario: an implementation gate executor closed or updated issue AIT-123.2 before validation failed; a generated helper script later crashed on unsupported mapfile; validation found a missed parent-update path that can invalidate child records; an ait close command returned ok=false with close_incomplete_acceptance_criteria; no Pi executable or native subagent is available, but the current session can perform gates; and commands/tdd-task.md exists alongside an optional .pi/prompts/tdd-task.md. The run may need to resume. Do not execute commands. Return the controller rules and next safe steps, including gate execution fallback and template precedence.",
       "checks": [
         {
           "id": "non-empty-response",

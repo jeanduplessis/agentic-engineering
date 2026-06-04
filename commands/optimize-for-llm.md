@@ -5,17 +5,23 @@ skills:
   - llm-optimized-rewrite
 ---
 
+## Required skills
+
+- `llm-optimized-rewrite`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
 Target path: $ARGUMENTS
 
 Require one path; absent: ask and stop; ambiguous: list matches and ask concise clarification before editing. Read target; optimize for token cost and LLM execution reliability.
 
-When running optional token/smell tools from downstream projects, use the bundled wrappers:
+Treat the loaded `llm-optimized-rewrite` skill directory as the skill root. When running optional token/smell tools from downstream projects, resolve and invoke bundled wrappers relative to that root:
 
 ```bash
-python3 /Users/jdp/.agents/skills/llm-optimized-rewrite/scripts/smell_test.py <path>
-python3 /Users/jdp/.agents/skills/llm-optimized-rewrite/scripts/count_tokens.py <<'TEXT'
+python3 <loaded-skill-root>/scripts/smell_test.py <path>
+python3 <loaded-skill-root>/scripts/count_tokens.py <<'TEXT'
 <exact snippet text>
 TEXT
 ```
 
-Do not run `python3 -m tools.llm_optimal_check` or `python3 -m tools.llm_token_count` outside `/Users/jdp/.agents` unless setting `PYTHONPATH=/Users/jdp/.agents`.
+Prefer these bundled wrappers. Do not assume the skill package or its repository lives at a fixed absolute path.

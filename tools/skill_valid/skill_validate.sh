@@ -4,15 +4,17 @@ set -euo pipefail
 usage() {
   cat >&2 <<'USAGE'
 Usage:
-  ./tools/skill_valid/skill_validate.sh <skill-dir>
+  ./tools/skill_valid/skill_validate.sh <skill-dir> [--allow-live] [skill_valid options...]
 
-Runs full real skill validation for the target skill by invoking tools.skill_valid:
-  - validates target shape, eval manifest, skill-local AGENTS.md, and LLM optimization readiness
-  - runs the live validate-skills gate
-  - runs live skill_eval workflow/regression suites with the target skill force-loaded
-  - requires strict real-run success
+Runs deterministic skill validation by default:
+  - validates target shape, required eval manifest, skill-local AGENTS.md, and LLM optimization readiness
+  - with --allow-live, runs the validate-skills qualitative gate
+  - with --allow-live and a manifest, runs workflow/regression suites with the target skill force-loaded
+  - live behavior evals require strict real-run success
 
 Environment overrides:
+  SKILL_VALID_ALLOW_LIVE=1  Explicitly enable live harness/model gates
+  SKILL_VALID_HARNESS=<pi|kilo>
   SKILL_VALID_PROVIDER=<provider>
   SKILL_VALID_MODEL=<model>
   SKILL_VALID_THINKING=<off|minimal|low|medium|high|xhigh>
@@ -26,7 +28,7 @@ Example:
 USAGE
 }
 
-if [[ $# -ne 1 || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+if [[ $# -lt 1 || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   usage
   exit $([[ $# -eq 1 && ("${1:-}" == "-h" || "${1:-}" == "--help") ]] && echo 0 || echo 2)
 fi
@@ -34,6 +36,7 @@ fi
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/../.." && pwd)"
 target="$1"
+shift
 
 enable_color=0
 if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
@@ -69,7 +72,13 @@ if [[ ! -d "$target" ]]; then
   exit 2
 fi
 
-args=("$target" "--allow-live-pi")
+args=("$target" "$@")
+if [[ "${SKILL_VALID_ALLOW_LIVE:-}" == "1" ]]; then
+  args+=("--allow-live")
+fi
+if [[ -n "${SKILL_VALID_HARNESS:-}" ]]; then
+  args+=("--harness" "$SKILL_VALID_HARNESS")
+fi
 if [[ -n "${SKILL_VALID_PROVIDER:-}" ]]; then
   args+=("--provider" "$SKILL_VALID_PROVIDER")
 fi
@@ -93,7 +102,11 @@ trap cleanup EXIT
 cd "$repo_root"
 
 printf '%s%sValidating skill%s %s%s%s\n' "$bold" "$blue" "$reset" "$bold" "$target" "$reset" >&2
-info "Live Pi/model execution is allowed if required by later gates."
+if [[ " ${args[*]} " == *" --allow-live "* || " ${args[*]} " == *" --allow-live-pi "* || "${SKILL_EVAL_ALLOW_LIVE:-}" == "1" || "${SKILL_EVAL_ALLOW_LIVE_PI:-}" == "1" ]]; then
+  info "Live harness/model execution explicitly allowed."
+else
+  info "Deterministic validation only; live gates require --allow-live."
+fi
 if [[ -n "${SKILL_VALID_PROVIDER:-}${SKILL_VALID_MODEL:-}${SKILL_VALID_THINKING:-}" ]]; then
   info "Execution profile: provider=${SKILL_VALID_PROVIDER:-default} model=${SKILL_VALID_MODEL:-default} thinking=${SKILL_VALID_THINKING:-default}"
 fi

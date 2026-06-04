@@ -6,6 +6,13 @@ skills:
   - ait-cli
 ---
 
+## Required skills
+
+- `epic-orchestrate`
+- `ait-cli`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
 Implement one existing ait epic using the loaded `epic-orchestrate` skill as the authoritative workflow.
 
 Args: $ARGUMENTS

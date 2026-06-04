@@ -25,15 +25,15 @@ On resume:
 
 ## Common failure modes
 
-### Child closed or mutated issue before validation failed
+### Gate executor closed or mutated issue before validation failed
 
-Corrective rule: implementation children must not close, update, or comment on issues unless the parent prompt explicitly permits it. Parent closure happens after all gates pass.
+Corrective rule: implementation gate executors must not close, update, or comment on issues unless the parent prompt explicitly permits it. Parent closure happens after all gates pass.
 
 If it already happened:
 
 1. stop and report inconsistent state;
 2. inspect `ait show <issue-id>` and gate outputs;
-3. run corrective child implementation gate with the validator blocker as context if work remains safe;
+3. run corrective implementation gate with the validator blocker as context if work remains safe;
 4. rerun validation/review;
 5. commit only after state is safe and gates pass.
 
@@ -44,7 +44,7 @@ Do not force-reopen or force-close unless the user explicitly approves and ait s
 Do not continue blindly.
 
 1. inspect worktree;
-2. inspect child gate outputs;
+2. inspect gate outputs;
 3. inspect `ait check` and relevant `ait show <id>` output;
 4. patch or discard helper script;
 5. preflight with `bash -n`;
@@ -52,7 +52,7 @@ Do not continue blindly.
 
 ### Validation finds missed invariant path
 
-Run a corrective implementation child with the exact validator blocker as context.
+Run a corrective implementation gate with the exact validator blocker as context.
 
 Validation should include both:
 
@@ -76,6 +76,12 @@ Common next actions:
 - `actor_required`: rerun the mutating command with `--actor agent`.
 - `write_lock_busy`: wait, re-check state, and retry only if safe.
 
+### Gate runner unavailable or failed
+
+Try native subagent support, then the current harness runner. If neither works, complete the gate sequentially in the current session using the same prompt, contract, footer, and output path. Pi self-invocation is optional and its absence is not a blocker.
+
+Stop instead of falling back only when repository or ait state is unsafe or the failed executor may have left ambiguous mutations.
+
 ### Prompt template unavailable or beads-specific
 
 Use the embedded fallback contract.
@@ -83,9 +89,9 @@ Use the embedded fallback contract.
 Log:
 
 - gate name;
-- searched repo paths;
-- searched user paths;
-- installed-package discovery attempt;
+- canonical `commands/<name>.md` lookup;
+- searched current-harness and repo prompt paths;
+- optional Pi location/package discovery attempt;
 - whether a discovered template was beads/br-specific;
 - fallback contract used.
 

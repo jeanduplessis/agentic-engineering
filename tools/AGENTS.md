@@ -2,8 +2,8 @@
 
 ## Purpose
 
-This directory contains repo-level Python tools used by agents to evaluate, validate, and optimize skills.
-Prefer these shared tools over skill-local scripts when adding automation. Read the tool-specific `AGENTS.md`
+This directory contains repo-level Python tools used by agents to validate shared commands and evaluate, validate, and optimize skills.
+Prefer these shared tools over command- or skill-local scripts when adding automation. Read the tool-specific `AGENTS.md`
 before changing a tool's internals.
 
 ## Available tools
@@ -22,16 +22,15 @@ before changing a tool's internals.
   bundles, supports static/replay/real harness modes, and labels synthetic results honestly..
 
 - `tools.skill_valid`: Purpose: End-to-end validity gate for one repo-local skill.. Primary CLI/API: `python3
-  -m tools.skill_valid skills/<skill-name> --allow-live-pi`; `validate_skill(...)`;
+  -m tools.skill_valid skills/<skill-name> [--allow-live --harness <pi|kilo>]`; `validate_skill(...)`;
   `./tools/skill_valid/skill_validate.sh skills/<skill-name>`. Notes: Orchestrates target, manifest,
   AGENTS.md, `llm_optimal_check`, live opt-in, validate-skills, and live eval gates. Stdout is compact JSON.
   The shell wrapper renders a friendly human summary..
 
-- `tools.command_valid`: Purpose: Deterministic validation for one clean Pi extended command.. Primary CLI/API:
+- `tools.command_valid`: Purpose: Deterministic validation for one canonical command shared by Pi and OpenCode.. Primary CLI/API:
   `python3 -m tools.command_valid <command-name> [--json]`; `validate_command(CommandValidationOptions)`.
-  Notes: Uses repo-root `commands/` by default; validates kebab/reserved names, direct `<name>.md` resolution,
-  scalar frontmatter plus scoped `skills` lists, supported fields, valid `thinking`/`restore`, body placeholders/syntax,
-  and declared skill resolution; emits friendly stdout by default and compact JSON with `--json`; does not query live Pi state..
+  Notes: Uses repo-root `commands/` by default; validates direct resolution, harmless union frontmatter, shared placeholders,
+  absence of OpenCode interpolation, and declared-skill/body-section agreement; preserves friendly/JSON output and does not query live harness state..
 
 ## Selection guide
 
@@ -41,7 +40,7 @@ before changing a tool's internals.
 
 - Need behavior evidence from a skill-owned eval manifest: use `tools.skill_eval`.
 
-- Need to validate one Pi command name and direct command-file resolution: use `tools.command_valid`.
+- Need to validate one canonical command shared by Pi and OpenCode: use `tools.command_valid`.
 
 - Need to decide whether a repo-local skill is valid: use `tools.skill_valid` or the friendly `tools/skill_valid/skill_validate.sh` wrapper.
 
@@ -53,7 +52,7 @@ before changing a tool's internals.
 
 - `skill_valid` calls `llm_optimal_check` through an injectable API and calls `skill_eval.runner.run_suite` in process.
 
-- `skill_valid` must not call live Pi/model gates before deterministic gates pass or warn and live opt-in is present.
+- `skill_valid` must not call live harness/model gates before deterministic gates pass or warn and live opt-in is present.
 
 - `skill_eval` static/replay outputs are synthetic; do not present them as benchmark-quality real behavior.
 
@@ -77,7 +76,7 @@ Run the deterministic suite before handoff:
 python3 -m unittest discover -v
 ```
 
-Do not add live Pi/model tests unless explicitly requested. Existing unit tests use fakes for live gates.
+Do not add live harness/model tests unless explicitly requested. Existing unit tests use fakes for live gates.
 
 ## Change guidelines
 

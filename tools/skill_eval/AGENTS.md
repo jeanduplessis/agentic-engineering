@@ -24,8 +24,9 @@ and explicit about whether results are synthetic or real.
 
 - Trigger and capability suites may be represented in manifests, but execution is currently unsupported and should return an explicit unsupported summary.
 
-- The only real harness adapter currently implemented is Pi (`harness: "pi"`). Live Pi execution must be gated
-  by `allow_live: true` or `SKILL_EVAL_ALLOW_LIVE_PI=1`.
+- Real harness adapters are Pi (`harness: "pi"`) and OpenCode-compatible Kilo (`harness: "kilo"`). Live
+  execution must be gated by `allow_live: true`, `--allow-live`, or `SKILL_EVAL_ALLOW_LIVE=1`; Pi-specific
+  opt-ins remain backwards-compatible aliases.
 
 ## Important contracts
 
@@ -70,5 +71,5 @@ python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
 For live behavioral validation, only when explicitly requested or approved:
 
 ```bash
-SKILL_EVAL_ALLOW_LIVE_PI=1 python3 -m tools.skill_eval <manifest> workflow --results <dir> --require-real
+python3 -m tools.skill_eval <manifest> workflow --results <dir> --require-real --allow-live
 ```

@@ -1,14 +1,14 @@
 ---
 name: epic-orchestrate
-description: "Use when asked to run, recover, or improve /epic-orchestrate; implement an existing ait epic; coordinate multi-issue child Pi gates; harden ait epic workflow; or resume a failed/interrupted epic orchestration. Orchestrates reconnaissance, per-issue implementation, validation, review, commits, final validation/review, closure, and recovery."
+description: "Use when asked to run, recover, or improve /epic-orchestrate; implement an existing ait epic; coordinate multi-issue formal gates in Pi, OpenCode/Kilo, or another capable harness; harden ait epic workflow; or resume a failed/interrupted epic orchestration. Orchestrates reconnaissance, per-issue implementation, validation, review, commits, final validation/review, closure, and recovery."
 license: MIT
-compatibility: Requires ait, git, and pi CLIs in PATH plus an existing .ait project in the target repo.
-allowed-tools: Bash(ait:*) Bash(git:*) Bash(pi:*) Bash(mktemp:*) Read Write
+compatibility: Requires ait and git in PATH plus an existing .ait project in the target repo. Native subagents or a harness runner are optional; sequential current-session execution is the required fallback.
+allowed-tools: Bash(ait:*) Bash(git:*) Bash(mktemp:*) Read Write
 ---
 
 # Epic Orchestrate
 
-Implement one existing ait epic. The parent session is the controller; spawned Pi instances run formal gates.
+Implement one existing ait epic. The parent session is the controller; gate executors perform formal gates without taking parent-owned actions.
 
 When using `ait`, load and follow the `ait-cli` skill.
 
@@ -20,12 +20,12 @@ Scope and ownership:
 - Require a clean worktree before starting and before selecting each new issue.
 - Parent owns queueing, gate interpretation, issue lifecycle updates, issue closure, commits, resume behavior, final validation/review, and epic closure.
 
-Child permissions:
+Gate executor permissions:
 
-- Child gates must not stage, commit, close issues, force-close issues, or directly edit `.ait/` files.
-- Implementation children may edit code/tests and propose or create needed follow-up ait issues only when the parent prompt explicitly permits it.
-- Validation children are read-only.
-- Review children may edit code/tests to fix findings, but must not stage, commit, comment on issues, update issues, or close issues.
+- Gate executors must not stage, commit, close issues, force-close issues, or directly edit `.ait/` files.
+- Implementation executors may edit code/tests and propose or create needed follow-up ait issues only when the parent prompt explicitly permits it.
+- Validation executors are read-only.
+- Review executors may edit code/tests to fix findings, but must not stage, commit, comment on issues, update issues, or close issues.
 
 Ait safety:
 
@@ -57,8 +57,8 @@ Stop if `ait` is unavailable, no `.ait/` project exists, the epic ID is invalid,
 
 ### Workdir and recon
 
-- Create a temp workdir outside the repo for prompts, child outputs, diff snapshots, and append-only state files.
-- Run the reconnaissance child gate.
+- Create a temp workdir outside the repo for prompts, gate outputs, diff snapshots, and append-only state files.
+- Run the reconnaissance gate.
 - Build the issue queue from `ait list --parent <epic-id>` cross-checked against `ait ready --grouped`.
 - Treat descendant scope as the epic's child issues unless current ait behavior explicitly supports nested descendants.
 - If nested descendants exist, include only ready executable leaf issues under the epic.
@@ -81,6 +81,8 @@ For each ready open descendant issue, run in order:
 12. one issue commit;
 13. clean-worktree check before continuing.
 
+Do not parallelize gates that share a worktree or depend on earlier gate output.
+
 ### Final epic pass
 
 When all descendants are closed:
@@ -101,7 +103,7 @@ Report:
 - temp workdir;
 - recon output;
 - completed/skipped issues;
-- child gate output paths;
+- gate output paths and execution methods;
 - validation/review commands;
 - commits;
 - changed files;
@@ -110,11 +112,31 @@ Report:
 - final epic status;
 - worktree status.
 
-## Child prompt rules
+## Gate execution
 
-Before every child invocation, write a self-contained prompt file.
+For every gate, choose the first available method in this order:
 
-Each child prompt must include:
+1. native subagent support exposed by the current harness;
+2. the current harness's non-interactive agent/runner capability;
+3. sequential execution in the current session as a distinct gate role.
+
+Pi self-invocation may be used as optional runner acceleration when available. It is never required.
+Do not stop or weaken gates because Pi, native subagents, or an external runner is unavailable.
+
+For current-session fallback, the controller must complete each gate before continuing:
+Write the same self-contained prompt and adopt only that gate's permissions.
+Perform the work, write its output/footer, return to the parent role, and interpret the result.
+Preserve gate separation and parent-only lifecycle/commit ownership.
+
+Record the execution method and output path for every gate.
+Treat a runner/subagent launch failure like any other failed execution.
+If no runner works, use current-session fallback unless repository state is unsafe.
+
+## Gate prompt rules
+
+Before every gate execution, write a self-contained prompt file.
+
+Each gate prompt must include:
 
 - target ID;
 - gate name;
@@ -126,7 +148,7 @@ Each child prompt must include:
 - warning not to rely on slash-command expansion;
 - instruction not to stage, commit, close issues, update issues, add issue comments, force-close, or edit `.ait/` directly unless explicitly permitted.
 
-Every child output must end with:
+Every gate output must end with:
 
 ```text
 GATE_STATUS: PASS|FAIL|BLOCKED
@@ -142,22 +164,20 @@ Parent rules:
 
 - Parse only the last `GATE_STATUS:` line.
 - Continue only on `PASS`.
-- Stop on non-zero `pi` exit, `FAIL`, `BLOCKED`, missing footer, ambiguous footer, mutating `ait` error envelope, or unsafe repo state.
+- Stop on non-zero executor exit, `FAIL`, `BLOCKED`, missing footer, ambiguous footer, mutating `ait` error envelope, or unsafe repo state.
 
 ## Template resolution
 
-Before child prompt construction, discover templates for `/tdd-task`, `/task-validate`, `/code-review`, and `/epic-validate`.
+Before gate prompt construction, discover templates for `/tdd-task`, `/task-validate`, `/code-review`, and `/epic-validate` in this order:
 
-Search:
+1. canonical repo path `commands/<name>.md`;
+2. current harness command/prompt locations and package entries when discoverable;
+3. repo `prompts/<name>.md`;
+4. optional Pi locations: `.pi/prompts/<name>.md`, root/nearest `package.json` `pi.prompts` entries, user `~/.pi/agent/prompts/<name>.md`, and installed Pi packages.
 
-- repo: `.pi/prompts/<name>.md`, `prompts/<name>.md`, `commands/<name>.md`, and root/nearest `package.json` `pi.prompts` entries;
-- user: `~/.pi/agent/prompts/<name>.md`;
-- installed Pi package prompt entries when discoverable.
+Log the template used or exact searched paths. If unavailable, use this skill and references as the embedded fallback contract and state the fallback. Template text informs the gate prompt; gate execution must not depend on slash-command expansion or any specific harness.
 
-Log the template used or exact searched paths. If unavailable, use this skill and references as the embedded fallback contract and state the fallback.
-
-If a discovered template is beads/br-specific, use it only as behavioral inspiration.
-The ait contract in `epic-orchestrate` wins: child prompts must use `ait` issue IDs and must not invoke `br`/beads unless the user explicitly asks.
+If a discovered template is beads/br-specific, use it only as behavioral inspiration. The ait contract in `epic-orchestrate` wins: gate prompts must use `ait` issue IDs and must not invoke `br`/beads unless the user explicitly asks.
 
 ## Script and state guidance
 
@@ -186,6 +206,7 @@ Report:
 - gate name;
 - target ID;
 - output path;
+- execution method;
 - blocker;
 - dirty files;
 - next recommended action.

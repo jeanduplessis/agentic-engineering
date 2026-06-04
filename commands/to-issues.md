@@ -6,6 +6,13 @@ skills:
   - ait-cli
 ---
 
+## Required skills
+
+- `to-issues`
+- `ait-cli`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
 Create dependency-aware ait issues using the `to-issues` skill as the authoritative workflow.
 
 Source: $ARGUMENTS

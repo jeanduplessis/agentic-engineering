@@ -17,7 +17,7 @@ python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
 python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
 ```
 
-Run live Pi eval/validation only with explicit approval.
+Run live harness eval/validation only with explicit approval.
 
 # Change guidelines
 

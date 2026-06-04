@@ -1,44 +1,59 @@
 # Agentic Engineering
 
 > [!NOTE]
-> Feel free to fork, modify and use as you like, however, this is not a collaborative OSS project. I'm not accepting PRs and not responding to issues. These tools are for me, highly opinionated and personalized for how I prefer to work at this moment in time. I encourage you to build your own that is tailored to how you work best.
+> Feel free to fork, modify and use as you like, however, this is not a collaborative OSS project. I'm not accepting PRs and not responding to issues. These tools are personalized for how I work.
 
-## Pi install/discovery
+## Shared command source
 
-Use this repository as a local Pi package:
+`commands/*.md` is canonical command source shared by Pi and OpenCode. Edit canonical files only. Do not generate, copy, or commit adapter-specific command artifacts.
 
-```sh
-pi install /Users/jdp/.agents
-```
+- Pi package discovery reads canonical source through root `package.json` `pi.prompts`.
+- `extensions/extended-commands/` is permissive Pi adapter adding routing and skill behavior over same source.
+- OpenCode command discovery should symlink `~/.config/opencode/commands` to canonical `commands/` rather than maintain a second tree.
+- Kilo, an OpenCode-compatible harness, should symlink `~/.config/kilo/commands` to canonical `commands/`.
+- Pi extension activation should symlink Pi extension discovery to `extensions/extended-commands/`; activation symlinks are local and untracked.
+- Skills remain canonical under `skills/`; harness config paths may symlink to them when `~/.agents/skills` is not discovered automatically.
 
-For a one-run load without changing settings:
+Source contract permits harmless Pi/OpenCode union frontmatter, including `agent` and `subtask`. Source placeholders are `$ARGUMENTS` and simple positional `$1`, `$2`, etc. Do not use `$@`, `${@:...}`, or OpenCode shell/file interpolation. Commands declaring skills must include matching explicit `## Required skills` body list so every harness can load required context.
 
-```sh
-pi -e /Users/jdp/.agents
-```
-
-The package manifest exposes:
-
-- `skills/` as Pi skills.
-- `commands/*.md` as Pi prompt templates/slash commands.
-
-## Pi resource layout
-
-- `commands/` contains Pi prompt templates exposed as slash commands. Keep command files there; do not move them into `prompts/`.
-- `prompts/` is reserved for system-prompt resources only.
-- `prompts/APPEND_SYSTEM.md` is the repo-owned append-system prompt fragment. Keep it in place. To load it in Pi, explicitly copy or symlink it to `.pi/APPEND_SYSTEM.md` or `~/.pi/agent/APPEND_SYSTEM.md`.
-
-## Extended commands workflow
-
-`extensions/extended-commands/` is the local Pi extension that owns `commands/*.md` as the global command library. Runtime stays migration-friendly: it warns on unknown frontmatter or stale legacy syntax and passes command bodies through literally. `tools.command_valid` is the strict gate for certifying one clean Pi command.
-
-Validate one command by name:
+Validate one canonical command:
 
 ```sh
 python3 -m tools.command_valid <command-name>
 python3 -m tools.command_valid <command-name> --json
 ```
 
-Clean command files use frontmatter with `description` plus optional `argument-hint`, `model`, `thinking`, `skill`, YAML-list `skills`, and `restore`. Model routing accepts exact `provider/model` or unique bare model IDs. `skill` and `skills` inject visible local skill context messages. `restore` defaults to `true`; set `restore: false` only for intentional sticky model/thinking switches.
+Validator is strict and shared-source focused. Pi adapter stays migration-friendly: it silently accepts `agent`/`subtask`, warns on unknown or legacy syntax, and passes legacy bodies through literally. Inventory tests require every canonical command to pass the shared contract.
 
-Migration guidance: replace legacy OpenCode shell/file expansion such as ``!`cmd` `` or `@path` with explicit instructions for Pi to run commands or read files. Keep commands flat; recursive command directories, project-local ownership, deterministic shell execution, loops, chains, parallel execution, worktrees, subagents, and agent-callable prompt execution are out of V1 scope.
+## Harness activation
+
+Use symlinks when a harness does not discover `~/.agents/` directly. Keep symlinks local and untracked; never copy or generate harness-specific variants.
+
+```sh
+ln -s /Users/jdp/.agents/commands ~/.config/opencode/commands
+ln -s /Users/jdp/.agents/commands ~/.config/kilo/commands
+```
+
+Use repository as local Pi package:
+
+```sh
+pi install /Users/jdp/.agents
+```
+
+For one-run load without changing settings:
+
+```sh
+pi -e /Users/jdp/.agents
+```
+
+Manifest exposes `skills/` as Pi skills and canonical `commands/*.md` as Pi prompt templates/slash commands.
+
+## Resource layout
+
+- `commands/` contains canonical shared Pi/OpenCode commands.
+- `skills/` contains canonical shared-harness skills; harness-specific metadata may add capability but cannot replace shared behavior.
+- `extensions/extended-commands/` contains Pi adapter source, never generated command copies.
+- `prompts/` is reserved for system-prompt resources only.
+- `prompts/APPEND_SYSTEM.md` is repo-owned append-system fragment. Load it by explicitly copying or symlinking it to `.pi/APPEND_SYSTEM.md` or `~/.pi/agent/APPEND_SYSTEM.md`.
+
+Keep commands flat. Recursive command directories, project-local ownership, deterministic shell execution, loops, chains, parallel execution, worktrees, subagents, and agent-callable prompt execution remain outside adapter V1 scope.

@@ -1,5 +1,7 @@
 # Gate Contracts
 
+These contracts apply identically whether a gate runs through a native subagent, current harness runner, optional Pi self-invocation, or sequential current-session fallback. Executor choice never changes permissions, pass criteria, footer requirements, or parent-only lifecycle/commit ownership.
+
 ## recon
 
 Read-only.

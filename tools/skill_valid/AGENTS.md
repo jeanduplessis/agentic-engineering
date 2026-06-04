@@ -2,14 +2,15 @@
 
 ## Purpose
 
-`tools.skill_valid` orchestrates the Skill Validity decision for one repo-local skill. Keep the public command
-`python3 -m tools.skill_valid skills/<skill-name> --allow-live-pi`, the friendly wrapper
+`tools.skill_valid` orchestrates the Skill Validity decision for one repo-local skill. Keep deterministic
+validation as baseline, expose live work only through explicit `--allow-live`, preserve `--allow-live-pi` as an
+alias, and keep the friendly wrapper
 `./tools/skill_valid/skill_validate.sh skills/<skill-name>`, and the compact stdout JSON contract stable.
 
 ## How the tool works
 
-The module implements Validation Gate functions in `tools/skill_valid/__init__.py`; deterministic Pi SKILL.md
-compatibility/resource checks live in `tools/skill_valid/spec_checks.py`. The target gate runs first because later
+The module implements Validation Gate functions in `tools/skill_valid/__init__.py`; deterministic shared Pi/OpenCode
+SKILL.md compatibility/resource checks live in `tools/skill_valid/spec_checks.py`. The target gate runs first because later
 gates need a real skill directory. Deterministic prerequisite gates then accumulate results for `skill_spec`,
 `evals/manifest.json`, skill-local `AGENTS.md`, `llm_optimal_check`, and live opt-in so users see multiple
 missing requirements in one JSON response. Live gates run only after those prerequisites pass or warn, then
@@ -27,15 +28,19 @@ python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
 python3 -m unittest tools.skill_valid.tests.test_skill_validate_wrapper -v
 ```
 
-Tests use fake Pi, fake skill_eval runners, and fake LLM Optimal Check injectables; do not add live Pi unit
+Tests use fake harnesses, fake skill_eval runners, and fake LLM Optimal Check injectables; do not add live model unit
 tests unless explicitly requested. When changing gate order, result fields, wrapper prompt requirements, or
 artifact behavior, update tests and `tools/skill_valid/README.md` together.
 
 ## Change guidelines
 
-- Preserve live-run safety: no Pi/model call before cheap gates pass or warn and live opt-in is present.
+- Preserve live-run safety: no harness/model call before cheap gates pass or warn and harness-neutral live opt-in is present.
 
-- Keep deterministic Pi compatibility/resource rules in `spec_checks.py`; keep the validate-skills skill focused on qualitative, judgment-based review.
+- Wrapper must remain deterministic by default and must not append a live opt-in unconditionally.
+
+- Pi and OpenCode-compatible Kilo are supported real harnesses; required eval manifests must pass structural validation before live work.
+
+- Keep deterministic shared compatibility/resource rules in `spec_checks.py`; keep the validate-skills skill focused on qualitative, judgment-based review.
 
 - Keep stdout machine-readable and compact; write diagnostics only to stderr.
 

@@ -26,12 +26,15 @@ SENTINEL_PREFIX = "SKILL_VALID_RESULT="
 class ValidationOptions:
     target: Path | str
     repo_root: Path | str = Path.cwd()
+    allow_live: bool = False
     allow_live_pi: bool = False
+    harness: str | None = None
     provider: str | None = None
     model: str | None = None
     thinking: str | None = None
     artifact_base: Path | str | None = None
     env: dict[str, str] | None = None
+    harness_executable: str | None = None
     pi_executable: str = "pi"
     validate_timeout_seconds: float = 300.0
 
@@ -50,13 +53,15 @@ LlmOptimalChecker = Callable[[Path], dict[str, Any]]
 
 @dataclass(frozen=True)
 class ValidationDependencies:
+    harness_runner: PiRunner | None = None
     pi_runner: PiRunner | None = None
     eval_runner: EvalRunner = run_suite
     llm_optimal_checker: LlmOptimalChecker = default_llm_optimal_check
 
-    def run_pi(self, command: list[str], *, cwd: Path, env: dict[str, str], timeout: float) -> CompletedProcessLike:
-        if self.pi_runner is not None:
-            return self.pi_runner(command, cwd=cwd, env=env, timeout=timeout)
+    def run_harness(self, command: list[str], *, cwd: Path, env: dict[str, str], timeout: float) -> CompletedProcessLike:
+        runner = self.harness_runner or self.pi_runner
+        if runner is not None:
+            return runner(command, cwd=cwd, env=env, timeout=timeout)
         completed = subprocess.run(
             command,
             cwd=cwd,
@@ -174,6 +179,14 @@ def validate_skill(
     if not cheap_gates_passed:
         _mark_live_gates_not_run(ctx.result, "deterministic prerequisite gates failed")
         return _failed_result(ctx)
+
+    if not _live_execution_allowed(ctx):
+        _mark_live_gates_not_run(ctx.result, "live validation was not explicitly enabled")
+        ctx.result["valid"] = True
+        if ctx.artifacts:
+            ctx.artifacts.cleanup_success()
+        ctx.log("deterministic gates passed; live gates not enabled")
+        return 0, ctx.result
 
     for gate in (_gate_validate_skills, _gate_live_eval):
         if not _run_required_gate(ctx, gate, stop_after_failure=True):
@@ -343,8 +356,9 @@ def _gate_eval_manifest(ctx: ValidationContext) -> None:
     with_skill = manifest.configurations.get("with_skill")
     if with_skill is None:
         raise GateFailure("eval_manifest", "Manifest must declare a with_skill configuration.")
-    if with_skill.get("harness") != "pi":
-        raise GateFailure("eval_manifest", "with_skill configuration must use the Pi harness.")
+    harness = with_skill.get("harness")
+    if harness not in {"pi", "kilo"}:
+        raise GateFailure("eval_manifest", "with_skill configuration must use a supported real harness: pi or kilo.")
     if with_skill.get("force_skill") is not True:
         raise GateFailure("eval_manifest", "with_skill configuration must have force-skill enabled.")
 
@@ -419,7 +433,9 @@ def _gate_agents_md(ctx: ValidationContext) -> None:
         if required.lower() not in headings:
             raise GateFailure("agents_md", f"Skill-local AGENTS.md is missing required heading: {required}")
     manifest_asset_refs = ctx.manifest_info.asset_refs if ctx.manifest_info else []
-    required_refs = ["SKILL.md", "evals/manifest.json", *manifest_asset_refs]
+    required_refs = ["SKILL.md", *manifest_asset_refs]
+    if ctx.manifest_info:
+        required_refs.append("evals/manifest.json")
     for ref in sorted(dict.fromkeys(required_refs)):
         if ref not in text:
             raise GateFailure("agents_md", f"Skill-local AGENTS.md is missing concrete reference: {ref}")
@@ -488,44 +504,92 @@ def _compact_llm_optimal_report(report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _live_execution_allowed(ctx: ValidationContext) -> bool:
+    return bool(
+        ctx.options.allow_live
+        or ctx.options.allow_live_pi
+        or ctx.env.get("SKILL_EVAL_ALLOW_LIVE") == "1"
+        or ctx.env.get("SKILL_EVAL_ALLOW_LIVE_PI") == "1"
+    )
+
+
 def _gate_live_opt_in(ctx: ValidationContext) -> None:
-    if ctx.options.allow_live_pi or ctx.env.get("SKILL_EVAL_ALLOW_LIVE_PI") == "1":
-        _pass_gate(ctx, "live_opt_in", "Live Pi execution is explicitly allowed.")
+    if _live_execution_allowed(ctx):
+        _pass_gate(ctx, "live_opt_in", "Live harness execution is explicitly allowed.")
         return
-    raise GateFailure("live_opt_in", "Live Pi execution requires --allow-live-pi or SKILL_EVAL_ALLOW_LIVE_PI=1.")
+    _pass_gate(ctx, "live_opt_in", "Live validation not enabled; deterministic validation only.")
 
 
 def _gate_validate_skills(ctx: ValidationContext) -> None:
     assert ctx.target_rel is not None
     artifact_dir = ctx.artifacts.child("validate_skills") if ctx.artifacts else None
     command = build_validate_skills_command(ctx)
+    harness = _selected_harness(ctx)
     env = dict(os.environ)
     env.update(ctx.env)
     started = time.time()
     try:
-        completed = ctx.deps.run_pi(command, cwd=ctx.repo_root, env=env, timeout=ctx.options.validate_timeout_seconds)
+        completed = ctx.deps.run_harness(command, cwd=ctx.repo_root, env=env, timeout=ctx.options.validate_timeout_seconds)
     except subprocess.TimeoutExpired as exc:
-        stdout = exc.stdout or ""
-        stderr = exc.stderr or ""
+        stdout = _text_output(exc.stdout)
+        stderr = _text_output(exc.stderr)
         if artifact_dir:
             _write_validate_artifacts(artifact_dir, stdout, stderr, command, None, started)
-        raise GateFailure("validate_skills", "validate-skills Pi run timed out.") from exc
+        raise GateFailure("validate_skills", f"validate-skills {harness} run timed out.") from exc
     if artifact_dir:
         _write_validate_artifacts(artifact_dir, completed.stdout, completed.stderr, command, completed.returncode, started)
     if completed.returncode != 0:
-        raise GateFailure("validate_skills", f"validate-skills Pi run exited nonzero: exit {completed.returncode}")
+        raise GateFailure("validate_skills", f"validate-skills {harness} run exited nonzero: exit {completed.returncode}")
     parsed = parse_sentinel_result(completed.stdout, expected_target=ctx.target_rel)
     if not parsed.passed:
         raise GateFailure("validate_skills", parsed.message, {"sentinel": parsed.payload} if parsed.payload else None)
     _pass_gate(ctx, "validate_skills", "validate-skills sentinel result passed.", {"checks": parsed.payload.get("checks", []) if parsed.payload else []})
 
 
+def _selected_harness(ctx: ValidationContext) -> str:
+    if ctx.options.harness:
+        return ctx.options.harness
+    if ctx.manifest_info:
+        return str(ctx.manifest_info.with_skill_config.get("harness", "pi"))
+    return "pi"
+
+
+def _harness_executable(ctx: ValidationContext, harness: str) -> str:
+    if ctx.options.harness_executable:
+        return ctx.options.harness_executable
+    if harness == "pi":
+        return ctx.options.pi_executable
+    return harness
+
+
+def _text_output(value: str | bytes | None) -> str:
+    if isinstance(value, bytes):
+        return value.decode(errors="replace")
+    return value or ""
+
+
 def build_validate_skills_command(ctx: ValidationContext) -> list[str]:
     assert ctx.target_rel is not None
     validate_skill_path = ctx.repo_root / "skills" / "validate-skills" / "SKILL.md"
     prompt = render_wrapper_prompt(ctx.target_rel)
+    harness = _selected_harness(ctx)
+    executable = _harness_executable(ctx, harness)
+    if harness == "kilo":
+        command = [executable, "run", "--pure", "--format", "default", "--file", str(validate_skill_path)]
+        if ctx.options.model:
+            model = ctx.options.model
+            if ctx.options.provider and "/" not in model:
+                model = f"{ctx.options.provider}/{model}"
+            command.extend(["--model", model])
+        if ctx.options.thinking:
+            command.extend(["--variant", ctx.options.thinking])
+        command.append(prompt)
+        return command
+    if harness != "pi":
+        raise GateFailure("validate_skills", f"Unsupported live harness: {harness}")
+
     command = [
-        ctx.options.pi_executable,
+        executable,
         "--no-session",
         "--no-context-files",
         "--no-extensions",
@@ -636,7 +700,12 @@ def _gate_live_eval(ctx: ValidationContext) -> None:
 def _generated_with_skill_config(ctx: ValidationContext) -> dict[str, Any]:
     assert ctx.manifest_info is not None
     config = dict(ctx.manifest_info.with_skill_config)
-    config.update({"harness": "pi", "force_skill": True, "allow_live": True})
+    harness = _selected_harness(ctx)
+    config.update({"harness": harness, "force_skill": True, "allow_live": True})
+    if ctx.options.harness_executable:
+        config["executable"] = ctx.options.harness_executable
+    elif harness == "pi" and ctx.options.pi_executable != "pi":
+        config["executable"] = ctx.options.pi_executable
     if ctx.options.provider:
         config["provider"] = ctx.options.provider
     if ctx.options.model:
@@ -680,21 +749,27 @@ def main(
     parser = argparse.ArgumentParser(description="Validate one repo-local skill through skill_valid gates.")
     parser.add_argument("target", type=Path, help="Repo-local skill directory, e.g. skills/custom-command")
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help="Repository root; defaults to current directory")
-    parser.add_argument("--allow-live-pi", action="store_true", help="Allow live Pi/model calls")
-    parser.add_argument("--provider", help="Provider override for live Pi gates")
-    parser.add_argument("--model", help="Model override for live Pi gates")
-    parser.add_argument("--thinking", help="Thinking override for live Pi gates")
+    parser.add_argument("--allow-live", action="store_true", help="Explicitly allow live harness/model calls")
+    parser.add_argument("--allow-live-pi", action="store_true", help="Deprecated alias for --allow-live")
+    parser.add_argument("--harness", choices=("pi", "kilo"), help="Real harness override; defaults to manifest with_skill harness")
+    parser.add_argument("--provider", help="Provider override for live harness gates")
+    parser.add_argument("--model", help="Model override for live harness gates")
+    parser.add_argument("--thinking", help="Thinking/variant override for live harness gates")
     parser.add_argument("--artifact-base", type=Path, help="Directory for temporary child artifacts")
-    parser.add_argument("--pi-executable", default="pi", help="Pi executable used by the validate-skills live gate")
+    parser.add_argument("--harness-executable", help="Executable override for selected live harness")
+    parser.add_argument("--pi-executable", default="pi", help="Deprecated Pi executable override")
     args = parser.parse_args(argv)
     options = ValidationOptions(
         target=args.target,
         repo_root=args.repo_root,
+        allow_live=args.allow_live,
         allow_live_pi=args.allow_live_pi,
+        harness=args.harness,
         provider=args.provider,
         model=args.model,
         thinking=args.thinking,
         artifact_base=args.artifact_base,
+        harness_executable=args.harness_executable,
         pi_executable=args.pi_executable,
     )
     code, result = validate_skill(options, deps=deps, stderr=stderr)

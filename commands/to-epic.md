@@ -7,6 +7,14 @@ skills:
   - ait-cli
 ---
 
+## Required skills
+
+- `to-epic`
+- `to-issues`
+- `ait-cli`
+
+Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+
 Create an ait epic using the `to-epic` skill as the authoritative workflow.
 
 Arguments: $ARGUMENTS

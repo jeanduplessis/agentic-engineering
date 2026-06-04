@@ -1,6 +1,6 @@
 # AGENTS.md — skills directory context
 
-This directory contains agent skills. Each skill should be self-contained, easy for agents to discover, and optionally measurable via the repo-level `tools/skill_eval` framework.
+This directory contains canonical agent skills shared by Pi and OpenCode. Each skill should be self-contained, easy for agents to discover, behaviorally complete without harness-specific acceleration, and optionally measurable via the repo-level `tools/skill_eval` framework.
 
 ## Skill structure
 
@@ -42,10 +42,10 @@ python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
   --require-real
 ```
 
-Live Pi execution is gated; run live evals only when explicitly requested or approved:
+Live harness execution is gated; run live evals only when explicitly requested or approved:
 
 ```bash
-SKILL_EVAL_ALLOW_LIVE_PI=1 \
+SKILL_EVAL_ALLOW_LIVE=1 \
 python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
   --results /tmp/<skill-name>-live-eval \
   --require-real
@@ -115,8 +115,10 @@ Current runner support:
 
 For workflow suites, compare:
 
-- `with_skill`: Pi runs with `--skill <path-to-SKILL.md>`.
-- `without_skill`: Pi runs with `--no-skills` and omits the target skill.
+- `with_skill`: selected real harness force-loads or attaches the target `SKILL.md`.
+- `without_skill`: selected real harness omits the target skill.
+
+Real configurations may select `harness: "pi"` or OpenCode-compatible `harness: "kilo"`; evaluator choice must not change skill behavior expectations.
 
 ## Checks and graders
 
@@ -203,6 +205,7 @@ When adding or substantially changing a skill:
 2. Add or update workflow eval cases for core behavior.
 3. Add deterministic checks or a skill-local grader for important contracts.
 4. Run unit tests for `tools.skill_eval` after changing framework-facing eval files.
-5. Run no-live `--require-real` validation to ensure the manifest uses real configs and skips honestly without live Pi.
-6. Run live Pi eval only with explicit approval.
+5. Run no-live `--require-real` validation to ensure the manifest uses real configs and skips honestly without live harness execution.
+6. Run live harness eval only with explicit approval.
+7. Preserve equivalent Pi and OpenCode behavior; harness-specific metadata or acceleration must have a complete shared fallback.
 7. Treat static/replay results as synthetic plumbing checks, not skill-quality evidence.

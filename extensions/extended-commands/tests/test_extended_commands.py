@@ -22,8 +22,8 @@ class ExtendedCommandsTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         return completed.stdout
 
-    def test_argument_substitution_preserves_raw_arguments_and_simple_positions(self):
-        body = "Raw=$ARGUMENTS\nAll=$@\nOne=$1\nTwo=$2\nMissing=$3"
+    def test_argument_substitution_preserves_raw_arguments_and_legacy_adapter_placeholders(self):
+        body = "Raw=$ARGUMENTS\nLegacy=$@ ${@:2}\nOne=$1\nTwo=$2\nMissing=$3"
         script = textwrap.dedent(
             f"""
             import {{ substituteArguments }} from {json.dumps(EXTENSION.as_uri())};
@@ -35,13 +35,13 @@ class ExtendedCommandsTests(unittest.TestCase):
 
         rendered = json.loads(self.run_node(script))
 
-        self.assertEqual(rendered, "Raw=alpha \"two words\"\nAll=alpha two words\nOne=alpha\nTwo=two words\nMissing=")
+        self.assertEqual(rendered, "Raw=alpha \"two words\"\nLegacy=alpha two words ${@:2}\nOne=alpha\nTwo=two words\nMissing=")
 
     def test_discovery_loads_only_direct_markdown_commands_with_runtime_warnings(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "alpha-command.md").write_text(
-                "---\ndescription: Alpha command\nunknown: value\n---\nRun $1\n!`legacy`\n@legacy/file.txt\n"
+                "---\ndescription: Alpha command\nunknown: value\n---\nRun $1\n!`legacy`\n@legacy/file.txt\n@README.md\nUse react-doctor@latest.\n"
             )
             (root / "notes.txt").write_text("ignore")
             (root / "nested").mkdir()
@@ -58,10 +58,50 @@ class ExtendedCommandsTests(unittest.TestCase):
 
             self.assertEqual([command["name"] for command in commands], ["alpha-command"])
             self.assertEqual(commands[0]["description"], "Alpha command")
-            self.assertEqual(commands[0]["body"], "Run $1\n!`legacy`\n@legacy/file.txt\n")
+            self.assertEqual(commands[0]["body"], "Run $1\n!`legacy`\n@legacy/file.txt\n@README.md\nUse react-doctor@latest.\n")
             self.assertTrue(any("Unknown frontmatter field" in warning for warning in commands[0]["warnings"]))
             self.assertTrue(any("shell expansion" in warning for warning in commands[0]["warnings"]))
             self.assertTrue(any("file expansion" in warning for warning in commands[0]["warnings"]))
+            self.assertFalse(any("react-doctor@latest" in warning for warning in commands[0]["warnings"]))
+
+    def test_adapter_discovers_every_canonical_command_from_shared_source(self):
+        command_dir = REPO_ROOT / "commands"
+        expected = sorted(path.stem for path in command_dir.glob("*.md"))
+        script = textwrap.dedent(
+            f"""
+            import {{ discoverCommands }} from {json.dumps(EXTENSION.as_uri())};
+            const commands = discoverCommands({json.dumps(str(command_dir))});
+            console.log(JSON.stringify(commands.map((command) => command.name)));
+            """
+        )
+
+        self.assertEqual(len(expected), 23)
+        self.assertEqual(json.loads(self.run_node(script)), expected)
+
+    def test_shared_union_agent_and_subtask_fields_are_silently_accepted(self):
+        command = textwrap.dedent(
+            """
+            ---
+            description: Shared command
+            agent: build
+            subtask: true
+            ---
+            Body
+            """
+        ).lstrip()
+        script = textwrap.dedent(
+            f"""
+            import {{ parseCommandFile }} from {json.dumps(EXTENSION.as_uri())};
+            const command = parseCommandFile('/tmp/shared.md', 'shared', {json.dumps(command)});
+            console.log(JSON.stringify(command));
+            """
+        )
+
+        command = json.loads(self.run_node(script))
+
+        self.assertEqual(command["frontmatter"]["agent"], "build")
+        self.assertEqual(command["frontmatter"]["subtask"], "true")
+        self.assertEqual(command["warnings"], [])
 
     def test_yaml_skills_frontmatter_parses_ordered_skills_and_merges_legacy_skill(self):
         command = textwrap.dedent(
@@ -561,12 +601,13 @@ class ExtendedCommandsTests(unittest.TestCase):
         combined = "\n".join([extension_readme, command_valid_readme, root_readme])
 
         self.assertIn("command_valid", combined)
-        self.assertIn("runtime", combined.lower())
+        self.assertIn("shared canonical command source", combined.lower())
         self.assertIn("strict", combined.lower())
         self.assertIn("OpenCode", combined)
-        self.assertIn("project-local", combined)
-        self.assertIn("multiple skills", combined)
-        self.assertIn("subagents", combined)
+        self.assertIn("symlink", combined.lower())
+        self.assertIn("do not generate", combined.lower())
+        self.assertIn("agent", combined)
+        self.assertIn("subtask", combined)
 
 
 if __name__ == "__main__":

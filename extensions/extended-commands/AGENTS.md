@@ -2,30 +2,27 @@
 
 ## Purpose
 
-This extension registers the local global command library (`~/.agents/commands/*.md`) as Pi extension-owned slash commands.
+Pi adapter over shared canonical Pi/OpenCode command source (`~/.agents/commands/*.md`).
 
 ## How it works
 
-- Entry point: `index.ts`.
-- Pure helpers (`parseArgs`, `substituteArguments`, `parseCommandFile`, `discoverCommands`, `registerExtendedCommands`) are exported for deterministic tests.
-- Pi runtime entrypoint is the default export, which calls `registerExtendedCommands(pi)`.
-- Discovery is global-only and flat; do not add recursive or project-local command ownership in V1.
-- Runtime is permissive during migration: warn on unknown frontmatter or unsupported legacy syntax; do not fail plain command execution for those warnings.
-- Model routing supports exact `provider/model` and unique bare model IDs. Ambiguous/missing/unavailable models fail before prompt send.
-- Thinking routing uses Pi thinking levels and restores model/thinking after `agent_end` unless `restore: false`.
-- Skill injection supports legacy `skill` and YAML-list `skills`, resolves all local `SKILL.md` files before injecting any skill, sends one visible `extended-command-skill` custom message per not-already-loaded skill before the command prompt, silently skips duplicates already present in active model context, uses canonical `SKILL.md` path as primary identity with skill-name fallback, prefers native Pi `<skill ...>` messages, and does not add a custom renderer.
+- Entry point: `index.ts`; default export calls `registerExtendedCommands(pi)`.
+- Canonical source is shared. Never generate, copy, or rewrite adapter-specific command artifacts.
+- Activation belongs to user configuration via symlink from Pi extension discovery; keep activation links untracked.
+- Discovery is global-only and flat; do not add recursive or project-local ownership in V1.
+- Runtime stays permissive during migration: warn on unknown frontmatter or unsupported legacy syntax; do not fail plain execution.
+- Silently accept shared union fields `agent` and `subtask`; Pi adapter intentionally ignores their semantics.
+- Shared source permits `$ARGUMENTS` and simple positions such as `$1`; preserve permissive adapter legacy behavior by still substituting `$@` and passing `${@:...}` literally.
+- Model/thinking routing, restore behavior, skill injection, and duplicate-skill handling remain Pi adapter features.
 
 ## Eval and validation
-
-Run focused extension tests:
 
 ```sh
 python3 -m unittest extensions.extended-commands.tests.test_extended_commands -v
 ```
 
-These tests import `index.ts` with Node's TypeScript stripping and use fake Pi APIs.
+Tests import `index.ts` with Node TypeScript stripping and fake Pi APIs.
 
 ## Change guidelines
 
-Update `README.md`, this `AGENTS.md`, and tests when changing command discovery, argument substitution, frontmatter parsing, runtime warnings, routing, or registration behavior.
-Keep activation/symlink changes out of this extension source slice; they are tracked separately.
+Update `README.md`, this `AGENTS.md`, and tests when changing discovery, argument substitution, frontmatter parsing, runtime warnings, routing, registration, or shared-source adapter behavior. Preserve permissive legacy runtime behavior.

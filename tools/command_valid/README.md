@@ -1,6 +1,6 @@
 # command_valid
 
-Deterministic validator for one Pi extended command name.
+Deterministic validator for one command from shared canonical Pi/OpenCode source.
 
 ## CLI
 
@@ -9,7 +9,7 @@ python3 -m tools.command_valid <command-name>
 python3 -m tools.command_valid <command-name> --json
 ```
 
-Default command library: `commands/` under the repo root. Override for tests or alternate checkouts:
+Default canonical source: repo-root `commands/`. Override for tests or alternate checkouts:
 
 ```sh
 python3 -m tools.command_valid code-review --repo-root /path/to/repo
@@ -18,27 +18,26 @@ python3 -m tools.command_valid code-review --commands-dir /path/to/commands
 
 ## Contract
 
-`command_valid` validates one clean Pi-only command:
+`command_valid` validates one clean command usable by both Pi and OpenCode adapters:
 
-- command name must be lowercase kebab-case;
-- command name must not be reserved by Pi;
-- command must resolve to one direct `<command-name>.md` file in the command library;
-- validation does not recurse into subdirectories;
-- command file must start with frontmatter and a non-empty scalar `description`;
-- recognized fields: scalar `description`, `argument-hint`, `model`, `thinking`, `skill`, `restore`, plus scoped YAML-list `skills`;
-- unknown fields fail validation;
-- unsupported nested/list/malformed frontmatter fails validation;
-- `thinking` must be `off`, `minimal`, `low`, `medium`, `high`, or `xhigh`;
-- `restore` must be `true` or `false`;
-- unsupported legacy body syntax such as shell/file expansion fails validation;
-- unsupported placeholders such as `${@:N}` fail validation;
-- declared `skill` and `skills` entries must resolve to readable local skills;
-- validation is static and does not query Pi's live model registry.
+- command name must be lowercase kebab-case and not reserved by Pi;
+- command must resolve to one direct `<command-name>.md` file; discovery is non-recursive;
+- frontmatter must include a non-empty scalar `description`;
+- harmless union fields are accepted: scalar `description`, `argument-hint`, `model`, `thinking`, `skill`, `restore`, `agent`, `subtask`, plus YAML-list `skills`;
+- unknown, duplicate, malformed, nested, or unsupported list frontmatter fails;
+- `thinking` must be `off`, `minimal`, `low`, `medium`, `high`, or `xhigh`; `restore` and `subtask` must be `true` or `false`;
+- source placeholders may use `$ARGUMENTS` and simple positional `$1`, `$2`, etc.; `$@` and `${@:...}` fail;
+- OpenCode shell interpolation such as ``!`cmd` `` and file interpolation such as `@src/file.ts` fail;
+- package suffixes such as `react-doctor@latest` are ordinary text and do not fail;
+- declared `skill` and `skills` entries must be unique lowercase kebab-case names, resolve locally, and exactly match the order of an explicit `## Required skills` body list;
+- validation is static and does not query live Pi or OpenCode state.
 
-Exit codes:
+Canonical inventory tests assert the expected command set and require every `commands/*.md` file to pass this contract.
 
-- `0`: valid command name and file resolution;
-- `1`: invalid command contract, such as non-kebab-case or reserved name;
-- `2`: usage or resolution error, such as missing command name or missing file.
+Exit codes and result schema remain stable:
 
-`--json` emits compact JSON on stdout. Friendly output is the default.
+- `0`: valid command;
+- `1`: invalid command contract;
+- `2`: usage or resolution error.
+
+`--json` emits compact JSON on stdout. Friendly output remains default.
