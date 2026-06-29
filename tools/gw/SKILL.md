@@ -6,6 +6,7 @@
 
 ```zsh
 gw add <branch>                    # local, remote, or new branch
+gw add --cd <branch>               # create worktree and enter it with shell integration
 gw add -b <new-branch> [start]     # explicitly create branch
 gw list                            # list all worktrees; alias: ls
 gw list -q                         # names only

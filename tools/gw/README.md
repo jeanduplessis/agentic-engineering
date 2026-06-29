@@ -15,6 +15,7 @@ Add shell initialization line to `~/.zshrc` for persistent setup.
 
 ```text
 gw add <branch>                 create worktree for local, remote, or new branch
+gw add --cd <branch>            create worktree and enter it with shell integration
 gw add -b <branch> [start]      create new branch and worktree
 gw list                         list all worktrees
 gw list --quiet                 print worktree names only

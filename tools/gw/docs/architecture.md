@@ -29,13 +29,14 @@ Every command starts from current directory, verifies it is inside Git repositor
 
 ## Commands
 
-- `add`: resolve local branch, unique remote branch, or new branch; create worktree; run hooks.
+- `add`: resolve local branch, unique remote branch, or new branch; create worktree; run hooks. With `--cd`, Zsh integration enters the new worktree after successful creation.
 - `list`: render all Git worktrees or names only.
 - `cd`: print one managed worktree absolute path; Zsh wrapper performs actual directory change.
 - `remove`: remove one managed non-main worktree and optionally branch.
 - `clean`: remove managed non-main worktrees whose branches are merged into selected base branch.
 - `init`: create `.gw.yml` at main repository root.
 - `completion`, `hook`, `shell-init`: emit Zsh integration scripts.
+- `__add-target`: hidden helper used by the Zsh `add --cd` wrapper to precompute the destination path without mutating Git state.
 
 ## Configuration and Hooks
 

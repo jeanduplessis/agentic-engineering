@@ -19,6 +19,7 @@ fn run() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Some(Command::Add(args)) => commands::add::run(&args),
+        Some(Command::AddTarget(args)) => commands::add::print_target_path(&args),
         Some(Command::List(args)) => commands::list::run(args),
         Some(Command::Remove(args)) => commands::remove::run(&args),
         Some(Command::Clean) => commands::clean::run(),

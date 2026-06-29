@@ -57,7 +57,7 @@ fn candidates(words: &[String]) -> Result<Vec<String>> {
 
 fn complete_add(current: &str) -> Result<Vec<String>> {
     if current.starts_with('-') {
-        return Ok(filter(["--branch", "-b"], current));
+        return Ok(filter(["--branch", "-b", "--cd"], current));
     }
     let cwd = env::current_dir()?;
     Ok(filter(
@@ -102,5 +102,13 @@ mod tests {
     #[test]
     fn completes_zsh_only_shell_commands() {
         assert_eq!(candidates(&["completion".to_owned()]).unwrap(), vec!["zsh"]);
+    }
+
+    #[test]
+    fn completes_add_flags_by_prefix() {
+        assert_eq!(
+            candidates(&["add".to_owned(), "--".to_owned()]).unwrap(),
+            vec!["--branch", "--cd"]
+        );
     }
 }

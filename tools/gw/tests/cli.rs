@@ -234,6 +234,36 @@ fn zsh_shell_init_enables_cd_hook() {
 }
 
 #[test]
+fn zsh_shell_init_enables_add_cd_hook() {
+    let test_repo = TestRepo::new();
+    let worktree = test_repo.worktree("feature/add-cd");
+    let binary_dir = Path::new(env!("CARGO_BIN_EXE_gw"))
+        .parent()
+        .expect("binary has parent directory");
+    let path = format!(
+        "{}:{}",
+        binary_dir.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+
+    let mut command = Command::new("zsh");
+    command
+        .args([
+            "-fc",
+            "autoload -Uz compinit; compinit; eval \"$(gw shell-init zsh)\"; gw add --cd feature/add-cd >/dev/null; pwd",
+        ])
+        .current_dir(&test_repo.repo)
+        .env("PATH", path);
+    isolated_environment(&mut command);
+    let output = assert_success(command.output().expect("run zsh"), "zsh");
+
+    assert_eq!(
+        stdout(&output).trim(),
+        worktree.canonicalize().unwrap().display().to_string()
+    );
+}
+
+#[test]
 fn remove_with_branch_removes_worktree_and_branch() {
     let test_repo = TestRepo::new();
     let worktree = test_repo.worktree("feature/test");

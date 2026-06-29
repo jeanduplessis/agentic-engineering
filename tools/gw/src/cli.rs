@@ -11,6 +11,9 @@ pub struct Cli {
 pub enum Command {
     /// Create a worktree.
     Add(AddArgs),
+    /// Print planned add target path.
+    #[command(name = "__add-target", hide = true)]
+    AddTarget(AddArgs),
     /// List worktrees.
     #[command(alias = "ls")]
     List(ListArgs),
@@ -36,6 +39,9 @@ pub enum Command {
 
 #[derive(Debug, Args)]
 pub struct AddArgs {
+    /// Enter the new worktree after creation when shell integration is active.
+    #[arg(long)]
+    pub cd: bool,
     /// Create a new branch, optionally from START_POINT.
     #[arg(short = 'b', long = "branch", value_name = "NEW_BRANCH")]
     pub new_branch: Option<String>,

@@ -8,6 +8,28 @@ const ZSH_HOOK: &str = r#"gw() {
     else
       command gw "$@"
     fi
+  elif [[ "$1" == "add" ]]; then
+    local arg
+    for arg in "${@:2}"; do
+      if [[ "$arg" == "--cd" ]]; then
+        local target_dir
+        target_dir="$(command gw __add-target "${@:2}" 2>/dev/null)"
+        local target_result=$?
+        if (( target_result != 0 )); then
+          command gw "$@"
+          return $?
+        fi
+
+        command gw "$@"
+        local result=$?
+        if (( result == 0 )); then
+          builtin cd -- "$target_dir"
+          result=$?
+        fi
+        return $result
+      fi
+    done
+    command gw "$@"
   else
     command gw "$@"
   fi
@@ -41,6 +63,7 @@ mod tests {
         let hook = zsh_hook();
 
         assert!(hook.contains("command gw cd \"${@:2}\""));
+        assert!(hook.contains("command gw __add-target \"${@:2}\" 2>/dev/null"));
         assert!(hook.contains("builtin cd -- \"$target_dir\""));
         assert!(hook.contains("command gw \"$@\""));
     }

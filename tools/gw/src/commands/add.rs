@@ -11,20 +11,49 @@ use crate::hooks;
 
 /// Creates a managed worktree and runs its post-create hooks.
 pub fn run(args: &AddArgs) -> Result<()> {
-    let cwd = env::current_dir().context("failed to access current directory")?;
-    let repository = Repository::discover(&cwd)?;
-    let config = Config::load(&repository.main_root)?;
-    let request = AddRequest::resolve(args, &repository)?;
-    let destination = destination_path(&config, &repository.main_root, &request.branch)?;
+    let plan = AddPlan::resolve(args)?;
 
-    create_worktree(&repository.main_root, &destination, &request)?;
+    create_worktree(&plan.repository.main_root, &plan.destination, &plan.request)?;
 
-    if let Err(error) = hooks::run_post_create(&config, &repository.main_root, &destination) {
+    if let Err(error) =
+        hooks::run_post_create(&plan.config, &plan.repository.main_root, &plan.destination)
+    {
         eprintln!("Warning: post-create hooks failed: {error:#}");
     }
 
-    println!("{}", destination.display());
+    println!("{}", plan.destination.display());
     Ok(())
+}
+
+/// Prints the destination path `add` would create.
+pub fn print_target_path(args: &AddArgs) -> Result<()> {
+    println!("{}", AddPlan::resolve(args)?.destination.display());
+    Ok(())
+}
+
+#[derive(Debug)]
+struct AddPlan {
+    repository: Repository,
+    config: Config,
+    request: AddRequest,
+    destination: PathBuf,
+}
+
+impl AddPlan {
+    fn resolve(args: &AddArgs) -> Result<Self> {
+        let cwd = env::current_dir().context("failed to access current directory")?;
+        let repository = Repository::discover(&cwd)?;
+        let config = Config::load(&repository.main_root)?;
+        let request = AddRequest::resolve(args, &repository)?;
+        let destination = destination_path(&config, &repository.main_root, &request.branch)?;
+
+        Ok(Self {
+            repository,
+            config,
+            request,
+            destination,
+        })
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
