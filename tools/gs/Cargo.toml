@@ -1,0 +1,16 @@
+[package]
+name = "gs"
+version = "0.1.0"
+edition = "2024"
+description = "Enhanced Git status view"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.5.51", features = ["derive"] }
+git2 = "0.20.2"
+thiserror = "2.0.17"
+
+[dev-dependencies]
+assert_cmd = "2.1.1"
+predicates = "3.1.3"
+tempfile = "3.23.0"
