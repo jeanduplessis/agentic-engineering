@@ -1,4 +1,4 @@
-use std::fs;
+use std::fs::{self, Metadata};
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -19,15 +19,15 @@ pub fn run_post_create(config: &Config, repo_root: &Path, worktree_path: &Path) 
 
 fn run_hook(hook: &Hook, repo_root: &Path, worktree_path: &Path) -> Result<()> {
     match hook {
-        Hook::Copy { from, to } => {
+        Hook::Copy { from, to, optional } => {
             let source = resolve_source(repo_root, from);
             let destination = resolve_destination(worktree_path, to)?;
-            copy_path(&source, &destination, worktree_path)
+            copy_path(&source, &destination, worktree_path, *optional)
         }
-        Hook::Symlink { from, to } => {
+        Hook::Symlink { from, to, optional } => {
             let source = resolve_source(repo_root, from);
             let destination = resolve_destination(worktree_path, to)?;
-            create_symlink(&source, &destination)
+            create_symlink(&source, &destination, *optional)
         }
         Hook::Command {
             command,
@@ -121,9 +121,10 @@ fn resolve_relative_contained(base: &Path, path: &Path, kind: &str) -> Result<Pa
     Ok(resolved)
 }
 
-fn create_symlink(source: &Path, destination: &Path) -> Result<()> {
-    fs::metadata(source)
-        .with_context(|| format!("failed to inspect symlink source {}", source.display()))?;
+fn create_symlink(source: &Path, destination: &Path, optional: bool) -> Result<()> {
+    if source_metadata(source, "symlink", optional)?.is_none() {
+        return Ok(());
+    }
     create_parent(destination)?;
     symlink(source, destination).with_context(|| {
         format!(
@@ -134,10 +135,16 @@ fn create_symlink(source: &Path, destination: &Path) -> Result<()> {
     })
 }
 
-fn copy_path(source: &Path, destination: &Path, worktree_path: &Path) -> Result<()> {
+fn copy_path(
+    source: &Path,
+    destination: &Path,
+    worktree_path: &Path,
+    optional: bool,
+) -> Result<()> {
     resolve_destination(worktree_path, destination)?;
-    let metadata = fs::metadata(source)
-        .with_context(|| format!("failed to inspect copy source {}", source.display()))?;
+    let Some(metadata) = source_metadata(source, "copy", optional)? else {
+        return Ok(());
+    };
     if metadata.is_dir() {
         copy_directory(
             source,
@@ -149,6 +156,15 @@ fn copy_path(source: &Path, destination: &Path, worktree_path: &Path) -> Result<
         copy_file(source, destination, metadata.permissions().mode())
     } else {
         bail!("unsupported copy source type: {}", source.display());
+    }
+}
+
+fn source_metadata(source: &Path, hook_type: &str, optional: bool) -> Result<Option<Metadata>> {
+    match fs::metadata(source) {
+        Ok(metadata) => Ok(Some(metadata)),
+        Err(error) if optional && error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error)
+            .with_context(|| format!("failed to inspect {hook_type} source {}", source.display())),
     }
 }
 
@@ -186,6 +202,7 @@ fn copy_directory(
             &entry.path(),
             &destination.join(entry.file_name()),
             worktree_path,
+            false,
         )?;
     }
 
@@ -263,7 +280,8 @@ mod tests {
             copy_path(
                 &source,
                 &worktree.path().join("destination"),
-                worktree.path()
+                worktree.path(),
+                false
             )
             .is_err()
         );
@@ -282,7 +300,7 @@ mod tests {
         fs::set_permissions(nested.join("script"), fs::Permissions::from_mode(0o740)).unwrap();
 
         let destination = destination_root.path().join("destination");
-        copy_path(&source, &destination, destination_root.path()).unwrap();
+        copy_path(&source, &destination, destination_root.path(), false).unwrap();
 
         assert_eq!(
             fs::read_to_string(destination.join("nested/script")).unwrap(),
@@ -300,5 +318,38 @@ mod tests {
                 & 0o777,
             0o740
         );
+    }
+
+    #[test]
+    fn optional_missing_copy_source_is_skipped() {
+        let source_root = tempfile::tempdir().unwrap();
+        let destination_root = tempfile::tempdir().unwrap();
+        let destination = destination_root.path().join("destination");
+
+        copy_path(
+            &source_root.path().join("missing"),
+            &destination,
+            destination_root.path(),
+            true,
+        )
+        .unwrap();
+
+        assert!(!destination.exists());
+    }
+
+    #[test]
+    fn missing_copy_source_still_fails_by_default() {
+        let source_root = tempfile::tempdir().unwrap();
+        let destination_root = tempfile::tempdir().unwrap();
+
+        let error = copy_path(
+            &source_root.path().join("missing"),
+            &destination_root.path().join("destination"),
+            destination_root.path(),
+            false,
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains("failed to inspect copy source"));
     }
 }

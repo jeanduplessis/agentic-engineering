@@ -57,10 +57,14 @@ pub enum Hook {
     Copy {
         from: PathBuf,
         to: PathBuf,
+        #[serde(default, skip_serializing_if = "is_false")]
+        optional: bool,
     },
     Symlink {
         from: PathBuf,
         to: PathBuf,
+        #[serde(default, skip_serializing_if = "is_false")]
+        optional: bool,
     },
     Command {
         command: String,
@@ -69,6 +73,10 @@ pub enum Hook {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         work_dir: Option<PathBuf>,
     },
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
 }
 
 impl Config {
@@ -157,6 +165,7 @@ hooks:
     - type: symlink
       from: ../shared
       to: shared
+      optional: true
     - type: command
       command: cargo test
       env:
@@ -169,11 +178,11 @@ hooks:
         assert_eq!(config.hooks.post_create.len(), 3);
         assert!(matches!(
             &config.hooks.post_create[0],
-            Hook::Copy { from, to } if from == Path::new(".env.example") && to == Path::new(".env")
+            Hook::Copy { from, to, optional } if from == Path::new(".env.example") && to == Path::new(".env") && !optional
         ));
         assert!(matches!(
             &config.hooks.post_create[1],
-            Hook::Symlink { from, to } if from == Path::new("../shared") && to == Path::new("shared")
+            Hook::Symlink { from, to, optional } if from == Path::new("../shared") && to == Path::new("shared") && *optional
         ));
         assert!(matches!(
             &config.hooks.post_create[2],

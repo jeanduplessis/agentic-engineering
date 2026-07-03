@@ -327,6 +327,45 @@ hooks:
 }
 
 #[test]
+fn optional_missing_post_create_source_is_skipped_and_later_hooks_run() {
+    let test_repo = TestRepo::new();
+    fs::write(test_repo.repo.join(".env.local"), "LOCAL=yes\n").expect("write copy source");
+    fs::write(
+        test_repo.repo.join(".gw.yml"),
+        r#"version: "1.0"
+defaults:
+  base_dir: ../worktrees
+hooks:
+  post_create:
+    - type: copy
+      from: .env
+      to: .env
+      optional: true
+    - type: copy
+      from: .env.local
+      to: .env.local
+    - type: command
+      command: 'printf "continued" > hook-result.txt'
+"#,
+    )
+    .expect("write gw configuration");
+
+    let output = gw_success(&test_repo.repo, ["add", "feature/optional-hooks"]);
+
+    let worktree = test_repo.worktree("feature/optional-hooks");
+    assert!(!worktree.join(".env").exists());
+    assert_eq!(
+        fs::read_to_string(worktree.join(".env.local")).unwrap(),
+        "LOCAL=yes\n"
+    );
+    assert_eq!(
+        fs::read_to_string(worktree.join("hook-result.txt")).unwrap(),
+        "continued"
+    );
+    assert!(!stderr(&output).contains("post-create hooks failed"));
+}
+
+#[test]
 fn clean_removes_merged_managed_worktree_but_keeps_unmerged_one() {
     let test_repo = TestRepo::new();
     let merged = test_repo.worktree("merged/test");
@@ -419,4 +458,8 @@ fn assert_success(output: Output, program: &str) -> Output {
 
 fn stdout(output: &Output) -> String {
     String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
+fn stderr(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stderr).into_owned()
 }

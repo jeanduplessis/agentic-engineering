@@ -59,12 +59,18 @@ pub fn render(view: &StatusView, color_mode: ColorMode, stdout_is_tty: bool) -> 
         .map(|entry| entry.display_path.chars().count())
         .max()
         .unwrap_or(0);
-    let max_addition_width = visible_sections
+    let max_entry_addition_width = visible_sections
         .iter()
         .flat_map(|section| section.entries.iter())
         .map(|entry| addition_text(entry.stats).chars().count())
         .max()
         .unwrap_or(0);
+    let max_section_addition_width = visible_sections
+        .iter()
+        .map(|section| addition_text(section_stats(section)).chars().count())
+        .max()
+        .unwrap_or(0);
+    let max_addition_width = max_entry_addition_width.max(max_section_addition_width);
     let border_width = border_width(view, &visible_sections, max_path_width, max_addition_width);
     let border = render_border(border_width, use_color);
     output.push_str(&border);
@@ -82,14 +88,21 @@ pub fn render(view: &StatusView, color_mode: ColorMode, stdout_is_tty: bool) -> 
     }
     output.push_str(&border);
     output.push('\n');
+    output.push('\n');
 
     for (index, section) in visible_sections.iter().enumerate() {
         if index > 0 {
             output.push('\n');
         }
 
-        let header = format!("{} ({})", section.kind.title(), section.entries.len());
-        output.push_str(&header);
+        output.push_str(&render_section_header(
+            section,
+            max_path_width,
+            max_addition_width,
+            use_color,
+        ));
+        output.push('\n');
+        output.push_str(&render_section_divider(border_width, use_color));
         output.push('\n');
 
         for entry in &section.entries {
@@ -139,7 +152,7 @@ fn border_width(
     let section_width = visible_sections
         .iter()
         .map(|section| {
-            format!("{} ({})", section.kind.title(), section.entries.len())
+            render_section_header(section, max_path_width, max_addition_width, false)
                 .chars()
                 .count()
         })
@@ -219,7 +232,7 @@ fn render_branch_line(
         } => {
             let plain_label = format!("Branch: {name}");
             let label = format!("Branch: {}", colorize(name, GREEN, use_color));
-            let stats_start = 2 + 2 + max_path_width + 2;
+            let stats_start = stats_column_start(max_path_width);
             let stats = render_branch_stats(*ahead, *behind, max_addition_width, use_color);
             let padding = " ".repeat(
                 stats_start
@@ -229,6 +242,58 @@ fn render_branch_line(
             format!("{label}{padding}{stats}")
         }
         BranchHeader::Detached { .. } => render_branch_header(header, use_color),
+    }
+}
+
+fn render_section_header(
+    section: &crate::model::Section,
+    max_path_width: usize,
+    max_addition_width: usize,
+    use_color: bool,
+) -> String {
+    let header = format!("{} ({})", section.kind.title(), section.entries.len());
+    let stats = render_stats(section_stats(section), use_color, max_addition_width);
+    let padding = " ".repeat(
+        stats_column_start(max_path_width)
+            .saturating_sub(header.chars().count())
+            .max(2),
+    );
+    format!("{header}{padding}{stats}")
+}
+
+fn render_section_divider(width: usize, use_color: bool) -> String {
+    let divider = "╌".repeat(width);
+    if use_color {
+        format!("{STATS_SEPARATOR}{divider}{RESET}")
+    } else {
+        divider
+    }
+}
+
+fn stats_column_start(max_path_width: usize) -> usize {
+    2 + 2 + max_path_width + 2
+}
+
+fn section_stats(section: &crate::model::Section) -> EntryStats {
+    let mut additions = 0;
+    let mut deletions = 0;
+
+    for entry in &section.entries {
+        match entry.stats {
+            EntryStats::Known {
+                additions: entry_additions,
+                deletions: entry_deletions,
+            } => {
+                additions += entry_additions;
+                deletions += entry_deletions;
+            }
+            EntryStats::Unknown => return EntryStats::Unknown,
+        }
+    }
+
+    EntryStats::Known {
+        additions,
+        deletions,
     }
 }
 
@@ -364,7 +429,7 @@ mod tests {
 
         assert_eq!(
             render(&view, ColorMode::Never, false),
-            " ───────────────────────────────\n Branch: feature           ↑2 ↓1\n Commit: d4e5f6a latest change\n ───────────────────────────────\n Tracked (2)\n   M a.txt                 +1/-0\n   D nested/long-name.txt  +0/-3\n"
+            " ───────────────────────────────\n Branch: feature           ↑2 ↓1\n Commit: d4e5f6a latest change\n ───────────────────────────────\n\n Tracked (2)               +1/-3\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   M a.txt                 +1/-0\n   D nested/long-name.txt  +0/-3\n"
         );
     }
 
@@ -404,7 +469,7 @@ mod tests {
 
         assert_eq!(
             render(&view, ColorMode::Never, false),
-            " ───────────────────────\n Branch: main      ↑0 ↓0\n ───────────────────────\n Untracked (2)\n   ? large.txt  +1153/-0\n   ? small.txt     +3/-0\n"
+            " ───────────────────────\n Branch: main      ↑0 ↓0\n ───────────────────────\n\n Untracked (2)  +1156/-0\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   ? large.txt  +1153/-0\n   ? small.txt     +3/-0\n"
         );
     }
 
@@ -459,7 +524,7 @@ mod tests {
 
         assert_eq!(
             render(&view, ColorMode::Always, false),
-            " \x1b[38;5;244m────────────────────────\x1b[0m\n Branch: \x1b[38;5;2mmain\x1b[0m       \x1b[38;5;2m↑0\x1b[0m \x1b[38;5;1m↓0\x1b[0m\n Commit: \x1b[38;5;180ma1b2c3d\x1b[0m color\n \x1b[38;5;244m────────────────────────\x1b[0m\n Staged (1)\n   \x1b[38;5;2mA staged.txt\x1b[0m     \x1b[38;5;2m+2\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m\n\n Tracked (1)\n   \x1b[38;5;180mM tracked.txt\x1b[0m    \x1b[38;5;2m+?\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-?\x1b[0m\n\n Untracked (1)\n   \x1b[38;5;245m? untracked.txt\x1b[0m  \x1b[38;5;2m+1\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m\n"
+            " \x1b[38;5;244m────────────────────────\x1b[0m\n Branch: \x1b[38;5;2mmain\x1b[0m       \x1b[38;5;2m↑0\x1b[0m \x1b[38;5;1m↓0\x1b[0m\n Commit: \x1b[38;5;180ma1b2c3d\x1b[0m color\n \x1b[38;5;244m────────────────────────\x1b[0m\n\n Staged (1)         \x1b[38;5;2m+2\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m\n \x1b[38;5;244m╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\x1b[0m\n   \x1b[38;5;2mA staged.txt\x1b[0m     \x1b[38;5;2m+2\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m\n\n Tracked (1)        \x1b[38;5;2m+?\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-?\x1b[0m\n \x1b[38;5;244m╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\x1b[0m\n   \x1b[38;5;180mM tracked.txt\x1b[0m    \x1b[38;5;2m+?\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-?\x1b[0m\n\n Untracked (1)      \x1b[38;5;2m+1\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m\n \x1b[38;5;244m╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\x1b[0m\n   \x1b[38;5;245m? untracked.txt\x1b[0m  \x1b[38;5;2m+1\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m\n"
         );
     }
 

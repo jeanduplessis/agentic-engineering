@@ -126,7 +126,7 @@ fn untracked_text_files_are_root_relative_sorted_counted_and_ignore_ignored_file
     assert_eq!(
         output,
         format!(
-            " ────────────────────────────\n Branch: main       ↑0 ↓0\n {commit}\n ────────────────────────────\n Untracked (2)\n   ? src/alpha.txt  +3/-0\n   ? zeta.txt       +2/-0\n"
+            " ────────────────────────────\n Branch: main       ↑0 ↓0\n {commit}\n ────────────────────────────\n\n Untracked (2)      +5/-0\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   ? src/alpha.txt  +3/-0\n   ? zeta.txt       +2/-0\n"
         )
     );
 }
@@ -146,7 +146,7 @@ fn unstaged_tracked_modifications_and_deletions_render_in_tracked_section() {
     assert_eq!(
         output,
         format!(
-            " ───────────────────────\n Branch: main    ↑0 ↓0\n {commit}\n ───────────────────────\n Tracked (2)\n   D delete.txt  +0/-1\n   M modify.txt  +2/-1\n"
+            " ───────────────────────\n Branch: main    ↑0 ↓0\n {commit}\n ───────────────────────\n\n Tracked (2)     +2/-2\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   D delete.txt  +0/-1\n   M modify.txt  +2/-1\n"
         )
     );
 }
@@ -169,7 +169,7 @@ fn staged_add_modify_delete_use_index_stats_separate_from_worktree_stats() {
     assert_eq!(
         output,
         format!(
-            " ───────────────────────\n Branch: main    ↑0 ↓0\n {commit}\n ───────────────────────\n Staged (3)\n   A added.txt   +2/-0\n   D delete.txt  +0/-1\n   M modify.txt  +1/-1\n\n Tracked (1)\n   M modify.txt  +1/-0\n"
+            " ───────────────────────\n Branch: main    ↑0 ↓0\n {commit}\n ───────────────────────\n\n Staged (3)      +3/-2\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   A added.txt   +2/-0\n   D delete.txt  +0/-1\n   M modify.txt  +1/-1\n\n Tracked (1)     +1/-0\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   M modify.txt  +1/-0\n"
         )
     );
 }
@@ -192,7 +192,7 @@ fn partially_staged_file_renders_once_per_section_with_separate_stats() {
     assert_eq!(
         output,
         format!(
-            " ───────────────────────\n Branch: main     ↑0 ↓0\n {commit}\n ───────────────────────\n Staged (1)\n   M partial.txt  +1/-1\n\n Tracked (1)\n   M partial.txt  +1/-0\n"
+            " ───────────────────────\n Branch: main     ↑0 ↓0\n {commit}\n ───────────────────────\n\n Staged (1)       +1/-1\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   M partial.txt  +1/-1\n\n Tracked (1)      +1/-0\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   M partial.txt  +1/-0\n"
         )
     );
 }
@@ -212,7 +212,7 @@ fn staged_renames_render_old_to_new_and_sort_by_destination_path() {
     assert_eq!(
         output,
         format!(
-            " ─────────────────────────────────────\n Branch: main                    ↑0 ↓0\n {commit}\n ─────────────────────────────────────\n Staged (2)\n   A mmm.txt                     +1/-0\n   R aaa-old.txt -> zzz-new.txt  +0/-0\n"
+            " ─────────────────────────────────────\n Branch: main                    ↑0 ↓0\n {commit}\n ─────────────────────────────────────\n\n Staged (2)                      +1/-0\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   A mmm.txt                     +1/-0\n   R aaa-old.txt -> zzz-new.txt  +0/-0\n"
         )
     );
 }
@@ -231,7 +231,7 @@ fn binary_files_render_unknown_stats() {
     assert_eq!(
         output,
         format!(
-            " ───────────────────────\n Branch: main     ↑0 ↓0\n {commit}\n ───────────────────────\n Tracked (1)\n   M tracked.bin  +?/-?\n\n Untracked (1)\n   ? new.bin      +?/-?\n"
+            " ───────────────────────\n Branch: main     ↑0 ↓0\n {commit}\n ───────────────────────\n\n Tracked (1)      +?/-?\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   M tracked.bin  +?/-?\n\n Untracked (1)    +?/-?\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   ? new.bin      +?/-?\n"
         )
     );
 }
@@ -300,7 +300,7 @@ fn color_modes_control_ansi_output() {
     let forced = gs_output(repo.path(), &["--color=always"]);
     assert!(forced.contains(" Branch: \x1b[38;5;2mmain\x1b[0m"));
     assert!(forced.contains("\x1b[38;5;2m↑0\x1b[0m \x1b[38;5;1m↓0\x1b[0m"));
-    assert!(forced.contains(" Untracked (1)\n"));
+    assert!(forced.contains(" Untracked (1)  "));
     assert!(forced.contains("\x1b[38;5;245m? new.txt\x1b[0m"));
     assert!(forced.contains("\x1b[38;5;2m+1\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m"));
 
@@ -352,7 +352,7 @@ fn submodule_path_level_changes_are_unknown_and_internal_changes_are_excluded() 
     assert_eq!(
         output,
         format!(
-            " ─────────────────────────────\n Branch: main    ↑0 ↓0\n {commit}\n ─────────────────────────────\n Tracked (1)\n   M vendor/sub  +?/-?\n"
+            " ─────────────────────────────\n Branch: main    ↑0 ↓0\n {commit}\n ─────────────────────────────\n\n Tracked (1)     +?/-?\n ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌\n   M vendor/sub  +?/-?\n"
         )
     );
 }

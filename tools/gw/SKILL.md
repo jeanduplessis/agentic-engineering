@@ -38,6 +38,7 @@ hooks:
     - type: copy
       from: .env.example
       to: .env
+      optional: true
     - type: symlink
       from: .bin
       to: .bin
@@ -48,4 +49,4 @@ hooks:
       work_dir: .
 ```
 
-Relative hook sources resolve from main root. Destinations and command work directories must stay inside new worktree.
+Relative hook sources resolve from main root. Copy and symlink hooks are strict by default; set `optional: true` to skip a missing source and continue. Destinations and command work directories must stay inside new worktree.

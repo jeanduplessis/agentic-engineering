@@ -42,6 +42,7 @@ hooks:
     - type: copy
       from: .env.example
       to: .env
+      optional: true
     - type: symlink
       from: .bin
       to: .bin
@@ -52,7 +53,7 @@ hooks:
       work_dir: .
 ```
 
-Relative hook sources resolve from main repository. Hook destinations and command working directories must stay inside new worktree. Command hooks run through `/bin/sh -c` and receive `GIT_GW_WORKTREE_PATH` and `GIT_GW_REPO_ROOT`.
+Relative hook sources resolve from main repository. Copy and symlink hooks are strict by default; set `optional: true` to skip a missing source and continue. Hook destinations and command working directories must stay inside new worktree. Command hooks run through `/bin/sh -c` and receive `GIT_GW_WORKTREE_PATH` and `GIT_GW_REPO_ROOT`.
 
 ## Development
 

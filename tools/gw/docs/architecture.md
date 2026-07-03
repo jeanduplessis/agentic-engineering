@@ -46,7 +46,7 @@ Missing `.gw.yml` uses default `../worktrees` base directory. Post-create hooks 
 - `symlink`: create symlink to source from main root.
 - `command`: run `/bin/sh -c` inside new worktree or contained `work_dir`.
 
-Destinations and command working directories cannot escape new worktree. Command hooks inherit terminal streams and receive `GIT_GW_WORKTREE_PATH` and `GIT_GW_REPO_ROOT`.
+Copy and symlink hooks are strict by default. When either is configured with `optional: true`, a missing source is skipped and later hooks still run. Destinations and command working directories cannot escape new worktree. Command hooks inherit terminal streams and receive `GIT_GW_WORKTREE_PATH` and `GIT_GW_REPO_ROOT`.
 
 ## Error and Process Handling
 
