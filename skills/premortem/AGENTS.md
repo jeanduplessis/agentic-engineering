@@ -17,7 +17,7 @@ Default output should stay chat-first. Optional files are allowed only when the 
 Run the deterministic/live validation wrapper before handing off changes when live execution is approved:
 
 ```sh
-./tools/skill_valid/skill_validate.sh skills/premortem
+./skill-factory/tools/skill_valid/skill_validate.sh skills/premortem
 ```
 
 The manifest has no copy fixtures, custom grader, or legacy eval assets.

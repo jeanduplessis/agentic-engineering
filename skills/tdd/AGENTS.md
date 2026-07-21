@@ -15,13 +15,13 @@ Behavior evals are declared in `evals/manifest.json`; cases live in `evals/evals
 Run deterministic validation from the repository root:
 
 ```sh
-python3 -m tools.skill_valid skills/tdd
+PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/tdd
 ```
 
 Run live harness validation only with explicit approval:
 
 ```sh
-python3 -m tools.skill_valid skills/tdd --allow-live --harness kilo
+PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/tdd --allow-live --harness kilo
 ```
 
 ## Change guidelines

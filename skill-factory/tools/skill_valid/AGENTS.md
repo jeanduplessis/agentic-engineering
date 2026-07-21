@@ -5,7 +5,7 @@
 `tools.skill_valid` orchestrates the Skill Validity decision for one repo-local skill. Keep deterministic
 validation as baseline, expose live work only through explicit `--allow-live`, preserve `--allow-live-pi` as an
 alias, and keep the friendly wrapper
-`./tools/skill_valid/skill_validate.sh skills/<skill-name>`, and the compact stdout JSON contract stable.
+`./skill-factory/tools/skill_valid/skill_validate.sh skills/<skill-name>`, and the compact stdout JSON contract stable.
 
 ## How the tool works
 
@@ -24,8 +24,8 @@ documented in `tools/skill_valid/WRAPPER_PROMPT.md`.
 Run deterministic tests with:
 
 ```sh
-python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
-python3 -m unittest tools.skill_valid.tests.test_skill_validate_wrapper -v
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_valid.tests.test_skill_validate_wrapper -v
 ```
 
 Tests use fake harnesses, fake skill_eval runners, and fake LLM Optimal Check injectables; do not add live model unit

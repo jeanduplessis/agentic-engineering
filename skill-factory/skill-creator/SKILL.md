@@ -103,8 +103,8 @@ Minimal manifest:
 Run deterministic/static plumbing checks from the repo root when useful:
 
 ```bash
-python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
-python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow --results /tmp/<skill-name>-eval --require-real
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow --results /tmp/<skill-name>-eval --require-real
 ```
 
 Choose `harness: "pi"` or OpenCode-compatible `harness: "kilo"` for real eval execution; evaluator choice must not change expected skill behavior. `--require-real` with live execution disabled should skip honestly; do not present skipped/static results as behavior evidence.
@@ -112,7 +112,7 @@ Run live behavior evals only with explicit approval:
 
 ```bash
 SKILL_EVAL_ALLOW_LIVE=1 \
-python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
   --results /tmp/<skill-name>-live-eval --require-real
 ```
 
@@ -121,20 +121,20 @@ python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
 Use deterministic validation before live gates:
 
 ```bash
-python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
-python3 -m unittest tools.skill_valid.tests.test_skill_validate_wrapper -v
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_valid.tests.test_skill_validate_wrapper -v
 ```
 
 Validate one skill deterministically through the repo-local wrapper:
 
 ```bash
-./tools/skill_valid/skill_validate.sh skills/<skill-name>
+./skill-factory/tools/skill_valid/skill_validate.sh skills/<skill-name>
 ```
 
 Run live gates only with explicit approval, selecting the intended supported harness:
 
 ```bash
-./tools/skill_valid/skill_validate.sh skills/<skill-name> --allow-live --harness <pi|kilo>
+./skill-factory/tools/skill_valid/skill_validate.sh skills/<skill-name> --allow-live --harness <pi|kilo>
 ```
 
 `tools.skill_valid` checks shared skill compatibility, eval manifests, skill-local `AGENTS.md`, LLM optimization readiness, optional live qualitative review, and optional live evals.
@@ -153,7 +153,7 @@ Legacy description-optimization scripts in this skill are disabled. Prefer repo-
 
 ## Activate and package
 
-Keep `skills/<skill-name>/SKILL.md` as canonical source. Pi and OpenCode discover `~/.agents/skills` directly in supported setups; otherwise expose that same source through local symlinks. Never generate or maintain copied harness variants.
+Keep `skills/<skill-name>/SKILL.md` as canonical source in this repository. Install or link it using each target harness's documented discovery mechanism; the source checkout is not intrinsically `~/.agents`. Never generate or maintain copied harness variants.
 
 This repo is also a local Pi package. Root `package.json` exposes Pi resources through harmless `pi.skills` and `pi.prompts` metadata:
 
@@ -162,7 +162,7 @@ This repo is also a local Pi package. Root `package.json` exposes Pi resources t
   "keywords": ["pi-package"],
   "pi": {
     "skills": ["skills"],
-    "prompts": ["commands/*.md"]
+    "prompts": ["harness/pi/commands/*.md"]
   }
 }
 ```

@@ -15,7 +15,7 @@ Run the custom-command workflow suite without live Pi enabled. Because the manif
 harness, these runs should be honestly skipped rather than faked:
 
 ```bash
-python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow \
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow \
   --results /tmp/custom-command-real-validation \
   --require-real
 ```
@@ -23,7 +23,7 @@ python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow \
 Run a live evaluation through manifest-selected real harness:
 
 ```bash
-python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow \
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow \
   --results /tmp/custom-command-real \
   --require-real \
   --allow-live
@@ -35,13 +35,13 @@ python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow \
 Run unit tests for the framework:
 
 ```bash
-python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
 ```
 
 Promote confirmed real failures into regression cases:
 
 ```bash
-python3 -m tools.skill_eval promote-regressions \
+PYTHONPATH=skill-factory python3 -m tools.skill_eval promote-regressions \
   skills/custom-command/evals/manifest.json \
   --results /tmp/custom-command-real \
   --output skills/custom-command/evals/manifest.json \

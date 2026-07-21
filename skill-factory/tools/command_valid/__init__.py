@@ -95,7 +95,7 @@ def validate_command(options: CommandValidationOptions) -> tuple[int, CommandVal
 
 def _resolve_commands_dir(repo_root: Path, commands_dir: Path | str | None) -> Path:
     if commands_dir is None:
-        return repo_root / "commands"
+        return repo_root / "harness" / "pi" / "commands"
     path = Path(commands_dir).expanduser()
     if not path.is_absolute():
         path = repo_root / path

@@ -13,7 +13,7 @@
 Primary validation:
 
 ```sh
-./tools/skill_valid/skill_validate.sh skills/llm-optimized-rewrite
+./skill-factory/tools/skill_valid/skill_validate.sh skills/llm-optimized-rewrite
 ```
 
 Deterministic skill eval manifest: `evals/manifest.json`.
@@ -34,6 +34,6 @@ TEXT
 
 - Keep `SKILL.md` concise, procedural, and strict about preserving exact meaning and constraints.
 - Keep confirmation options and review formats stable; evals depend on the batch confirmation contract.
-- Prefer skill-local wrapper commands over `python3 -m tools...` in instructions that may run from downstream projects.
+- Prefer skill-local wrapper commands over `PYTHONPATH=skill-factory python3 -m tools...` in instructions that may run from downstream projects.
 - Update `evals/manifest.json` when changing required workflow behavior.
 - Update this `AGENTS.md` when adding or removing maintained resources, wrapper scripts, or eval files.

@@ -15,8 +15,8 @@ Terminology is defined in `tools/llm_optimal_check/UBIQUITOUS_LANGUAGE.md`.
 Run:
 
 ```sh
-python3 -m unittest tools.skill_eval.tests.test_llm_optimized_smell_test -v
-python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_llm_optimized_smell_test -v
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
 ```
 
 The first suite covers the standalone checker and legacy wrapper. The second covers the `skill_valid` gate integration.

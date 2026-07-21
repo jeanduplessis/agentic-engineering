@@ -13,7 +13,7 @@ The module reads stdin for CLI use and exposes `count_text(text, model=None, enc
 Run:
 
 ```sh
-python3 -m unittest tools.skill_eval.tests.test_llm_optimized_smell_test -v
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_llm_optimized_smell_test -v
 ```
 
 That suite covers the repo-level CLI/API and the legacy wrapper contract.

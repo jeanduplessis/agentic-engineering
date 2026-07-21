@@ -13,7 +13,7 @@ Behavior evals are declared in `evals/manifest.json`. The workflow case data liv
 Run full real validation from the repository root with:
 
 ```bash
-./tools/skill_valid/skill_validate.sh skills/to-tasks
+./skill-factory/tools/skill_valid/skill_validate.sh skills/to-tasks
 ```
 
 # Change guidelines

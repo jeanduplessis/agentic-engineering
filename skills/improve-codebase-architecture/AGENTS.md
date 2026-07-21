@@ -17,13 +17,13 @@ Preserve core behavior when editing: use Module, Interface, Implementation, Dept
 Run the local validity gate from the repository root:
 
 ```sh
-./tools/skill_valid/skill_validate.sh skills/improve-codebase-architecture
+./skill-factory/tools/skill_valid/skill_validate.sh skills/improve-codebase-architecture
 ```
 
 This wrapper is deterministic by default; pass `--allow-live` and select a supported harness only with explicit approval. For a deterministic optimization check, run:
 
 ```sh
-python3 -m tools.llm_optimal_check skills/improve-codebase-architecture/SKILL.md
+PYTHONPATH=skill-factory python3 -m tools.llm_optimal_check skills/improve-codebase-architecture/SKILL.md
 ```
 
 ## Change guidelines

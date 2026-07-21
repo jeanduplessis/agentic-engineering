@@ -15,10 +15,10 @@ _EXPECTED_FILENAMES = {
 }
 _SHARED_CASES = {"1", "2", "3", "5"}
 _CANONICAL_PATHS = {
-    "1": "commands/fix-tests.md",
-    "2": "commands/analyze-coverage.md",
-    "3": "commands/pr-review.md",
-    "5": "commands/code-review.md",
+    "1": "harness/pi/commands/fix-tests.md",
+    "2": "harness/pi/commands/analyze-coverage.md",
+    "3": "harness/pi/commands/pr-review.md",
+    "5": "harness/pi/commands/code-review.md",
 }
 
 

@@ -2,15 +2,15 @@
 
 ## Purpose
 
-Maintain `SKILL.md` as shared Pi/OpenCode command-authoring guidance. Optimize for one canonical shared source, portable baseline behavior, explicit body skill loading, safe placeholders, and symlink activation. Keep harness-local one-offs distinct from shared repo commands.
+Maintain `SKILL.md` as command-authoring guidance. Distinguish this repository's Pi-owned source from downstream shared commands and harness-local one-offs.
 
 ## How the skill works
 
-- Default commands owned by this repo to canonical `commands/<name>.md` shared sources.
+- Default commands owned by this repo to `harness/pi/commands/<name>.md`.
 - Permit harness-specific metadata only when every other target safely ignores it and body preserves baseline behavior.
 - Require explicit body instruction to load/follow skills whenever `skill` or `skills` metadata appears.
 - Restrict shared sources to `$ARGUMENTS` and simple positional placeholders; reject `$@` and slicing.
-- Prohibit built, generated, copied, or hand-synchronized harness variants; recommend package discovery or symlinks.
+- Do not claim this repository activates OpenCode/Kilo commands. Recommend root package discovery for Pi-owned templates and target-harness documentation for other commands.
 - Allow native harness-specific syntax only for clearly labeled harness-local one-offs.
 
 ## Eval and validation
@@ -20,9 +20,9 @@ Maintain `SKILL.md` as shared Pi/OpenCode command-authoring guidance. Optimize f
 Run deterministic checks from repo root:
 
 ```sh
-python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
-python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow --results /tmp/custom-command-eval --require-real
-python3 -m tools.llm_optimal_check skills/custom-command/SKILL.md
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow --results /tmp/custom-command-eval --require-real
+PYTHONPATH=skill-factory python3 -m tools.llm_optimal_check skills/custom-command/SKILL.md
 ```
 
 No-live `--require-real` run must skip honestly. Run live harness eval only with explicit approval.

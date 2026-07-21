@@ -65,11 +65,11 @@ and explicit about whether results are synthetic or real.
 Run after changes:
 
 ```bash
-python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
 ```
 
 For live behavioral validation, only when explicitly requested or approved:
 
 ```bash
-python3 -m tools.skill_eval <manifest> workflow --results <dir> --require-real --allow-live
+PYTHONPATH=skill-factory python3 -m tools.skill_eval <manifest> workflow --results <dir> --require-real --allow-live
 ```

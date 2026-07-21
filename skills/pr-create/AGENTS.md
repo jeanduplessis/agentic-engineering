@@ -15,7 +15,7 @@ Behavior evals are declared in `evals/manifest.json`. The workflow case force-lo
 Run the full validation wrapper from the repository root:
 
 ```sh
-./tools/skill_valid/skill_validate.sh skills/pr-create
+./skill-factory/tools/skill_valid/skill_validate.sh skills/pr-create
 ```
 
 This invokes deterministic `tools.skill_valid`; pass `--allow-live` and select a supported harness only with explicit approval.

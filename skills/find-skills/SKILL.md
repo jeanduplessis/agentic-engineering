@@ -98,7 +98,7 @@ If no relevant Pi package exists:
 1. Say no suitable Pi package was found.
 2. Offer to help with the task directly.
 3. Offer to create a local Pi skill or package if the workflow is recurring.
-4. For local creation, prefer this repo's package layout: `skills/`, `commands/` exposed via `pi.prompts`, and `prompts/APPEND_SYSTEM.md` for system append text.
+4. For local creation, prefer this repo's package layout: `skills/`, `harness/pi/commands/` exposed via `pi.prompts`, and `prompts/COMPRESSED_OUTPUT_MODE.md` for system-prompt text.
 
 ## Legacy note
 

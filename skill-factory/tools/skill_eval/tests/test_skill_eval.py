@@ -10,11 +10,14 @@ from tools.skill_eval.regression import promote_failures_to_regression_cases
 from tools.skill_eval.runner import run_suite
 from tools.skill_eval.sandbox import create_sandbox
 
+ROOT = Path(__file__).resolve().parents[4]
+SKILLS_ROOT = ROOT / "skills"
+TOOLS_ROOT = ROOT / "skill-factory" / "tools"
 
 class SkillEvalSmokeTests(unittest.TestCase):
     def test_custom_command_skill_and_eval_contracts_clarify_artifacts_and_nested_fences(self):
-        skill = Path("skills/custom-command/SKILL.md").read_text()
-        evals = json.loads(Path("skills/custom-command/evals/evals.json").read_text())
+        skill = (SKILLS_ROOT / "custom-command" / "SKILL.md").read_text()
+        evals = json.loads((SKILLS_ROOT / "custom-command" / "evals" / "evals.json").read_text())
         prompts = "\n".join(case["prompt"] for case in evals["evals"])
 
         self.assertIn("Pi prompt templates", skill)
@@ -28,8 +31,8 @@ class SkillEvalSmokeTests(unittest.TestCase):
         self.assertIn("If you write a file, summarize the path", prompts)
 
     def test_skill_eval_documentation_covers_real_workflow_and_caveats(self):
-        doc = Path("tools/skill_eval/README.md").read_text()
-        agent_doc = Path("tools/skill_eval/AGENTS.md").read_text()
+        doc = (TOOLS_ROOT / "skill_eval" / "README.md").read_text()
+        agent_doc = (TOOLS_ROOT / "skill_eval" / "AGENTS.md").read_text()
 
         self.assertIn("## Overview", doc)
         self.assertIn("## Quick usage", doc)
@@ -51,7 +54,7 @@ class SkillEvalSmokeTests(unittest.TestCase):
         self.assertIn("Regression suites run through the same case runner as workflow suites", agent_doc)
 
     def test_custom_command_manifest_maps_legacy_eval_data_to_workflow_suite(self):
-        manifest = load_manifest(Path("skills/custom-command/evals/manifest.json"))
+        manifest = load_manifest(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json")
         suite = manifest.suite("workflow")
 
         self.assertEqual(manifest.skill["name"], "custom-command")
@@ -228,7 +231,7 @@ Run tests from: $ARGUMENTS
         self.assertIn("custom-command.arguments", check_ids)
 
     def test_custom_command_grader_prefers_generated_markdown_artifacts(self):
-        manifest = load_manifest(Path("skills/custom-command/evals/manifest.json"))
+        manifest = load_manifest(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json")
         suite = manifest.suite("workflow")
         case = suite.cases[0]
         with tempfile.TemporaryDirectory() as tmp:
@@ -242,9 +245,9 @@ Run tests from: $ARGUMENTS
                 "Run tests and diagnose failures. User input: $ARGUMENTS\n"
             )
             grade = grade_response(
-                "Created fix-tests.md in the current directory. Pi discovery paths: commands/fix-tests.md and .pi/prompts/fix-tests.md.",
+                "Created fix-tests.md in the current directory. Repository source: harness/pi/commands/fix-tests.md; root package manifest exposes it to Pi.",
                 case.checks,
-                custom_grader=str(Path("skills/custom-command/evals") / suite.custom_grader),
+                custom_grader=str(SKILLS_ROOT / "custom-command" / "evals" / suite.custom_grader),
                 case=case,
                 context={
                     "sandbox_path": str(root),
@@ -257,7 +260,7 @@ Run tests from: $ARGUMENTS
         self.assertEqual(artifact_checks[0]["details"]["path"], "fix-tests.md")
 
     def test_custom_command_grader_handles_text_fences_nested_fences_and_recommended_filename(self):
-        manifest = load_manifest(Path("skills/custom-command/evals/manifest.json"))
+        manifest = load_manifest(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json")
         suite = manifest.suite("workflow")
         case = suite.cases[1]
         response = '''Recommended filename:
@@ -288,7 +291,7 @@ npm test -- --coverage
         grade = grade_response(
             response,
             case.checks,
-            custom_grader=str(Path("skills/custom-command/evals") / suite.custom_grader),
+            custom_grader=str(SKILLS_ROOT / "custom-command" / "evals" / suite.custom_grader),
             case=case,
         )
 
@@ -296,7 +299,7 @@ npm test -- --coverage
         self.assertFalse(any(check["status"] == "failed" for check in grade["checks"]))
 
     def test_custom_command_structured_checks_grade_generated_artifact_not_legacy_prose(self):
-        manifest = load_manifest(Path("skills/custom-command/evals/manifest.json"))
+        manifest = load_manifest(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json")
         suite = manifest.suite("workflow")
         case = suite.cases[0]
         response = """Here is the command.
@@ -311,13 +314,13 @@ description: "Run and fix tests"
 Run the relevant test suite. If the user supplied an optional test command or focus area in $ARGUMENTS, use that first. Diagnose failures, make the smallest safe fix, and rerun tests.
 ```
 
-Install it at `commands/fix-tests.md` or `.pi/prompts/fix-tests.md`.
+Install it at `harness/pi/commands/fix-tests.md`; root package manifest exposes it to Pi.
 """
 
         grade = grade_response(
             response,
             case.checks,
-            custom_grader=str(Path("skills/custom-command/evals") / suite.custom_grader),
+            custom_grader=str(SKILLS_ROOT / "custom-command" / "evals" / suite.custom_grader),
             case=case,
         )
 
@@ -331,7 +334,7 @@ Install it at `commands/fix-tests.md` or `.pi/prompts/fix-tests.md`.
         bad_grade = grade_response(
             response.replace('description: "Run and fix tests"', 'description: "Run and fix tests"\nagent: build'),
             case.checks,
-            custom_grader=str(Path("skills/custom-command/evals") / suite.custom_grader),
+            custom_grader=str(SKILLS_ROOT / "custom-command" / "evals" / suite.custom_grader),
             case=case,
         )
         self.assertFalse(bad_grade["passed"])
@@ -340,7 +343,7 @@ Install it at `commands/fix-tests.md` or `.pi/prompts/fix-tests.md`.
     def test_custom_command_static_smoke_can_still_run_with_explicit_static_configurations(self):
         with tempfile.TemporaryDirectory() as tmp:
             summary = run_suite(
-                Path("skills/custom-command/evals/manifest.json"),
+                SKILLS_ROOT / "custom-command" / "evals" / "manifest.json",
                 "workflow",
                 Path(tmp) / "results",
                 configurations={
@@ -383,7 +386,7 @@ Install it at `commands/fix-tests.md` or `.pi/prompts/fix-tests.md`.
     def test_custom_command_workflow_defaults_to_real_pi_and_skips_when_live_disabled(self):
         with tempfile.TemporaryDirectory() as tmp:
             result_root = Path(tmp) / "results"
-            summary = run_suite(Path("skills/custom-command/evals/manifest.json"), "workflow", result_root, require_real=True)
+            summary = run_suite(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json", "workflow", result_root, require_real=True)
 
             self.assertEqual(len(summary["runs"]), 10)
             self.assertEqual(summary["harness_modes"], {"with_skill": "real", "without_skill": "real"})
@@ -439,7 +442,7 @@ Install it at `commands/fix-tests.md` or `.pi/prompts/fix-tests.md`.
             fake_pi.chmod(fake_pi.stat().st_mode | 0o111)
             result_root = root / "results"
             summary = run_suite(
-                Path("skills/custom-command/evals/manifest.json"),
+                SKILLS_ROOT / "custom-command" / "evals" / "manifest.json",
                 "workflow",
                 result_root,
                 configurations={
@@ -457,7 +460,7 @@ Install it at `commands/fix-tests.md` or `.pi/prompts/fix-tests.md`.
             self.assertIn("generated command artifact", first_with_response)
             self.assertIn("generated command artifact", first_without_response)
             self.assertNotIn("complete Pi Markdown prompt template", first_with_response)
-            self.assertNotEqual(first_without_response, load_manifest(Path("skills/custom-command/evals/manifest.json")).suite("workflow").cases[0].prompt)
+            self.assertNotEqual(first_without_response, load_manifest(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json").suite("workflow").cases[0].prompt)
 
     def test_real_kilo_harness_adapter_runs_fake_open_code_compatible_kilo(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -500,7 +503,7 @@ Install it at `commands/fix-tests.md` or `.pi/prompts/fix-tests.md`.
             self.assertIn("--file", raw["command"])
 
     def test_manifest_represents_suite_purposes_and_trigger_is_explicitly_not_run(self):
-        manifest = load_manifest(Path("skills/custom-command/evals/manifest.json"))
+        manifest = load_manifest(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json")
         suites = {suite.name: suite for suite in manifest.suites}
 
         self.assertEqual({suite.type for suite in manifest.suites}, {"workflow", "trigger", "capability"})
@@ -508,7 +511,7 @@ Install it at `commands/fix-tests.md` or `.pi/prompts/fix-tests.md`.
         self.assertFalse(suites["trigger"].cases[1].metadata["should_trigger"])
 
         with tempfile.TemporaryDirectory() as tmp:
-            summary = run_suite(Path("skills/custom-command/evals/manifest.json"), "trigger", Path(tmp) / "results")
+            summary = run_suite(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json", "trigger", Path(tmp) / "results")
             saved = json.loads((Path(tmp) / "results" / "summary.json").read_text())
 
             self.assertEqual(summary["suite_type"], "trigger")
@@ -654,7 +657,7 @@ Install it at `commands/fix-tests.md` or `.pi/prompts/fix-tests.md`.
         with tempfile.TemporaryDirectory() as tmp:
             result_root = Path(tmp) / "results"
             run_suite(
-                Path("skills/custom-command/evals/manifest.json"),
+                SKILLS_ROOT / "custom-command" / "evals" / "manifest.json",
                 "workflow",
                 result_root,
                 configurations={

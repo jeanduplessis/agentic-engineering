@@ -8,8 +8,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 
-ROOT = Path(__file__).resolve().parents[3]
-WRAPPER = ROOT / "tools" / "skill_valid" / "skill_validate.sh"
+ROOT = Path(__file__).resolve().parents[4]
+WRAPPER = ROOT / "skill-factory" / "tools" / "skill_valid" / "skill_validate.sh"
 
 
 class SkillValidateWrapperTests(unittest.TestCase):
@@ -69,6 +69,14 @@ class SkillValidateWrapperTests(unittest.TestCase):
         self.assertIn("--allow-live", live_run.skill_valid_args)
         self.assertIn("--harness kilo", live_run.skill_valid_args)
         self.assertIn("--allow-live", env_live_run.skill_valid_args)
+
+    def test_wrapper_runs_from_monorepo_root_with_skill_factory_python_path(self):
+        payload = {"valid": True, "target": "skills/demo", "gates": {}}
+
+        completed = self.run_wrapper_with_fake_skill_valid(payload)
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertTrue(WRAPPER.is_relative_to(ROOT / "skill-factory" / "tools"))
 
     def test_friendly_wrapper_renders_llm_optimal_warn_findings_as_non_blocking(self):
         payload = {

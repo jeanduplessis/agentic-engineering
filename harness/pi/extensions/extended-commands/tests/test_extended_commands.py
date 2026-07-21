@@ -6,8 +6,8 @@ import unittest
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-EXTENSION = REPO_ROOT / "extensions" / "extended-commands" / "index.ts"
+REPO_ROOT = Path(__file__).resolve().parents[5]
+EXTENSION = REPO_ROOT / "harness" / "pi" / "extensions" / "extended-commands" / "index.ts"
 
 
 class ExtendedCommandsTests(unittest.TestCase):
@@ -64,8 +64,8 @@ class ExtendedCommandsTests(unittest.TestCase):
             self.assertTrue(any("file expansion" in warning for warning in commands[0]["warnings"]))
             self.assertFalse(any("react-doctor@latest" in warning for warning in commands[0]["warnings"]))
 
-    def test_adapter_discovers_every_canonical_command_from_shared_source(self):
-        command_dir = REPO_ROOT / "commands"
+    def test_adapter_discovers_every_pi_command(self):
+        command_dir = REPO_ROOT / "harness" / "pi" / "commands"
         expected = sorted(path.stem for path in command_dir.glob("*.md"))
         script = textwrap.dedent(
             f"""
@@ -594,15 +594,15 @@ class ExtendedCommandsTests(unittest.TestCase):
             self.assertEqual(result[1]["customType"], "other-extension")
 
     def test_documentation_covers_validator_runtime_migration_and_out_of_scope(self):
-        extension_readme = (REPO_ROOT / "extensions" / "extended-commands" / "README.md").read_text()
-        command_valid_readme = (REPO_ROOT / "tools" / "command_valid" / "README.md").read_text()
+        extension_readme = (REPO_ROOT / "harness" / "pi" / "extensions" / "extended-commands" / "README.md").read_text()
+        command_valid_readme = (REPO_ROOT / "skill-factory" / "tools" / "command_valid" / "README.md").read_text()
         root_readme = (REPO_ROOT / "README.md").read_text()
 
         combined = "\n".join([extension_readme, command_valid_readme, root_readme])
 
         self.assertIn("command_valid", combined)
-        self.assertIn("shared canonical command source", combined.lower())
-        self.assertIn("strict", combined.lower())
+        self.assertIn("pi-owned source", combined.lower())
+        self.assertIn("deterministic", combined.lower())
         self.assertIn("OpenCode", combined)
         self.assertIn("symlink", combined.lower())
         self.assertIn("do not generate", combined.lower())

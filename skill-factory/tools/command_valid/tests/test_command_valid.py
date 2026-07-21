@@ -15,12 +15,12 @@ class CommandValidTests(unittest.TestCase):
     def make_repo(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "commands").mkdir()
+            (root / "harness" / "pi" / "commands").mkdir(parents=True)
             yield root
 
     def test_valid_command_emits_compact_json_with_resolved_direct_file(self):
         with self.make_repo() as root:
-            command = root / "commands" / "code-review.md"
+            command = root / "harness" / "pi" / "commands" / "code-review.md"
             command.write_text("---\ndescription: Review code\n---\nBody\n")
             stdout = io.StringIO()
             stderr = io.StringIO()
@@ -35,7 +35,7 @@ class CommandValidTests(unittest.TestCase):
             result = json.loads(output)
             self.assertTrue(result["valid"])
             self.assertEqual(result["command"], "code-review")
-            self.assertEqual(result["path"], "commands/code-review.md")
+            self.assertEqual(result["path"], "harness/pi/commands/code-review.md")
             self.assertEqual(result["status"], "passed")
             self.assertEqual(result["errors"], [])
 
@@ -68,7 +68,7 @@ class CommandValidTests(unittest.TestCase):
 
     def test_reserved_command_name_fails_before_file_resolution(self):
         with self.make_repo() as root:
-            (root / "commands" / "model.md").write_text("---\ndescription: model\n---\n")
+            (root / "harness" / "pi" / "commands" / "model.md").write_text("---\ndescription: model\n---\n")
             stdout = io.StringIO()
             stderr = io.StringIO()
 
@@ -96,11 +96,11 @@ class CommandValidTests(unittest.TestCase):
             self.assertFalse(result["valid"])
             self.assertEqual(result["status"], "resolution_error")
             self.assertEqual(result["errors"][0]["code"], "not_found")
-            self.assertIn("commands/missing-command.md", result["errors"][0]["message"])
+            self.assertIn("harness/pi/commands/missing-command.md", result["errors"][0]["message"])
 
     def test_python_module_cli_resolves_one_direct_command_file(self):
         with self.make_repo() as root:
-            (root / "commands" / "spec-audit.md").write_text("---\ndescription: Audit spec\n---\n")
+            (root / "harness" / "pi" / "commands" / "spec-audit.md").write_text("---\ndescription: Audit spec\n---\n")
 
             completed = subprocess.run(
                 [sys.executable, "-m", "tools.command_valid", "spec-audit", "--repo-root", str(root), "--json"],
@@ -113,11 +113,11 @@ class CommandValidTests(unittest.TestCase):
             self.assertEqual(completed.stderr, "")
             result = json.loads(completed.stdout)
             self.assertEqual(result["command"], "spec-audit")
-            self.assertEqual(result["path"], "commands/spec-audit.md")
+            self.assertEqual(result["path"], "harness/pi/commands/spec-audit.md")
 
     def test_requires_scalar_frontmatter_with_non_empty_description(self):
         with self.make_repo() as root:
-            (root / "commands" / "no-description.md").write_text("Body only\n")
+            (root / "harness" / "pi" / "commands" / "no-description.md").write_text("Body only\n")
             stdout = io.StringIO()
             stderr = io.StringIO()
 
@@ -127,7 +127,7 @@ class CommandValidTests(unittest.TestCase):
             result = json.loads(stdout.getvalue())
             self.assertFalse(result["valid"])
             self.assertEqual(result["status"], "invalid")
-            self.assertEqual(result["path"], "commands/no-description.md")
+            self.assertEqual(result["path"], "harness/pi/commands/no-description.md")
             self.assertTrue(any(error["code"] == "missing_frontmatter" for error in result["errors"]))
             self.assertTrue(any("description" in error["message"] for error in result["errors"]))
 
@@ -137,7 +137,7 @@ class CommandValidTests(unittest.TestCase):
             (root / "skills" / "review-skill" / "SKILL.md").write_text("---\nname: review-skill\ndescription: Review skill\n---\n")
             (root / "skills" / "test-skill").mkdir(parents=True)
             (root / "skills" / "test-skill" / "SKILL.md").write_text("---\nname: test-skill\ndescription: Test skill\n---\n")
-            (root / "commands" / "routed-command.md").write_text(
+            (root / "harness" / "pi" / "commands" / "routed-command.md").write_text(
                 "---\n"
                 "description: Routed command\n"
                 "argument-hint: \"<target>\"\n"
@@ -165,7 +165,7 @@ class CommandValidTests(unittest.TestCase):
 
     def test_unknown_frontmatter_field_fails_strict_validation(self):
         with self.make_repo() as root:
-            (root / "commands" / "bad-field.md").write_text("---\ndescription: Bad\nunsupported-field: value\n---\nBody\n")
+            (root / "harness" / "pi" / "commands" / "bad-field.md").write_text("---\ndescription: Bad\nunsupported-field: value\n---\nBody\n")
             stdout = io.StringIO()
             stderr = io.StringIO()
 
@@ -178,7 +178,7 @@ class CommandValidTests(unittest.TestCase):
 
     def test_scalar_skills_field_fails_validation(self):
         with self.make_repo() as root:
-            (root / "commands" / "scalar-skills.md").write_text("---\ndescription: Bad\nskills: review-skill\n---\nBody\n")
+            (root / "harness" / "pi" / "commands" / "scalar-skills.md").write_text("---\ndescription: Bad\nskills: review-skill\n---\nBody\n")
             stdout = io.StringIO()
             stderr = io.StringIO()
 
@@ -192,7 +192,7 @@ class CommandValidTests(unittest.TestCase):
         with self.make_repo() as root:
             (root / "skills" / "review-skill").mkdir(parents=True)
             (root / "skills" / "review-skill" / "SKILL.md").write_text("---\nname: review-skill\ndescription: Review skill\n---\n")
-            (root / "commands" / "multi-skill.md").write_text(
+            (root / "harness" / "pi" / "commands" / "multi-skill.md").write_text(
                  "---\ndescription: Multi\nskills:\n  - review-skill\n  - missing-skill\n---\n## Required skills\n\n- `review-skill`\n- `missing-skill`\n\nBody\n"
 
             )
@@ -208,7 +208,7 @@ class CommandValidTests(unittest.TestCase):
 
     def test_nested_or_list_frontmatter_fails_scalar_validation(self):
         with self.make_repo() as root:
-            (root / "commands" / "nested-field.md").write_text("---\ndescription:\n  text: Nested\n---\nBody\n")
+            (root / "harness" / "pi" / "commands" / "nested-field.md").write_text("---\ndescription:\n  text: Nested\n---\nBody\n")
             stdout = io.StringIO()
             stderr = io.StringIO()
 
@@ -220,7 +220,7 @@ class CommandValidTests(unittest.TestCase):
 
     def test_invalid_thinking_restore_subtask_opencode_interpolation_and_placeholders_fail(self):
         with self.make_repo() as root:
-            (root / "commands" / "bad-body.md").write_text(
+            (root / "harness" / "pi" / "commands" / "bad-body.md").write_text(
                 "---\ndescription: Bad body\nthinking: deepest\nrestore: maybe\nsubtask: maybe\n---\nRun !`npm test` with @src/app.ts, $@, and ${@:2}\n"
             )
             stdout = io.StringIO()
@@ -239,7 +239,7 @@ class CommandValidTests(unittest.TestCase):
         with self.make_repo() as root:
             (root / "skills" / "review-skill").mkdir(parents=True)
             (root / "skills" / "review-skill" / "SKILL.md").write_text("# Review\n")
-            (root / "commands" / "duplicates.md").write_text(
+            (root / "harness" / "pi" / "commands" / "duplicates.md").write_text(
                 "---\n"
                 "description: First\n"
                 "description: Second\n"
@@ -263,7 +263,7 @@ class CommandValidTests(unittest.TestCase):
             for name in ("first-skill", "second-skill"):
                 (root / "skills" / name).mkdir(parents=True)
                 (root / "skills" / name / "SKILL.md").write_text(f"# {name}\n")
-            (root / "commands" / "wrong-order.md").write_text(
+            (root / "harness" / "pi" / "commands" / "wrong-order.md").write_text(
                 "---\ndescription: Wrong order\nskills:\n  - first-skill\n  - second-skill\n---\n"
                 "## Required skills\n\n- `second-skill`\n- `first-skill`\n"
             )
@@ -277,7 +277,7 @@ class CommandValidTests(unittest.TestCase):
 
     def test_declared_skill_name_must_be_lowercase_kebab_case(self):
         with self.make_repo() as root:
-            (root / "commands" / "bad-skill-name.md").write_text(
+            (root / "harness" / "pi" / "commands" / "bad-skill-name.md").write_text(
                 "---\ndescription: Bad skill name\nskill: Bad_Skill\n---\n## Required skills\n\n- `Bad_Skill`\n"
             )
             stdout = io.StringIO()
@@ -290,7 +290,7 @@ class CommandValidTests(unittest.TestCase):
 
     def test_package_suffix_is_not_treated_as_opencode_file_interpolation(self):
         with self.make_repo() as root:
-            (root / "commands" / "package-suffix.md").write_text(
+            (root / "harness" / "pi" / "commands" / "package-suffix.md").write_text(
                 "---\ndescription: Package suffix\n---\nRun `npx -y react-doctor@latest . --verbose`.\n"
             )
             stdout = io.StringIO()
@@ -302,7 +302,7 @@ class CommandValidTests(unittest.TestCase):
 
     def test_bare_opencode_file_interpolation_is_rejected(self):
         with self.make_repo() as root:
-            (root / "commands" / "bare-file.md").write_text("---\ndescription: Bare file\n---\nRead @README.md\n")
+            (root / "harness" / "pi" / "commands" / "bare-file.md").write_text("---\ndescription: Bare file\n---\nRead @README.md\n")
             stdout = io.StringIO()
 
             code = main(["bare-file", "--repo-root", str(root), "--json"], stdout=stdout, stderr=io.StringIO())
@@ -314,10 +314,10 @@ class CommandValidTests(unittest.TestCase):
         with self.make_repo() as root:
             (root / "skills" / "review-skill").mkdir(parents=True)
             (root / "skills" / "review-skill" / "SKILL.md").write_text("# Review\n")
-            (root / "commands" / "missing-section.md").write_text(
+            (root / "harness" / "pi" / "commands" / "missing-section.md").write_text(
                 "---\ndescription: Needs skill\nskill: review-skill\n---\nBody\n"
             )
-            (root / "commands" / "mismatched-section.md").write_text(
+            (root / "harness" / "pi" / "commands" / "mismatched-section.md").write_text(
                 "---\ndescription: Needs skill\nskill: review-skill\n---\n## Required skills\n\n- `other-skill`\n"
             )
 
@@ -331,7 +331,7 @@ class CommandValidTests(unittest.TestCase):
 
     def test_declared_skill_must_resolve_to_readable_local_skill(self):
         with self.make_repo() as root:
-            (root / "commands" / "missing-skill.md").write_text(
+            (root / "harness" / "pi" / "commands" / "missing-skill.md").write_text(
                 "---\ndescription: Needs skill\nskill: missing-skill\n---\n## Required skills\n\n- `missing-skill`\n"
             )
             stdout = io.StringIO()
@@ -374,9 +374,10 @@ class CanonicalCommandInventoryTests(unittest.TestCase):
         }
     )
 
-    def test_every_canonical_command_passes_shared_validation(self):
-        repo_root = Path(__file__).resolve().parents[3]
-        command_names = sorted(path.stem for path in (repo_root / "commands").glob("*.md"))
+    def test_every_pi_command_passes_validation(self):
+        repo_root = Path(__file__).resolve().parents[4]
+        commands_dir = repo_root / "harness" / "pi" / "commands"
+        command_names = sorted(path.stem for path in commands_dir.glob("*.md"))
 
         self.assertEqual(command_names, self.EXPECTED_COMMANDS)
         results = {}
@@ -387,13 +388,14 @@ class CanonicalCommandInventoryTests(unittest.TestCase):
 
         self.assertTrue(all(entry["code"] == 0 for entry in results.values()), results)
         self.assertTrue(all(entry["result"]["valid"] is True for entry in results.values()), results)
-        self.assertTrue(all(entry["result"]["path"] == f"commands/{name}.md" for name, entry in results.items()), results)
+        self.assertTrue(all(entry["result"]["path"] == f"harness/pi/commands/{name}.md" for name, entry in results.items()), results)
 
-    def test_repo_tracks_one_canonical_command_tree_with_pi_discovery_metadata(self):
-        repo_root = Path(__file__).resolve().parents[3]
+    def test_repo_tracks_one_pi_command_tree_with_discovery_metadata(self):
+        repo_root = Path(__file__).resolve().parents[4]
         package = json.loads((repo_root / "package.json").read_text())
 
-        self.assertEqual(package["pi"]["prompts"], ["commands/*.md"])
+        self.assertEqual(package["pi"]["prompts"], ["harness/pi/commands/*.md"])
+        self.assertFalse((repo_root / "commands").exists(), "Pi commands must remain under harness/pi/commands")
         for adapter_tree in (
             repo_root / ".pi" / "prompts",
             repo_root / ".opencode" / "commands",

@@ -14,7 +14,7 @@ Run deterministic validation from the repository root when changing this skill:
 
 ```bash
 python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
-python3 -m tools.skill_eval skills/to-issues/evals/manifest.json workflow --results /tmp/to-issues-eval --require-real
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/to-issues/evals/manifest.json workflow --results /tmp/to-issues-eval --require-real
 ```
 
 Run live harness validation only with explicit approval.

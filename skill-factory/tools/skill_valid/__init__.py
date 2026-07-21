@@ -570,7 +570,7 @@ def _text_output(value: str | bytes | None) -> str:
 
 def build_validate_skills_command(ctx: ValidationContext) -> list[str]:
     assert ctx.target_rel is not None
-    validate_skill_path = ctx.repo_root / "skills" / "validate-skills" / "SKILL.md"
+    validate_skill_path = ctx.repo_root / "skill-factory" / "validate-skills" / "SKILL.md"
     prompt = render_wrapper_prompt(ctx.target_rel)
     harness = _selected_harness(ctx)
     executable = _harness_executable(ctx, harness)

@@ -9,13 +9,13 @@ qualitative review and behavior evals through Pi or OpenCode-compatible Kilo.
 Machine-readable JSON:
 
 ```sh
-python3 -m tools.skill_valid skills/<skill-name>
+PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/<skill-name>
 ```
 
 Friendly human summary:
 
 ```sh
-./tools/skill_valid/skill_validate.sh skills/<skill-name>
+./skill-factory/tools/skill_valid/skill_validate.sh skills/<skill-name>
 ```
 
 The wrapper invokes deterministic validation by default, renders gate statuses, prints `llm_optimal_check`
@@ -26,7 +26,7 @@ to enable live gates. Set `SKILL_VALIDATE_RAW_JSON=1` to append raw JSON or `SKI
 Optional live execution overrides are applied to both live gates:
 
 ```sh
-python3 -m tools.skill_valid skills/<skill-name> \
+PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/<skill-name> \
   --allow-live \
   --harness kilo \
   --provider openrouter \

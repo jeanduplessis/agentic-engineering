@@ -2,10 +2,10 @@
   "name": "agents-pi-resources",
   "version": "0.0.0",
   "private": true,
-  "description": "Local agent resources with canonical skills and commands shared by Pi and OpenCode.",
+  "description": "Local agent resources with shared skills and Pi-owned commands.",
   "keywords": ["pi-package"],
   "pi": {
     "skills": ["skills"],
-    "prompts": ["commands/*.md"]
+    "prompts": ["harness/pi/commands/*.md"]
   }
 }

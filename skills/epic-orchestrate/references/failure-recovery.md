@@ -89,7 +89,7 @@ Use the embedded fallback contract.
 Log:
 
 - gate name;
-- canonical `commands/<name>.md` lookup;
+- `harness/pi/commands/<name>.md` lookup;
 - searched current-harness and repo prompt paths;
 - optional Pi location/package discovery attempt;
 - whether a discovered template was beads/br-specific;

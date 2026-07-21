@@ -1,44 +1,42 @@
 ---
 name: custom-command
-description: Create, port, audit, and edit shared Pi/OpenCode Markdown commands or harness-local prompt templates. Use when working with slash commands, command files, prompt-template files, shared command sources, .pi/prompts, .opencode/commands, package prompt entries, command migration, or prompt-template syntax audits. Covers canonical ownership, symlink activation, portable metadata, skill loading, and shared argument placeholders.
+description: Create, port, audit, and edit Pi-owned Markdown commands in this repository or harness-local prompt templates. Use when working with slash commands, command files, prompt-template files, .pi/prompts, .opencode/commands, package prompt entries, command migration, or prompt-template syntax audits. Covers repository ownership, native harness locations, metadata, skill loading, and argument placeholders.
 ---
 
-# Custom Command
+# Custom command
 
-Author Markdown commands, including Pi prompt templates, for Pi, OpenCode, or both. Filename stem becomes command name.
+Author Markdown commands, including Pi prompt templates, for Pi, OpenCode, or both. Filename stem becomes the command name. This repository owns Pi templates only; it is not a shared Pi/OpenCode command source.
 
 ## Decide scope first
 
-Classify command before choosing syntax or location:
+- **This repository's Pi command:** store it at `harness/pi/commands/<name>.md`.
+- **Harness-local one-off:** store it in the target harness's native command directory.
+- **Downstream shared command:** a target repository may choose one source for Pi and OpenCode. This repository does not supply or activate that source.
 
-- **Shared repo command:** intended to behave the same in Pi and OpenCode. Keep one canonical source.
-  In this repo, default canonical source is `commands/<name>.md`.
-- **Harness-local one-off:** intentionally uses one harness's behavior or belongs only to one user/project setup. Store it in that harness's native prompt directory; do not promote it to this repo's shared `commands/` library.
+If a harness-local installation target is ambiguous, ask one concise clarification. Otherwise default command work in this repository to `harness/pi/commands/`.
 
-If user asks to install a harness-local file but does not identify Pi or OpenCode, ask one concise clarification. Otherwise default this repo command work to a shared source under `commands/`.
+## This repository's Pi commands
 
-## Canonical source and activation
+1. Edit `harness/pi/commands/<name>.md`.
+2. Root `package.json` exposes these files through `pi.prompts`.
+3. Do not claim that this file activates OpenCode or Kilo commands.
 
-For shared commands:
+Pi extensions are separate resources under `harness/pi/extensions/`. Do not create copied or generated command variants.
 
-1. Edit one canonical Markdown source, normally this repo's `commands/<name>.md`.
-2. Expose that same source to each harness through package discovery or symlinks.
-3. Never maintain generated, built, copied, or hand-synchronized harness variants.
+## Harness-local and downstream commands
 
-This repo's root Pi package manifest already exposes `commands/*.md`. Activate a shared source elsewhere with symlinks when needed:
+For arbitrary harness-local commands, use the target harness's documented native location:
 
 - Pi project: `.pi/prompts/<name>.md`
 - Pi global: `~/.pi/agent/prompts/<name>.md`
 - OpenCode project: `.opencode/commands/<name>.md`
 - OpenCode global: `~/.config/opencode/commands/<name>.md`
 
-Use relative symlinks for project-local activation when practical. Before proposing a symlink, verify target harness discovers that directory and does not require a regular file.
+For a downstream command shared by Pi and OpenCode, choose and document its canonical source in that downstream repository. Verify each target's discovery and metadata behavior before recommending symlinks. Do not infer a shared contract from one harness accepting syntax.
 
-Harness-local one-offs may live directly in native locations above. Pi also supports package `pi.prompts` entries and `pi --prompt-template <path>`.
+## Command shape
 
-## Shared command shape
-
-Use a flat lowercase kebab-case `.md` filename and behavior-complete body:
+Use a flat lowercase kebab-case `.md` filename and a behavior-complete body:
 
 ```markdown
 ---
@@ -50,17 +48,14 @@ Perform the requested task.
 Raw user input: $ARGUMENTS
 ```
 
-Rules:
-
-- Use valid scalar YAML. `description` is portable baseline metadata.
-- `argument-hint` is harmless UI metadata only when every target harness accepts or safely ignores it.
-- Shared body must preserve baseline behavior if any harness ignores nonessential metadata.
-- Do not put behavior-changing routing metadata such as `agent`, `model`, or `subtask` in shared sources.
-- Additional harness-specific metadata is allowed only after verifying other target harnesses parse and safely ignore it. Never rely on it for core behavior.
+- Use valid scalar YAML.
+- Keep routing metadata compatible with the intended harness. Do not describe Pi-only metadata as portable.
+- Keep core behavior in the body, including required skill loading.
+- For a downstream shared command, keep nonessential metadata safely ignorable by every target.
 
 ## Skills metadata
 
-`skill` or `skills` metadata may help a supporting harness, but is not portable command behavior. Whenever a shared command includes skills metadata, repeat the requirement explicitly in body:
+When a command includes `skill` or `skills` metadata, repeat the requirement explicitly in its body:
 
 ```markdown
 ---
@@ -73,72 +68,54 @@ Load and follow the `code-review-workflow` skill before reviewing changes.
 Review scope: $ARGUMENTS
 ```
 
-Body instruction is required even when current activation injects skill automatically. Command must remain understandable and behavior-complete when metadata is ignored.
+The body instruction remains necessary when metadata is ignored.
 
-## Shared arguments
+## Arguments
 
-Use only shared placeholder intersection in canonical shared sources:
+For this repository's Pi templates, use `$ARGUMENTS` or simple positional placeholders. For a downstream shared command, limit its source to placeholders supported by every target:
 
 - `$ARGUMENTS` for complete raw/freeform input.
-- `$1`, `$2`, and other simple positional arguments when each position has a fixed meaning.
+- `$1`, `$2`, and other simple positional arguments with fixed meanings.
 
-Do not use `$@`, `${@:N}`, or `${@:N:L}` in shared sources. Do not use slicing to represent a freeform tail. Instead expose `$ARGUMENTS` and tell agent how to interpret first fixed value and remaining text, or redesign contract around bounded simple positions.
+Do not use `$@`, `${@:N}`, or `${@:N:L}` in a downstream shared source. Use `$ARGUMENTS` for a freeform tail and state what happens when required input is missing or ambiguous.
 
-State missing or ambiguous required-argument behavior in body: ask one concise clarification and stop.
-
-Harness-local one-offs may use native placeholders when user intentionally accepts lock-in.
-
-## Shared workflow
-
-- Classify command as shared repo command or harness-local one-off.
-- Identify name, purpose, canonical source, activation paths, and argument contract.
-- Choose `$ARGUMENTS` by default or simple positional placeholders for fixed meanings.
-- Keep shared behavior independent of harness-specific metadata.
-- Add explicit body skill loading for every `skill` or `skills` metadata entry.
-- Use normal agent tools, not pre-expanded shell output or implicit file inclusion.
-- Validate filename, frontmatter, placeholders, baseline behavior, and symlink/package activation.
+Harness-local commands may use native syntax when lock-in is explicit.
 
 ## Migration and audit rules
 
-When making a command shared between Pi and OpenCode: Remove unsupported frontmatter such as `agent`, `subtask`, and legacy model-routing fields when they affect behavior.
+For a downstream Pi/OpenCode shared command:
 
-- Move canonical ownership to `commands/<name>.md` in this repo unless user requests another shared source.
-- Remove behavior-changing harness metadata such as `agent`, `model`, and `subtask`; express required behavior in body.
-- Keep harmless harness metadata only when ignored safely and body retains baseline behavior.
-- Add explicit body skill loading whenever `skill` or `skills` metadata remains.
-- Replace shell interpolation such as ``!`npm test` `` with instructions to run command.
-- Replace implicit file inclusion such as `@src/file.ts` with instructions to read supplied path.
-- Replace `$@` and argument slicing with `$ARGUMENTS` or simple fixed positional arguments.
-- Replace copied/generated harness variants with symlinks to canonical source.
+- choose the downstream repository's canonical source; do not use this repository's Pi directory unless the command is Pi-only;
+- Remove unsupported frontmatter such as `agent`, `subtask`, and legacy model-routing fields when they affect the downstream shared behavior.
+- remove metadata that changes behavior in only one target;
+- replace shell pre-expansion and implicit file inclusion with body instructions;
+- replace `$@` and slicing with `$ARGUMENTS` or fixed positional arguments;
+- avoid copied or generated variants.
 
-For harness-local one-offs, audit against target harness's native contract instead; label lock-in clearly and do not claim source is shared.
+## Output when creating a command
 
-## Output when creating command
+Unless writing was requested, return:
 
-Unless user explicitly asks to write/install files, return:
+1. Scope classification: this repository's Pi command, downstream shared command, or named harness-local one-off.
+2. Canonical path and complete Markdown contents.
+3. Activation guidance for the actual target harness.
+4. A validation note covering metadata, skill loading, and argument placeholders.
 
-1. Scope classification: shared repo command or named harness-local one-off.
-2. Canonical filename/path and complete Markdown contents.
-3. Activation paths; recommend symlinks for shared sources.
-4. Validation note covering metadata, skill loading, placeholders, and migrated syntax.
-
-If writing files, create only requested canonical or harness-local source. Do not create generated harness variants. For returned Markdown containing nested fences, use four-backtick outer fence.
+For returned Markdown containing nested fences, use a four-backtick outer fence.
 
 ## Checklist
 
-- [ ] Scope is explicitly shared or harness-local.
-- [ ] Shared repo source defaults to `commands/<name>.md` in this repo.
+- [ ] Scope is explicitly Pi-owned, downstream shared, or harness-local.
+- [ ] This repository's Pi source is `harness/pi/commands/<name>.md`.
 - [ ] Filename is flat lowercase kebab-case and ends with `.md`.
-- [ ] Frontmatter is valid YAML; shared baseline does not depend on harness-specific metadata.
+- [ ] Frontmatter is valid YAML and body retains core behavior.
 - [ ] Skills metadata has matching explicit body skill-loading instruction.
-- [ ] Shared placeholders are `$ARGUMENTS` and/or simple positional arguments; no `$@` or slicing.
-- [ ] Missing or ambiguous required arguments have concise clarification path.
-- [ ] Body does not rely on shell pre-expansion or implicit file inclusion.
-- [ ] Shared activation uses package discovery or symlinks, never generated variants.
+- [ ] Downstream shared placeholders are `$ARGUMENTS` and/or simple positional arguments; no `$@` or slicing.
+- [ ] Activation guidance does not claim this repository activates OpenCode/Kilo commands.
 
-## Shared example
+## This repository's Pi example
 
-Canonical path: `commands/pr-review.md`
+Canonical path: `harness/pi/commands/pr-review.md`
 
 ```markdown
 ---
@@ -152,4 +129,4 @@ Interpret remaining text from raw input as optional extra instructions: $ARGUMEN
 If pull request URL is missing or ambiguous, ask one concise clarification and stop.
 ```
 
-Activate same source for OpenCode with symlink at `.opencode/commands/pr-review.md`; Pi discovers it through this repo's package manifest.
+Pi discovers this template through this repository's package manifest. An OpenCode-only or downstream shared command belongs in the relevant target repository or OpenCode-native command directory.

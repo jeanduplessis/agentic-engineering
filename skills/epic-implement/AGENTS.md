@@ -18,8 +18,8 @@ Use deterministic checks by default:
 
 ```sh
 python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
-python3 -m tools.skill_eval skills/epic-implement/evals/manifest.json workflow --results /tmp/epic-implement-eval --require-real
-python3 -m tools.skill_valid skills/epic-implement
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/epic-implement/evals/manifest.json workflow --results /tmp/epic-implement-eval --require-real
+PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/epic-implement
 ```
 
 The `tools.skill_eval` run may skip when its configured live harness is unavailable. Do not run live model-backed evals without explicit user approval.
@@ -30,7 +30,7 @@ The `tools.skill_eval` run may skip when its configured live harness is unavaila
 - Preserve gate executor no-stage/no-commit/no-close rules.
 - Keep native subagent/current harness runner support optional and preserve complete sequential current-session fallback.
 - Never require Pi; Pi self-invocation may remain optional acceleration.
-- Resolve canonical `commands/<name>.md` first; keep Pi prompt locations optional.
+- Resolve this repository's `harness/pi/commands/<name>.md` first; keep arbitrary harness prompt locations optional.
 - Preserve append-only resume state.
 - Preserve generated-script preflight (`bash -n` plus compatibility checks).
 - Preserve invariant validation coverage for invalidating mutation paths.

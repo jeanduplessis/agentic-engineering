@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat >&2 <<'USAGE'
 Usage:
-  ./tools/skill_valid/skill_validate.sh <skill-dir> [--allow-live] [skill_valid options...]
+  ./skill-factory/tools/skill_valid/skill_validate.sh skills/<skill-name> [--allow-live] [skill_valid options...]
 
 Runs deterministic skill validation by default:
   - validates target shape, required eval manifest, skill-local AGENTS.md, and LLM optimization readiness
@@ -24,7 +24,7 @@ Environment overrides:
   NO_COLOR=1                 Disable color output
 
 Example:
-  ./tools/skill_valid/skill_validate.sh skills/beads
+  ./skill-factory/tools/skill_valid/skill_validate.sh skills/beads
 USAGE
 }
 
@@ -34,9 +34,11 @@ if [[ $# -lt 1 || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$script_dir/../.." && pwd)"
+repo_root="$(cd "$script_dir/../../.." && pwd)"
 target="$1"
 shift
+
+cd "$repo_root"
 
 enable_color=0
 if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
@@ -99,8 +101,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-cd "$repo_root"
-
 printf '%s%sValidating skill%s %s%s%s\n' "$bold" "$blue" "$reset" "$bold" "$target" "$reset" >&2
 if [[ " ${args[*]} " == *" --allow-live "* || " ${args[*]} " == *" --allow-live-pi "* || "${SKILL_EVAL_ALLOW_LIVE:-}" == "1" || "${SKILL_EVAL_ALLOW_LIVE_PI:-}" == "1" ]]; then
   info "Live harness/model execution explicitly allowed."
@@ -112,7 +112,7 @@ if [[ -n "${SKILL_VALID_PROVIDER:-}${SKILL_VALID_MODEL:-}${SKILL_VALID_THINKING:
 fi
 
 set +e
-python3 -m tools.skill_valid "${args[@]}" >"$stdout_file" 2>"$stderr_file"
+PYTHONPATH="${repo_root}/skill-factory${PYTHONPATH:+:${PYTHONPATH}}" python3 -m tools.skill_valid "${args[@]}" >"$stdout_file" 2>"$stderr_file"
 code=$?
 set -e
 

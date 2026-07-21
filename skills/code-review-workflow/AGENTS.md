@@ -15,13 +15,13 @@ Maintain `SKILL.md` as the router for deterministic review of local repository c
 Run deterministic validation from the repository root without live harness/model gates:
 
 ```sh
-python3 -m tools.skill_valid skills/code-review-workflow
+PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/code-review-workflow
 ```
 
 Run live harness/model validation only with explicit approval:
 
 ```sh
-./tools/skill_valid/skill_validate.sh skills/code-review-workflow --allow-live --harness kilo
+./skill-factory/tools/skill_valid/skill_validate.sh skills/code-review-workflow --allow-live --harness kilo
 ```
 
 ## Change guidelines

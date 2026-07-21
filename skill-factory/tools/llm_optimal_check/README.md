@@ -5,7 +5,7 @@
 ## CLI
 
 ```sh
-python3 -m tools.llm_optimal_check <path>
+PYTHONPATH=skill-factory python3 -m tools.llm_optimal_check <path>
 ```
 
 The CLI emits JSON only on success and exits `0` for completed `pass`, `warn`, or `fail` analyses. Runtime/tool errors exit nonzero and write diagnostics to stderr.

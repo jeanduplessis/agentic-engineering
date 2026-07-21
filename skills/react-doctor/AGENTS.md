@@ -20,13 +20,13 @@ Keep the commands exact unless the upstream `react-doctor` CLI contract changes.
 Run deterministic validation from the repository root:
 
 ```sh
-python3 -m tools.skill_valid skills/react-doctor
+PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/react-doctor
 ```
 
 Run live harness/model validation only with explicit approval:
 
 ```sh
-./tools/skill_valid/skill_validate.sh skills/react-doctor --allow-live --harness kilo
+./skill-factory/tools/skill_valid/skill_validate.sh skills/react-doctor --allow-live --harness kilo
 ```
 
 ## Change guidelines

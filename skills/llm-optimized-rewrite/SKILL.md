@@ -77,7 +77,7 @@ directory, then run:
 python3 <skill-dir>/scripts/smell_test.py <path>
 ```
 
-Do not run `python3 -m tools.llm_optimal_check <path>` outside the package repo unless setting `PYTHONPATH` to
+Do not run `PYTHONPATH=skill-factory python3 -m tools.llm_optimal_check <path>` outside the package repo unless setting `PYTHONPATH` to
 that repo. The tool emits JSON-only token-cost and reliability heuristics with exact token metrics and excludes
 leading YAML frontmatter. Use it to spot likely opportunities before planning; it does not replace semantic
 verification, exact token counts for proposed edits, or user confirmation before applying changes. Treat findings
@@ -172,7 +172,7 @@ TEXT
 Repo-module form works only from the package repo or with `PYTHONPATH` set to that repo:
 
 ```bash
-PYTHONPATH=<package-repo> python3 -m tools.llm_token_count <<'TEXT'
+PYTHONPATH=<package-repo>/skill-factory python3 -m tools.llm_token_count <<'TEXT'
 <exact snippet text>
 TEXT
 ```

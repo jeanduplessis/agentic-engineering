@@ -3,15 +3,15 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Create a Pi slash command called fix-tests in this repo for shared Pi and OpenCode use. It should run relevant tests, diagnose failures, make the smallest safe fix, and rerun tests. Accept an optional test command or focus area. Explain canonical ownership and activation.\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox as canonical source. If you write a file, summarize the path and activation guidance.",
-      "expected_output": "A complete Pi Markdown prompt template compatible with shared Pi/OpenCode use, canonical source commands/fix-tests.md, portable arguments, and package or symlink activation guidance without generated variants.",
+      "prompt": "Create a Pi slash command called fix-tests in this repo. It should run relevant tests, diagnose failures, make the smallest safe fix, and rerun tests. Accept an optional test command or focus area. Explain canonical ownership and Pi activation.\n\nEval contract: You may either return the complete Markdown prompt-template contents or write the command file in the sandbox as canonical source. If you write a file, summarize the path and activation guidance.",
+      "expected_output": "A complete Pi Markdown prompt template at harness/pi/commands/fix-tests.md, with Pi-compatible arguments and root package activation guidance.",
       "files": [],
       "expectations": [
-        "The response classifies this as a shared repo command.",
-        "The canonical source is commands/fix-tests.md.",
+        "The response classifies this as a Pi-owned repository command.",
+        "The canonical source is harness/pi/commands/fix-tests.md.",
         "The command uses valid YAML frontmatter with description.",
         "The command uses $ARGUMENTS for optional input and does not use $@ or slicing.",
-        "The response recommends package discovery or symlink activation for Pi/OpenCode and does not recommend generated variants."
+        "The response recommends root package discovery for Pi and does not claim OpenCode/Kilo activation."
       ],
       "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     },
@@ -25,7 +25,7 @@
         "The rewrite replaces shell interpolation and implicit @file inclusion with explicit body instructions.",
         "The rewrite replaces slicing with $ARGUMENTS or simple positional arguments.",
         "If skills metadata remains, body explicitly instructs agent to load and follow coverage-review skill.",
-        "The response recommends one canonical source plus symlink or package activation instead of built variants."
+        "The response identifies an arbitrary downstream canonical source and does not claim this repository activates OpenCode/Kilo commands."
       ],
       "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     },
@@ -38,19 +38,19 @@
         "The command uses $1 for PR URL and $ARGUMENTS to interpret raw input or optional tail.",
         "The shared source does not use $@ or slicing such as ${@:2}.",
         "The prompt includes concise clarification behavior.",
-        "The canonical source is commands/pr-review.md.",
-        "The response recommends symlink or package activation rather than generated variants."
+        "The canonical source is identified as a downstream repository choice, not this repository's Pi directory.",
+        "The response recommends target-harness activation rather than generated variants."
       ],
       "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     },
     {
       "id": 4,
       "prompt": "Create a personal OpenCode-only command named inspect-session. It intentionally relies on an OpenCode-only feature and should not enter this repo shared command library. Accept optional user focus. Explain where it belongs and why it is not a shared repo command.\n\nEval contract: Return complete Markdown contents and install path, or write the harness-local command in sandbox and summarize it.",
-      "expected_output": "A clearly labeled OpenCode harness-local one-off installed in an OpenCode-native command directory, not commands/.",
+      "expected_output": "A clearly labeled OpenCode harness-local one-off installed in an OpenCode-native command directory, not harness/pi/commands/.",
       "files": [],
       "expectations": [
         "The response classifies command as an OpenCode harness-local one-off.",
-        "The command is not assigned canonical ownership under this repo commands/.",
+        "The command is not assigned canonical ownership under this repo's harness/pi/commands/.",
         "The response names an OpenCode-native command location.",
         "The command body remains explicit about requested task.",
         "The response does not recommend generated Pi/OpenCode variants."
@@ -59,15 +59,15 @@
     },
     {
       "id": 5,
-      "prompt": "Create shared repo command code-review using metadata `skills: [code-review-workflow]`. OpenCode may ignore that metadata, so keep baseline behavior intact in both Pi and OpenCode. Accept optional review scope and explain activation.\n\nEval contract: You may either return complete Markdown command contents or write canonical command file in sandbox. If writing a file, summarize path and activation guidance.",
-      "expected_output": "A shared command retaining harmless skills metadata only with explicit body skill loading and behavior-complete fallback, plus portable placeholders and symlink/package activation.",
+      "prompt": "Create a Pi-owned repository command code-review using metadata `skills: [code-review-workflow]`. Accept optional review scope and explain Pi activation.\n\nEval contract: You may either return complete Markdown command contents or write canonical command file in sandbox. If writing a file, summarize path and activation guidance.",
+      "expected_output": "A Pi command retaining skills metadata with explicit body skill loading, Pi-compatible placeholders, and root package activation guidance.",
       "files": [],
       "expectations": [
-        "The canonical source is commands/code-review.md.",
+        "The canonical source is harness/pi/commands/code-review.md.",
         "The body explicitly instructs agent to load and follow code-review-workflow skill.",
-        "The body preserves baseline review behavior if skills metadata is ignored.",
-        "The command uses $ARGUMENTS and no $@ or slicing.",
-        "The response explains safely ignored metadata and recommends symlink or package activation."
+        "The body preserves explicit review behavior if skills metadata is ignored.",
+        "The command uses $ARGUMENTS or simple positional arguments.",
+        "The response recommends root package activation and does not claim OpenCode/Kilo activation."
       ],
       "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     }

@@ -5,10 +5,10 @@
 ## CLI
 
 ```sh
-python3 -m tools.llm_token_count < file.txt
-python3 -m tools.llm_token_count --json < file.txt
-python3 -m tools.llm_token_count --model gpt-5 --json < file.txt
-python3 -m tools.llm_token_count --encoding o200k_base --json < file.txt
+PYTHONPATH=skill-factory python3 -m tools.llm_token_count < file.txt
+PYTHONPATH=skill-factory python3 -m tools.llm_token_count --json < file.txt
+PYTHONPATH=skill-factory python3 -m tools.llm_token_count --model gpt-5 --json < file.txt
+PYTHONPATH=skill-factory python3 -m tools.llm_token_count --encoding o200k_base --json < file.txt
 ```
 
 Default output preserves the legacy human contract:

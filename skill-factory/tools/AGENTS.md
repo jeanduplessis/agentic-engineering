@@ -8,28 +8,28 @@ before changing a tool's internals.
 
 ## Available tools
 
-- `tools.llm_token_count`: Purpose: Exact token metrics for LLM-facing text.. Primary CLI/API: `python3 -m
+- `tools.llm_token_count`: Purpose: Exact token metrics for LLM-facing text.. Primary CLI/API: `PYTHONPATH=skill-factory python3 -m
   tools.llm_token_count [--json]`; `count_text(text, model=None, encoding=None)`. Notes: Uses `tiktoken`,
   defaults to `gpt-5` / `o200k_base`, and backs the legacy rewrite-skill `count_tokens.py` wrapper..
 
 - `tools.llm_optimal_check`: Purpose: Deterministic LLM optimization-readiness check for Markdown/prompt/skill
-  text.. Primary CLI/API: `python3 -m tools.llm_optimal_check <path>`; `check_path(path)`. Notes: Emits
+  text.. Primary CLI/API: `PYTHONPATH=skill-factory python3 -m tools.llm_optimal_check <path>`; `check_path(path)`. Notes: Emits
   `{status, score, metrics, findings}`. `warn` is advisory; `fail` blocks `skill_valid`. Backs the legacy
   `smell_test.py` wrapper..
 
-- `tools.skill_eval`: Purpose: Skill behavior evaluation framework.. Primary CLI/API: `python3 -m
+- `tools.skill_eval`: Purpose: Skill behavior evaluation framework.. Primary CLI/API: `PYTHONPATH=skill-factory python3 -m
   tools.skill_eval <manifest> <suite> --results <dir>`. Notes: Runs workflow/regression suites, writes trace
   bundles, supports static/replay/real harness modes, and labels synthetic results honestly..
 
 - `tools.skill_valid`: Purpose: End-to-end validity gate for one repo-local skill.. Primary CLI/API: `python3
   -m tools.skill_valid skills/<skill-name> [--allow-live --harness <pi|kilo>]`; `validate_skill(...)`;
-  `./tools/skill_valid/skill_validate.sh skills/<skill-name>`. Notes: Orchestrates target, manifest,
+  `./skill-factory/tools/skill_valid/skill_validate.sh skills/<skill-name>`. Notes: Orchestrates target, manifest,
   AGENTS.md, `llm_optimal_check`, live opt-in, validate-skills, and live eval gates. Stdout is compact JSON.
   The shell wrapper renders a friendly human summary..
 
-- `tools.command_valid`: Purpose: Deterministic validation for one canonical command shared by Pi and OpenCode.. Primary CLI/API:
-  `python3 -m tools.command_valid <command-name> [--json]`; `validate_command(CommandValidationOptions)`.
-  Notes: Uses repo-root `commands/` by default; validates direct resolution, harmless union frontmatter, shared placeholders,
+- `tools.command_valid`: Purpose: Deterministic validation for one Pi-owned command.. Primary CLI/API:
+  `PYTHONPATH=skill-factory python3 -m tools.command_valid <command-name> [--json]`; `validate_command(CommandValidationOptions)`.
+  Notes: Uses repo-root `harness/pi/commands/` by default; validates direct resolution, supported frontmatter, placeholders,
   absence of OpenCode interpolation, and declared-skill/body-section agreement; preserves friendly/JSON output and does not query live harness state..
 
 ## Selection guide
@@ -40,7 +40,7 @@ before changing a tool's internals.
 
 - Need behavior evidence from a skill-owned eval manifest: use `tools.skill_eval`.
 
-- Need to validate one canonical command shared by Pi and OpenCode: use `tools.command_valid`.
+- Need to validate one Pi command: use `tools.command_valid`.
 
 - Need to decide whether a repo-local skill is valid: use `tools.skill_valid` or the friendly `tools/skill_valid/skill_validate.sh` wrapper.
 
@@ -63,17 +63,17 @@ before changing a tool's internals.
 Run focused tests after changing a tool:
 
 ```sh
-python3 -m unittest tools.command_valid.tests.test_command_valid -v
-python3 -m unittest tools.skill_eval.tests.test_llm_optimized_smell_test -v
-python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
-python3 -m unittest tools.skill_valid.tests.test_skill_validate_wrapper -v
-python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
+ PYTHONPATH=skill-factory python3 -m unittest tools.command_valid.tests.test_command_valid -v
+ PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_llm_optimized_smell_test -v
+ PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
+ PYTHONPATH=skill-factory python3 -m unittest tools.skill_valid.tests.test_skill_validate_wrapper -v
+ PYTHONPATH=skill-factory python3 -m unittest tools.skill_valid.tests.test_skill_valid -v
 ```
 
 Run the deterministic suite before handoff:
 
 ```sh
-python3 -m unittest discover -v
+PYTHONPATH=skill-factory python3 -m unittest discover -s skill-factory -v
 ```
 
 Do not add live harness/model tests unless explicitly requested. Existing unit tests use fakes for live gates.

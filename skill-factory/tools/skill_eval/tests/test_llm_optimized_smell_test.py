@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -6,7 +7,7 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 SCRIPT = ROOT / "skills" / "llm-optimized-rewrite" / "scripts" / "smell_test.py"
 SHELL_SCRIPT = ROOT / "skills" / "llm-optimized-rewrite" / "scripts" / "smell_test.sh"
 COUNT_SCRIPT = ROOT / "skills" / "llm-optimized-rewrite" / "scripts" / "count_tokens.py"
@@ -202,7 +203,13 @@ class SmellTestCliTests(unittest.TestCase):
             completed = subprocess.run(
                 [str(SHELL_SCRIPT), str(target)],
                 cwd=ROOT,
-                env={"NO_COLOR": "1", "SMELL_TEST_RAW_JSON": "1", "SMELL_TEST_VERBOSE": "1"},
+                env={
+                    **os.environ,
+                    "PYTHONPATH": f"{ROOT / 'skill-factory'}{os.pathsep}{os.environ.get('PYTHONPATH', '')}",
+                    "NO_COLOR": "1",
+                    "SMELL_TEST_RAW_JSON": "1",
+                    "SMELL_TEST_VERBOSE": "1",
+                },
                 text=True,
                 capture_output=True,
             )

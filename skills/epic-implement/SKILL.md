@@ -156,7 +156,7 @@ Parent rules:
 
 Before gate prompt construction, discover templates for `/tdd-task`, `/task-validate`, `/code-review`, and `/epic-validate` in this order:
 
-1. canonical repo path `commands/<name>.md`;
+1. this repository's Pi path `harness/pi/commands/<name>.md`;
 2. current harness command/prompt locations and package entries when discoverable;
 3. repo `prompts/<name>.md`;
 4. optional Pi locations: `.pi/prompts/<name>.md`, root/nearest `package.json` `pi.prompts` entries, user `~/.pi/agent/prompts/<name>.md`, and installed Pi packages.

@@ -10,6 +10,7 @@ from tools.skill_valid import ValidationDependencies, ValidationOptions, main, p
 
 
 VALID_SENTINEL = 'review text\nSKILL_VALID_RESULT={"status":"passed","target":"skills/demo","checks":[{"id":"spec","status":"passed","message":"ok"}]}\n'
+ROOT = Path(__file__).resolve().parents[4]
 
 
 class SkillValidTests(unittest.TestCase):
@@ -19,6 +20,9 @@ class SkillValidTests(unittest.TestCase):
             yield None, Path(tmp)
 
     def write_valid_skill(self, root: Path, *, name: str = "demo", regression: bool = True) -> Path:
+        bundled_validator = root / "skill-factory" / "validate-skills"
+        bundled_validator.mkdir(parents=True)
+        (bundled_validator / "SKILL.md").write_text("---\nname: validate-skills\ndescription: validator\n---\n")
         skill_dir = root / "skills" / name
         eval_dir = skill_dir / "evals"
         fixture_dir = eval_dir / "fixtures" / "project"
@@ -606,7 +610,7 @@ class SkillValidTests(unittest.TestCase):
             self.assertIn("read,grep,find,ls", command)
             self.assertIn("--skill", command)
             skill_arg = command[command.index("--skill") + 1]
-            self.assertTrue(skill_arg.endswith("skills/validate-skills/SKILL.md"))
+            self.assertEqual(Path(skill_arg), (root / "skill-factory" / "validate-skills" / "SKILL.md").resolve())
             self.assertIn("--provider", command)
             self.assertIn("openrouter", command)
             self.assertIn("--model", command)
@@ -765,12 +769,14 @@ class SkillValidTests(unittest.TestCase):
             self.assertFalse(artifact_base.exists())
 
     def test_tool_docs_and_wrapper_prompt_document_final_contract(self):
-        readme = Path("tools/skill_valid/README.md").read_text()
-        agents = Path("tools/skill_valid/AGENTS.md").read_text()
-        wrapper = Path("tools/skill_valid/WRAPPER_PROMPT.md").read_text()
-        language = Path("tools/skill_valid/UBIQUITOUS_LANGUAGE.md").read_text()
+        tool_dir = ROOT / "skill-factory" / "tools" / "skill_valid"
+        readme = (tool_dir / "README.md").read_text()
+        agents = (tool_dir / "AGENTS.md").read_text()
+        wrapper = (tool_dir / "WRAPPER_PROMPT.md").read_text()
+        language = (tool_dir / "UBIQUITOUS_LANGUAGE.md").read_text()
 
         self.assertIn("python3 -m tools.skill_valid", readme)
+        self.assertIn("PYTHONPATH=skill-factory", readme)
         self.assertIn("--allow-live-pi", readme)
         self.assertIn("provider", readme)
         self.assertIn("stdout JSON", readme)

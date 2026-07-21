@@ -1,6 +1,6 @@
 # AGENTS.md — skills directory context
 
-This directory contains canonical agent skills shared by Pi and OpenCode. Each skill should be self-contained, easy for agents to discover, behaviorally complete without harness-specific acceleration, and optionally measurable via the repo-level `tools/skill_eval` framework.
+This directory contains canonical agent skills shared by Pi and OpenCode. Each skill should be self-contained, easy for agents to discover, behaviorally complete without harness-specific acceleration, and optionally measurable via the repo-level `skill-factory/tools/skill_eval` framework.
 
 ## Skill structure
 
@@ -33,11 +33,11 @@ Use `tools.skill_eval` for behavioral skill evaluation. It runs skill-owned mani
 Primary commands:
 
 ```bash
-python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
 ```
 
 ```bash
-python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
   --results /tmp/<skill-name>-eval \
   --require-real
 ```
@@ -46,12 +46,12 @@ Live harness execution is gated; run live evals only when explicitly requested o
 
 ```bash
 SKILL_EVAL_ALLOW_LIVE=1 \
-python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow \
   --results /tmp/<skill-name>-live-eval \
   --require-real
 ```
 
-See `tools/skill_eval/README.md` and `tools/skill_eval/AGENTS.md` for the runner contract.
+See `skill-factory/tools/skill_eval/README.md` and `skill-factory/tools/skill_eval/AGENTS.md` for the runner contract.
 
 ## Eval-ready skill requirements
 
@@ -188,7 +188,7 @@ Process failures are not graded as content failures. Timeouts and nonzero harnes
 When a real, graded failure is confirmed, promote it before changing the skill:
 
 ```bash
-python3 -m tools.skill_eval promote-regressions \
+PYTHONPATH=skill-factory python3 -m tools.skill_eval promote-regressions \
   skills/<skill-name>/evals/manifest.json \
   --results /tmp/<skill-name>-live-eval \
   --output skills/<skill-name>/evals/manifest.json \
@@ -204,8 +204,8 @@ When adding or substantially changing a skill:
 1. Keep `SKILL.md` trigger description precise.
 2. Add or update workflow eval cases for core behavior.
 3. Add deterministic checks or a skill-local grader for important contracts.
-4. Run unit tests for `tools.skill_eval` after changing framework-facing eval files.
+4. Run unit tests for `skill-factory/tools/skill_eval` after changing framework-facing eval files.
 5. Run no-live `--require-real` validation to ensure the manifest uses real configs and skips honestly without live harness execution.
 6. Run live harness eval only with explicit approval.
 7. Preserve equivalent Pi and OpenCode behavior; harness-specific metadata or acceleration must have a complete shared fallback.
-7. Treat static/replay results as synthetic plumbing checks, not skill-quality evidence.
+8. Treat static/replay results as synthetic plumbing checks, not skill-quality evidence.
