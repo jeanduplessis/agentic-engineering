@@ -16,28 +16,36 @@ pub fn run(args: &RemoveArgs) -> Result<()> {
     let config = Config::load(&repo.main_root)?;
     let base_dir = config.base_dir(&repo.main_root);
     let worktrees = repo.worktrees();
-    let target = find_target(worktrees, &repo, &base_dir, &args.name)?;
+    let targets = args
+        .names
+        .iter()
+        .map(|name| find_target(worktrees, &repo, &base_dir, name))
+        .collect::<Result<Vec<_>>>()?;
 
-    if is_current(&repo.cwd, &target.path) {
-        bail!(
-            "cannot remove worktree '{}' because it is currently active",
-            target.display_name(&repo.main_root, &base_dir)
-        );
+    for target in &targets {
+        if is_current(&repo.cwd, &target.path) {
+            bail!(
+                "cannot remove worktree '{}' because it is currently active",
+                target.display_name(&repo.main_root, &base_dir)
+            );
+        }
     }
 
-    let display_name = target.display_name(&repo.main_root, &base_dir);
-    let branch = target.branch.clone();
-    remove_worktree(&repo, &target.path, args.force)?;
-    println!(
-        "Removed worktree '{display_name}' at {}",
-        target.path.display()
-    );
+    for target in targets {
+        let display_name = target.display_name(&repo.main_root, &base_dir);
+        let branch = target.branch.clone();
+        remove_worktree(&repo, &target.path, args.force)?;
+        println!(
+            "Removed worktree '{display_name}' at {}",
+            target.path.display()
+        );
 
-    if args.with_branch
-        && let Some(branch) = branch
-    {
-        delete_branch(&repo, &branch, args.force_branch)?;
-        println!("Removed branch '{branch}'");
+        if args.with_branch
+            && let Some(branch) = branch
+        {
+            delete_branch(&repo, &branch, args.force_branch)?;
+            println!("Removed branch '{branch}'");
+        }
     }
 
     Ok(())

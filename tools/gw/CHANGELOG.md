@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+- Added support for removing multiple managed worktrees in one command.
+- `--force`, `--with-branch`, and `--force-branch` apply to every named worktree.
+- All named worktrees are resolved and safety-checked before removal begins.
+
 ## 1.1.0
 
 - Added `optional: true` for `copy` and `symlink` post-create hooks.

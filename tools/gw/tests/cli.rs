@@ -276,6 +276,30 @@ fn remove_with_branch_removes_worktree_and_branch() {
 }
 
 #[test]
+fn remove_multiple_worktrees_with_branches() {
+    let test_repo = TestRepo::new();
+    let first = test_repo.worktree("feature/first");
+    let second = test_repo.worktree("feature/second");
+    gw_success(&test_repo.repo, ["add", "feature/first"]);
+    gw_success(&test_repo.repo, ["add", "feature/second"]);
+
+    let output = gw_success(
+        &test_repo.repo,
+        ["remove", "--with-branch", "feature/first", "feature/second"],
+    );
+
+    assert!(!first.exists());
+    assert!(!second.exists());
+    assert!(!branch_exists(&test_repo.repo, "feature/first"));
+    assert!(!branch_exists(&test_repo.repo, "feature/second"));
+    assert_eq!(
+        stdout(&output).lines().collect::<Vec<_>>().len(),
+        4,
+        "prints worktree and branch output for each target"
+    );
+}
+
+#[test]
 fn add_runs_post_create_copy_and_command_hooks() {
     let test_repo = TestRepo::new();
     fs::write(test_repo.repo.join(".env.example"), "FROM_TEMPLATE=yes\n")

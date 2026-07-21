@@ -10,9 +10,9 @@ gw add --cd <branch>               # create worktree and enter it with shell int
 gw add -b <new-branch> [start]     # explicitly create branch
 gw list                            # list all worktrees; alias: ls
 gw list -q                         # names only
-gw remove <name>                   # remove managed worktree; alias: rm
-gw remove --with-branch <name>     # remove worktree and branch
-gw remove -f <name>                # force dirty/locked removal
+gw remove <name> [<name>...]                   # remove managed worktrees; alias: rm
+gw remove --with-branch <name> [<name>...]     # remove worktrees and branches
+gw remove -f <name> [<name>...]                # force dirty/locked removal
 gw clean                           # remove merged managed worktrees
 gw cd [name]                       # print path; defaults to main @
 gw init                            # create main-root .gw.yml

@@ -62,7 +62,8 @@ pub struct ListArgs {
 
 #[derive(Debug, Args)]
 pub struct RemoveArgs {
-    pub name: String,
+    #[arg(required = true, num_args = 1..)]
+    pub names: Vec<String>,
     /// Force removal of a dirty or locked worktree.
     #[arg(short, long)]
     pub force: bool,

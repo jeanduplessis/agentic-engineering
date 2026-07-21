@@ -19,8 +19,8 @@ gw add --cd <branch>            create worktree and enter it with shell integrat
 gw add -b <branch> [start]      create new branch and worktree
 gw list                         list all worktrees
 gw list --quiet                 print worktree names only
-gw remove <name>                remove managed worktree
-gw remove --with-branch <name>  remove worktree and branch
+gw remove <name> [<name>...]                remove managed worktrees
+gw remove --with-branch <name> [<name>...]  remove worktrees and branches
 gw clean                        remove merged managed worktrees and branches
 gw cd [name]                    print worktree path; defaults to @
 gw init                         create .gw.yml at main repository root
