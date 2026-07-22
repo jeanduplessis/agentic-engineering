@@ -1,7 +1,9 @@
 use std::ffi::OsString;
 use std::path::Path;
+use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use path_clean::PathClean;
 
 use crate::cli::RemoveArgs;
@@ -34,7 +36,9 @@ pub fn run(args: &RemoveArgs) -> Result<()> {
     for target in targets {
         let display_name = target.display_name(&repo.main_root, &base_dir);
         let branch = target.branch.clone();
-        remove_worktree(&repo, &target.path, args.force)?;
+        with_progress(format!("Removing worktree '{display_name}'..."), || {
+            remove_worktree(&repo, &target.path, args.force)
+        })?;
         println!(
             "Removed worktree '{display_name}' at {}",
             target.path.display()
@@ -43,12 +47,29 @@ pub fn run(args: &RemoveArgs) -> Result<()> {
         if args.with_branch
             && let Some(branch) = branch
         {
-            delete_branch(&repo, &branch, args.force_branch)?;
+            with_progress(format!("Removing branch '{branch}'..."), || {
+                delete_branch(&repo, &branch, args.force_branch)
+            })?;
             println!("Removed branch '{branch}'");
         }
     }
 
     Ok(())
+}
+
+fn with_progress<T>(message: String, operation: impl FnOnce() -> Result<T>) -> Result<T> {
+    let progress = ProgressBar::with_draw_target(None, ProgressDrawTarget::stdout());
+    progress.set_style(
+        ProgressStyle::with_template("{spinner:.cyan} {msg}")
+            .expect("the removal progress template is valid")
+            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
+    );
+    progress.set_message(message);
+    progress.enable_steady_tick(Duration::from_millis(80));
+
+    let result = operation();
+    progress.finish_and_clear();
+    result
 }
 
 fn find_target<'a>(

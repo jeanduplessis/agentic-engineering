@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0
+
+- Added live progress spinners while removing worktrees and associated branches.
+- Preserved clean, newline-delimited output when stdout is redirected or piped.
+
 ## 1.2.0
 
 - Added support for removing multiple managed worktrees in one command.

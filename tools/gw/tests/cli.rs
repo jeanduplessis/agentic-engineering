@@ -297,6 +297,10 @@ fn remove_multiple_worktrees_with_branches() {
         4,
         "prints worktree and branch output for each target"
     );
+    assert!(
+        !stdout(&output).contains('\u{1b}'),
+        "does not emit terminal progress control sequences when stdout is redirected"
+    );
 }
 
 #[test]
