@@ -21,6 +21,8 @@
 
 Before completing implementation work, run format check, Clippy, tests, and release build.
 
+For version requirements and the release checklist, see [`RELEASE.md`](RELEASE.md).
+
 ## Coding Style
 
 - Follow standard Rust formatting and Clippy guidance.
