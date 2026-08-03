@@ -1,0 +1,11 @@
+[package]
+name = "ghh"
+version = "0.1.0"
+edition = "2024"
+description = "A GitHub CLI helper for managing pull requests"
+license = "MIT"
+repository = "https://github.com/jeanduplessis/agentic-engineering"
+
+[dependencies]
+clap = { version = "4.5.60", features = ["derive"] }
+indicatif = "0.18.4"

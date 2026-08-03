@@ -30,6 +30,6 @@ pi -e /absolute/path/to/this-repository
 - `skills/` contains shared-harness skills.
 - `prompts/` contains system-prompt resources. `prompts/COMPRESSED_OUTPUT_MODE.md` is the current repository-owned prompt resource.
 - `skill-factory/` contains skill authoring, validation, and evaluation resources.
-- `tools/gs/` and `tools/gw/` are independent tool packages.
+- `tools/ghh/`, `tools/gs/`, and `tools/gw/` are independent tool packages.
 
 Commands are flat. Recursive command directories, project-local command ownership, deterministic shell execution, loops, chains, parallel execution, worktrees, subagents, and agent-callable prompt execution remain outside the Pi extension's V1 scope.
