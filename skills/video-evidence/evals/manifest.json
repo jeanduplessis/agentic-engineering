@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "video-evidence",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "plan-capture-edit-validate",
+          "prompt": "Plan concise video evidence for two completed browser journeys: a customer checkout and an admin refund. The artifacts will remain local for now. Do not run commands, open a browser, edit files, or publish anything. Explain the order from preparation through final validation, including artifact separation, editing integrity, concrete media checks, and the output you would hand to a later publishing workflow.",
+          "checks": [
+            {
+              "id": "loads-agent-browser-core",
+              "type": "required_content",
+              "value": "agent-browser skills get core --full"
+            },
+            {
+              "id": "requires-dry-run",
+              "type": "regex",
+              "pattern": "(?i)dry[- ]run"
+            },
+            {
+              "id": "separates-journeys",
+              "type": "regex",
+              "pattern": "(?i)(separate|one).*clip"
+            },
+            {
+              "id": "preserves-chronology",
+              "type": "regex",
+              "pattern": "(?i)(preserve|preserving).*(chronolog|order)|one (source )?take"
+            },
+            {
+              "id": "uses-ffprobe",
+              "type": "required_content",
+              "value": "ffprobe"
+            },
+            {
+              "id": "uses-full-decode",
+              "type": "regex",
+              "pattern": "ffmpeg[^\\n]*(?:-v error[^\\n]*)?-i|decode"
+            },
+            {
+              "id": "uses-contact-sheet",
+              "type": "regex",
+              "pattern": "(?i)contact sheet"
+            },
+            {
+              "id": "keeps-artifacts-external",
+              "type": "regex",
+              "pattern": "(?i)(outside|not (?:in|to)|do not commit|don't commit).*(repositor|git)|media.*outside"
+            },
+            {
+              "id": "reports-path",
+              "type": "regex",
+              "pattern": "(?i)(absolute )?path"
+            },
+            {
+              "id": "reports-claim",
+              "type": "regex",
+              "pattern": "(?i)claim|demonstrat"
+            },
+            {
+              "id": "does-not-publish",
+              "type": "forbidden_content",
+              "value": "gh pr edit"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}

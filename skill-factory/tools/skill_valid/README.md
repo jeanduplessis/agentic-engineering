@@ -99,7 +99,7 @@ Exit code is `0` only when `valid` is `true`. Gate statuses are `passed`, `warn`
    - Shared loadability and repo-contract violations fail.
    - Deterministic best-practice concerns warn without blocking validity, such as weak trigger wording or
       list-form `allowed-tools`.
-   - Safely ignored Pi capability fields such as `disable-model-invocation` are allowed only when baseline behavior does not depend on them.
+   - Safely ignored harness capability fields such as `disable-model-invocation` and `user-invocable` are allowed only when baseline behavior does not depend on them.
 
 3. `eval_manifest` — required `evals/manifest.json` must load through `tools.skill_eval`, declare a non-empty
    `workflow` suite, align skill name/path with the target, define a supported real-harness `with_skill`

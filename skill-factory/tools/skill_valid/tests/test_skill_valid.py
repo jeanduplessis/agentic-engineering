@@ -352,6 +352,31 @@ class SkillValidTests(unittest.TestCase):
             self.assertNotIn("name.reserved-words", check_map)
             self.assertEqual(len(calls["pi"]), 1)
 
+    def test_skill_spec_accepts_shared_user_invocable_flag(self):
+        with self.make_repo() as (tmp, root):
+            target = self.write_valid_skill(root, name="hidden-helper", regression=False)
+            (target / "SKILL.md").write_text(
+                "---\n"
+                "name: hidden-helper\n"
+                "description: Use when an agent needs a non-user-invocable helper workflow.\n"
+                "user-invocable: false\n"
+                "---\n"
+                "# Hidden helper\n"
+            )
+            deps, calls = self.passing_deps(
+                pi_stdout='review text\nSKILL_VALID_RESULT={"status":"passed","target":"skills/hidden-helper","checks":[{"id":"spec","status":"passed","message":"ok"}]}\n'
+            )
+
+            code, result = validate_skill(ValidationOptions(target, repo_root=root, allow_live_pi=True), deps=deps)
+
+            self.assertEqual(code, 0)
+            self.assertTrue(result["valid"])
+            checks = result["gates"]["skill_spec"]["details"]["checks"]
+            check_map = {check["id"]: check for check in checks}
+            self.assertEqual(check_map["frontmatter.allowed-fields"]["status"], "passed")
+            self.assertEqual(check_map["user-invocable.type"]["status"], "passed")
+            self.assertEqual(len(calls["pi"]), 1)
+
     def test_eval_manifest_structural_failures_fail_before_live_work(self):
         cases = []
 

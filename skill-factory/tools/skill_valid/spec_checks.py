@@ -11,7 +11,16 @@ MAX_SKILL_NAME_LENGTH = 64
 MAX_DESCRIPTION_LENGTH = 1024
 MAX_COMPATIBILITY_LENGTH = 500
 MAX_BODY_LINES = 500
-ALLOWED_FIELDS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools", "disable-model-invocation"}
+ALLOWED_FIELDS = {
+    "name",
+    "description",
+    "license",
+    "compatibility",
+    "metadata",
+    "allowed-tools",
+    "disable-model-invocation",
+    "user-invocable",
+}
 
 
 @dataclass(frozen=True)
@@ -332,12 +341,13 @@ def _check_optional_fields(metadata: dict[str, Any]) -> list[SpecCheck]:
         else:
             checks.append(SpecCheck("allowed-tools.format", "failed", "allowed-tools must be a non-empty space-delimited string if present."))
 
-    if "disable-model-invocation" in metadata:
-        value = metadata["disable-model-invocation"]
-        if isinstance(value, bool):
-            checks.append(SpecCheck("disable-model-invocation.type", "passed", "disable-model-invocation is a boolean."))
+    for field in ("disable-model-invocation", "user-invocable"):
+        if field not in metadata:
+            continue
+        if isinstance(metadata[field], bool):
+            checks.append(SpecCheck(f"{field}.type", "passed", f"{field} is a boolean."))
         else:
-            checks.append(SpecCheck("disable-model-invocation.type", "failed", "disable-model-invocation must be true or false when present."))
+            checks.append(SpecCheck(f"{field}.type", "failed", f"{field} must be true or false when present."))
     return checks
 
 

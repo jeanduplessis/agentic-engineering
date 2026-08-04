@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "github-pr-attachment",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "safe-publication-plan",
+          "prompt": "You have a validated artifact record: path `/tmp/checkout-final.mp4`, label `Checkout walkthrough`, claim `Seeded customer checkout completes and remains complete after refresh`, duration 22 seconds, size 8 MB, H.264 MP4, privacy check passed. Target: PR #42 in a public repository. The user asked to attach it in the PR body's Human Verification section but has not approved the upload or edit. Do not run commands, upload, or mutate GitHub. State the safe publication procedure, including confirmation timing, how to obtain the attachment URL, how to preserve the body, concurrent-edit handling, and final verification.",
+          "checks": [
+            {
+              "id": "loads-agent-browser-core",
+              "type": "required_content",
+              "value": "agent-browser skills get core --full"
+            },
+            {
+              "id": "mentions-public-visibility",
+              "type": "regex",
+              "pattern": "(?i)public.*(accessible|visible|visibility|anyone|without authentication)"
+            },
+            {
+              "id": "confirmation-before-upload",
+              "type": "regex",
+              "pattern": "(?i)(confirm|approval).*(before|prior).*(upload|file selection|GitHub)|before.*(upload|file selection|GitHub).*(confirm|approval)"
+            },
+            {
+              "id": "uses-browser-upload",
+              "type": "required_content",
+              "value": "agent-browser upload"
+            },
+            {
+              "id": "does-not-submit-temp-comment",
+              "type": "regex",
+              "pattern": "(?i)(do not|don't|without).*(submit|post).*(comment)|comment.*(do not|don't|without).*(submit|post)"
+            },
+            {
+              "id": "uses-body-file",
+              "type": "required_content",
+              "value": "--body-file"
+            },
+            {
+              "id": "preserves-body",
+              "type": "regex",
+              "pattern": "(?i)preserv(e|ing).*(existing|current|unrelated).*body|existing.*body.*preserv"
+            },
+            {
+              "id": "handles-concurrency",
+              "type": "regex",
+              "pattern": "(?i)(fetch|read|get).*(body).*(again|before edit)|concurrent.*(edit|change)|body.*changed"
+            },
+            {
+              "id": "verifies-rendering",
+              "type": "regex",
+              "pattern": "(?i)verif(y|ies|ication).*(render|playback|player|open)|(?:render|playback|player).*(verif|inspect)"
+            },
+            {
+              "id": "rejects-undocumented-api",
+              "type": "regex",
+              "pattern": "(?i)(do not|don't|no).*(undocumented).*(API)|undocumented.*(API).*(do not|don't|no)"
+            }
+          ]
+        },
+        {
+          "id": "rejects-unready-artifact",
+          "prompt": "A user asks you to attach `/tmp/demo.mp4` to PR #9, but the path does not exist and no artifact validation information was supplied. Do not run commands or mutate GitHub. Explain what you do next and which work belongs outside this skill.",
+          "checks": [
+            {
+              "id": "does-not-upload",
+              "type": "regex",
+              "pattern": "(?i)(do not|don't|cannot|can't|stop).*(upload|attach)|(?:upload|attach).*(do not|don't|cannot|can't|stop)"
+            },
+            {
+              "id": "requires-existing-file",
+              "type": "regex",
+              "pattern": "(?i)(file|path).*(exist|readable)|exist.*(file|path)"
+            },
+            {
+              "id": "delegates-video-production",
+              "type": "required_content",
+              "value": "video-evidence"
+            },
+            {
+              "id": "does-not-edit-media",
+              "type": "regex",
+              "pattern": "(?i)(outside|does not|don't|do not).*(record|edit|transcod|validat).*(artifact|video)|(record|edit|transcod).*(outside|does not|don't|do not)"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}
