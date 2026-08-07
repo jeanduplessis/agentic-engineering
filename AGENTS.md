@@ -16,6 +16,7 @@ This repository is a local agent-resource package. Skills are shared across supp
 - Respect nested `AGENTS.md` files; the closest file takes precedence.
 - Preserve equivalent shared-skill behavior across Pi and OpenCode-compatible harnesses. Harness-specific metadata or acceleration must be safely ignorable and have a complete shared fallback.
 - When a public resource or tool contract changes, coordinate its documentation, `AGENTS.md`, and tests or eval fixtures that define the contract.
+- Document all changes in the root `CHANGELOG.md` under `Unreleased` before pushing changes from this repository to `origin`.
 - Prefer deterministic validation. Do not run live harness or model-backed evaluations without explicit approval.
 - Inspect `git status` and relevant diffs before editing. Stage exact intended paths, and verify the staged scope with `git diff --cached --name-status` before committing. Do not use broad reset commands as staging advice.
 

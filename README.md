@@ -3,6 +3,10 @@
 > [!NOTE]
 > Feel free to fork, modify and use as you like, however, this is not a collaborative OSS project. I'm not accepting PRs and not responding to issues. These tools are personalized for how I work.
 
+## Setup
+
+Run `./setup.sh` to interactively install tools, link selected skills into Pi, Kilo, or the global `~/.agents/skills` directory, and install Pi or Kilo harness artifacts. Skill selection is explicit; all skills are not installed by default. Æ is the name of this setup, not a separate command.
+
 ## Pi resources
 
 Pi-owned prompt templates live in `harness/pi/commands/*.md`. Root `package.json` exposes them through `pi.prompts`; edit those files directly. This repository does not provide shared Pi/OpenCode command sources or activate OpenCode/Kilo commands.

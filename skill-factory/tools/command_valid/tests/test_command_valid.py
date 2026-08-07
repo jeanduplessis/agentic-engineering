@@ -349,13 +349,9 @@ class CanonicalCommandInventoryTests(unittest.TestCase):
     EXPECTED_COMMANDS = sorted(
         {
             "code-review",
-            "epic-create",
-            "epic-implement",
             "epic-orchestrate",
-            "epic-validate",
             "flesh-out",
             "idea-challenger",
-            "migrate-bd-to-br",
             "optimize-for-llm",
             "pr-analyze",
             "pr-audit",
@@ -366,9 +362,6 @@ class CanonicalCommandInventoryTests(unittest.TestCase):
             "spec-audit",
             "spec-gen",
             "spec-reverse-gen",
-            "task-validate",
-            "tdd-epic",
-            "tdd-task",
             "to-epic",
             "to-issues",
         }
