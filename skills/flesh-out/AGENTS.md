@@ -2,17 +2,19 @@
 
 ## Purpose
 
-Maintain `SKILL.md` as a compact interview workflow for turning vague ideas, plans, and designs into explicit agreed decisions. The skill should keep the assistant from asking broad brainstorming questions or making downstream choices before dependencies are settled.
+Maintain `SKILL.md` as a compact interview workflow for turning vague ideas, plans, and designs into explicit agreed decisions. The skill should prevent broad brainstorming questions and downstream choices before dependencies are settled.
 
 ## How the skill works
 
-`SKILL.md` provides a single question template. It tells the assistant to recap accepted decisions, present mutually exclusive options, recommend one default, explain rejected alternatives briefly, and ask for yes/no confirmation before continuing.
+`SKILL.md` asks one focused decision question at a time, grounded in the repository and prior dependencies. Each turn gives one best recommendation, followed by zero to two possible variations when useful. Variations adapt the recommendation; they are not competing alternatives and need no rejection rationale.
 
-When editing the skill, preserve the core behavior: one focused decision question per turn, recommendation before confirmation, and decision-log continuity between turns.
+Do not routinely print a recap of agreed decisions. Keep accepted decisions in a running log, surface only the context needed for the current dependency, and include accepted decisions in the final summary or requested documentation.
+
+After the recommendation, use an available `question` or `ask-user` tool with both an accept action and free-form feedback/custom input. If no such tool exists, use the text fallback in `SKILL.md`. Do not advance until the user accepts or provides feedback. Preserve equivalent Pi and OpenCode behavior through that fallback.
 
 ## Eval and validation
 
-`evals/manifest.json` defines the workflow evaluation for this skill. It force-loads `SKILL.md` and checks that the response includes the decision recap, one question heading, options, a recommendation, and an agreement prompt.
+`evals/manifest.json` checks for a focused numbered question, one recommendation, an accept-or-feedback prompt with custom input, and the absence of the retired recap, options, and rejected-alternatives format.
 
 Run the deterministic validation wrapper before handing off changes:
 
@@ -24,7 +26,8 @@ The manifest has no copy fixtures, custom grader, or legacy eval assets.
 
 ## Change guidelines
 
-- Keep `SKILL.md` concise and LLM-facing; avoid adding background theory that does not affect execution.
-- Update `evals/manifest.json` when the required response contract changes.
-- Prefer deterministic checks in `evals/manifest.json`; add skill-local grading only if the template contract cannot be checked with built-ins.
-- Preserve equivalent Pi/OpenCode behavior; keep harness-specific capability optional with a shared fallback.
+- Keep `SKILL.md` concise, direct, and executable for LLMs.
+- Update `evals/manifest.json` when the public response contract changes.
+- Prefer deterministic checks; add skill-local grading only if built-in checks cannot express the contract.
+- Preserve one-question-at-a-time behavior, dependency ordering, repository grounding, accepted-decision tracking, and the final summary.
+- Keep question-tool use optional with a shared text fallback.

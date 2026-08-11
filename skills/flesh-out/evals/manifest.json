@@ -22,29 +22,34 @@
               "type": "non_empty_response"
             },
             {
-              "id": "tracks-agreed-decisions",
-              "type": "required_content",
-              "value": "Agreed decisions:"
-            },
-            {
               "id": "asks-numbered-question",
               "type": "regex",
               "pattern": "(?m)^## Question\\b"
             },
             {
-              "id": "offers-options",
+              "id": "gives-recommendation",
               "type": "regex",
-              "pattern": "(?s)Options:\\s*\\n\\s*A\\."
+              "pattern": "(?is)## Recommendation\\s+.{1,500}"
             },
             {
-              "id": "recommends-default",
-              "type": "required_content",
-              "value": "## Recommendation"
+              "id": "allows-accept-or-feedback",
+              "type": "regex",
+              "pattern": "(?is)(accept|feedback).{0,250}(custom|free[- ]form|feedback)"
             },
             {
-              "id": "asks-for-agreement",
-              "type": "regex",
-              "pattern": "Agree\\?"
+              "id": "forbids-agreed-decisions-recap",
+              "type": "forbidden_content",
+              "value": "Agreed decisions:"
+            },
+            {
+              "id": "forbids-options-heading",
+              "type": "forbidden_content",
+              "value": "Options:"
+            },
+            {
+              "id": "forbids-rejected-alternatives",
+              "type": "forbidden_content",
+              "value": "Why not alternatives"
             }
           ]
         }
