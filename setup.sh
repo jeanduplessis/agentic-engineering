@@ -17,6 +17,7 @@ GLOBAL_SKILLS_DIR="${GLOBAL_SKILLS_DIR:-$HOME/.agents/skills}"
 
 TOOL_DIRS=()
 SKILL_DIRS=()
+PI_EXTENSION_DIRS=()
 CANDIDATE_DIRS=()
 SELECTED_DIRS=()
 
@@ -38,7 +39,8 @@ Interactively choose which Agentic Engineering resources to install:
   tools      Install Rust tools from $TOOLS_DIR with cargo.
   skills     Link selected skills from $SKILLS_DIR into Pi, Kilo, and/or the
              shared global skills directory.
-  harness    Link harness-specific resources from $HARNESS_DIR.
+  harness    Link harness-specific resources from $HARNESS_DIR, including an
+             explicit selection of Pi extensions.
 
 Targets:
   Pi:      $PI_AGENT_DIR
@@ -85,6 +87,17 @@ discover_resources() {
   for directory in "$SKILLS_DIR"/*; do
     if [ -d "$directory" ] && [ -f "$directory/SKILL.md" ]; then
       SKILL_DIRS+=("$directory")
+    fi
+  done
+
+  # Pi discovers a global extension directory as either a direct entry file or a
+  # subdirectory exposing index.ts/index.js or a package.json "pi" manifest.
+  PI_EXTENSION_DIRS=()
+  for directory in "$HARNESS_DIR"/pi/extensions/*; do
+    [ -d "$directory" ] || continue
+    if [ -f "$directory/index.ts" ] || [ -f "$directory/index.js" ] ||
+      [ -f "$directory/package.json" ]; then
+      PI_EXTENSION_DIRS+=("$directory")
     fi
   done
 }
@@ -143,7 +156,7 @@ choose_items() {
       index=$((index + 1))
     done
     printf 'Nothing is selected automatically. Enter numbers or names separated by spaces,\n'
-    printf 'or type "all" explicitly to select every %s; "q" cancels.\n' "$kind"
+    printf 'or type "all" explicitly to select all %s; "q" cancels.\n' "$kind"
     printf 'Select %s: ' "$kind"
 
     if ! read_answer; then
@@ -559,6 +572,47 @@ link_children() {
   return "$failures"
 }
 
+# Pi extensions are opt-in: nothing is linked unless the user selects it. The
+# repository checkout stays the source of truth; only the activation link lives
+# in the Pi agent directory.
+install_pi_extensions() {
+  local target="$PI_AGENT_DIR/extensions"
+  local directory failures=0
+
+  if [ "${#PI_EXTENSION_DIRS[@]}" -eq 0 ]; then
+    printf 'No Pi extensions are available in this checkout.\n'
+    return 0
+  fi
+
+  CANDIDATE_DIRS=("${PI_EXTENSION_DIRS[@]}")
+  if ! choose_items "Pi extensions"; then
+    return 0
+  fi
+
+  printf '\nSelected Pi extensions:\n'
+  for directory in "${SELECTED_DIRS[@]}"; do
+    printf '  - %s\n' "${directory##*/}"
+  done
+  printf '  Target: %s\n' "$target"
+  if ! confirm 'Link the selected Pi extensions?'; then
+    printf 'Pi extension installation cancelled.\n'
+    return 0
+  fi
+
+  if ! ensure_directory "$target"; then
+    return 1
+  fi
+  for directory in "${SELECTED_DIRS[@]}"; do
+    if ! link_resource "$directory" "$target/${directory##*/}"; then
+      failures=1
+    fi
+  done
+
+  printf '\nLinked extensions are discovered from %s.\n' "$target"
+  printf 'Extensions listed in settings.json "extensions" stay enabled as configured.\n'
+  return "$failures"
+}
+
 install_pi_harness() {
   local source="$HARNESS_DIR/pi"
   local item failures=0
@@ -578,7 +632,7 @@ install_pi_harness() {
   if [ -d "$source/commands" ] && ! link_children "$source/commands" "$PI_AGENT_DIR/prompts"; then
     failures=1
   fi
-  if [ -d "$source/extensions" ] && ! link_children "$source/extensions" "$PI_AGENT_DIR/extensions"; then
+  if ! install_pi_extensions; then
     failures=1
   fi
   if [ -d "$source/skills" ] && ! link_children "$source/skills" "$PI_AGENT_DIR/skills"; then
@@ -635,7 +689,7 @@ install_harness() {
   fi
 
   printf '\nHarness installation plan:\n'
-  [ "$HARNESS_PI" -eq 1 ] && printf '  - Pi:   %s -> %s\n' "$HARNESS_DIR/pi" "$PI_AGENT_DIR"
+  [ "$HARNESS_PI" -eq 1 ] && printf '  - Pi:   %s -> %s (extensions are selected individually)\n' "$HARNESS_DIR/pi" "$PI_AGENT_DIR"
   [ "$HARNESS_KILO" -eq 1 ] && printf '  - Kilo: %s -> %s\n' "$HARNESS_DIR/kilo" "$KILO_CONFIG_DIR"
   if ! confirm 'Install the selected harness resources?'; then
     printf 'Harness installation cancelled.\n'
@@ -655,8 +709,8 @@ main() {
   print_header
   discover_resources
 
-  printf 'Found %d installable tool(s), %d skill(s), and %s harness source tree(s).\n' \
-    "${#TOOL_DIRS[@]}" "${#SKILL_DIRS[@]}" \
+  printf 'Found %d installable tool(s), %d skill(s), %d Pi extension(s), and %s harness source tree(s).\n' \
+    "${#TOOL_DIRS[@]}" "${#SKILL_DIRS[@]}" "${#PI_EXTENSION_DIRS[@]}" \
     "$(find "$HARNESS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
 
   if ! choose_categories; then

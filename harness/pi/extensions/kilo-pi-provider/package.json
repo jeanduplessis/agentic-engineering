@@ -1,0 +1,20 @@
+{
+  "name": "kilo-pi-provider-custom",
+  "version": "1.2.0-custom.0",
+  "private": true,
+  "type": "module",
+  "keywords": [
+    "pi-package"
+  ],
+  "license": "BSL-1.0",
+  "description": "Kilo provider for Pi with footer-owned balance status",
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./kilo.ts"
+    ]
+  }
+}

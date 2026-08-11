@@ -5,7 +5,7 @@ This repository is a local agent-resource package. Skills are shared across supp
 ## Directory map
 
 - `skills/` — shared-harness agent skills. Read `skills/AGENTS.md` before changing a skill.
-- `harness/pi/` — Pi-owned resources: `commands/` contains Pi prompt templates and `extensions/` contains Pi extensions. Read the closest `AGENTS.md` before changing an extension.
+- `harness/pi/` — Pi-owned resources: `commands/` contains Pi prompt templates and `extensions/` contains the canonical sources of this repository's Pi extensions. Read the closest `AGENTS.md` before changing an extension.
 - `prompts/` — system-prompt resources. `prompts/COMPRESSED_OUTPUT_MODE.md` is the current prompt resource, not a slash command.
 - `skill-factory/` — skill authoring, validation, and evaluation resources. Read its closest `AGENTS.md` before editing.
 - `tools/ghh/`, `tools/gs/`, and `tools/gw/` — independent tool packages. Read each package's `AGENTS.md` before editing.
@@ -18,6 +18,7 @@ This repository is a local agent-resource package. Skills are shared across supp
 - When a public resource or tool contract changes, coordinate its documentation, `AGENTS.md`, and tests or eval fixtures that define the contract.
 - Document all changes in the root `CHANGELOG.md` under `Unreleased` before pushing changes from this repository to `origin`.
 - Prefer deterministic validation. Do not run live harness or model-backed evaluations without explicit approval.
+- Pi extension sources live only in `harness/pi/extensions/`. `./setup.sh` links selected extensions into `~/.pi/agent/extensions/`; never treat the Pi agent directory as an extension source or edit through it as if it were a copy.
 - Inspect `git status` and relevant diffs before editing. Stage exact intended paths, and verify the staged scope with `git diff --cached --name-status` before committing. Do not use broad reset commands as staging advice.
 
 ## Validation

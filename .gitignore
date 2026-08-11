@@ -12,4 +12,8 @@ __pycache__/
 
 .skill-lock.json
 
+# Pi extension runtime state written through the installed symlink
+harness/pi/extensions/*/node_modules/
+harness/pi/extensions/openai-extended-support/config.json
+
 skills/maestri*
