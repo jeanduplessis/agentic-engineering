@@ -1,34 +1,35 @@
-# AGENTS.md — code-review-workflow skill maintenance
+# AGENTS.md — code-review-workflow maintenance
 
 ## Purpose
 
-Maintain `SKILL.md` as the router for deterministic review of local repository changes. The skill should guide `/review` and `@review-*` workflows across staged, unstaged, untracked, deleted, and branch-diff changes without editing code or running application logic. React Code Quality is the only focus allowed to run the required `react-doctor` static analyzer.
+Maintain local adapter/orchestrator for deterministic code review. Shared criteria and specialized agents belong to
+`code-quality`.
 
 ## How the skill works
 
-`SKILL.md` selects which reference files a caller should load. `references/scope.md` resolves changed files and emits the `Resolved Review Scope` contract. `references/reviewer-core.md` defines shared reviewer constraints. `references/output.md` defines the Evidence / Trace / Impact output shape. Focus references under `references/` define security, logic, types, data, resources, style, and React criteria.
+`SKILL.md` routes `/code-review-local` into this local workflow. `references/scope.md` resolves local changes.
+`references/orchestrator.md` builds a shared Review Packet, invokes all
+eight `@code-quality-*` agents, validates/persists results, merges findings, requests confirmation, fixes, validates,
+and reports. `scripts/gate_result.py` is the required response acceptance boundary: it preserves raw attempts,
+canonicalizes deterministic transport/format deviations, strictly validates review semantics, enforces one retry,
+and creates the only allowed irrecoverable-response `BLOCKED` fallback.
 
 ## Eval and validation
 
-`evals/manifest.json` declares the workflow smoke eval. It force-loads `SKILL.md` and asks an inline `@review-logic` scenario to produce the required review-summary and Evidence / Trace / Impact fields.
-
-Run deterministic validation from the repository root without live harness/model gates:
+`evals/manifest.json` covers local packet construction, eight-agent execution, approval, and action policy.
 
 ```sh
-PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/code-review-workflow
+PYTHONPATH=skill-factory python3 -m unittest discover -s skills/code-review-workflow/tests -v
+./skill-factory/tools/skill_valid/skill_validate.sh skills/code-review-workflow
 ```
 
-Run live harness/model validation only with explicit approval:
-
-```sh
-./skill-factory/tools/skill_valid/skill_validate.sh skills/code-review-workflow --allow-live --harness kilo
-```
+Live validation requires explicit approval.
 
 ## Change guidelines
 
-- Keep `SKILL.md` concise; move detailed review rules into `references/`.
-- Preserve no-edit behavior: no edits, commits, pushes, builds, tests, servers, or application-code execution during focus review.
-- Keep the analyzer exception narrow: only React Code Quality may run `npx -y react-doctor@latest . --verbose --diff`, and only when React is applicable.
-- Update `evals/manifest.json` when the routing contract or required output shape changes.
-- Keep command and reference mentions aligned with the skill name `code-review-workflow`.
-- Preserve equivalent Pi/OpenCode execution: native sub-agents and harness-specific parallelism are optional; sequential current-session focus review is required fallback.
+- Keep quality criteria and result schema in `code-quality`, not this workflow.
+- Preserve confirmation before fixes.
+- Validate local drift before agent launch and result acceptance.
+- Normalize only through `scripts/gate_result.py`; never infer substantive review content or overwrite a finalized result.
+- Update evals when local scope, packet construction, action policy, or reporting changes.
+- Preserve sequential fallback when concurrent subagents are unavailable.

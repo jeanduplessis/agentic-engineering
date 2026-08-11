@@ -1,108 +1,39 @@
 {
   "schema_version": 1,
-  "skill": {
-    "name": "code-review-workflow",
-    "path": "../SKILL.md"
-  },
+  "skill": {"name": "code-review-workflow", "path": "../SKILL.md"},
   "suites": [
     {
       "name": "workflow",
       "type": "workflow",
       "mode": "forced",
-      "fixture": {
-        "type": "empty"
-      },
+      "fixture": {"type": "empty"},
       "cases": [
         {
-          "id": "logic-review-evidence-trace-impact",
-          "prompt": "You are acting as @review-logic for a code-review-workflow smoke test. Use only the inline resolved scope and diff below; do not read files, write files, or run shell commands. Load the review workflow, then return the normal logic review output with exact labels `## Review Summary (Logic & Error Handling)`, `**Evidence:**`, `**Trace:**`, and `**Impact:**`.\n\n## Resolved Review Scope\n\n**Base ref:** origin/main\n**Scope note:** Inline fixture for one modified file.\n\n| File | Status | Sources |\n|------|--------|---------|\n| src/cart.ts | modified | branch |\n\n```diff\ndiff --git a/src/cart.ts b/src/cart.ts\n@@\n export function totalAfterCoupon(totalCents: number, coupon?: Coupon): number {\n-  if (!coupon) return totalCents;\n+  if (!coupon) return 0;\n   if (coupon.type === 'percent') {\n     return Math.round(totalCents * (1 - coupon.value));\n   }\n   return Math.max(0, totalCents - coupon.value);\n }\n```\n\nReview only the changed line for logic and error-handling issues. Report the missing-coupon behavior regression as a WARNING on `src/cart.ts`.",
+          "id": "local-adapter-contract",
+          "prompt": "Summarize the local code-review workflow without calling tools: local scope sources, Review Packet source kind and drift guard, number and names of shared agents, response normalization and strict semantic validation, exact confirmation question, and severity action policy. Include how fenced JSON, lowercase known enums, invented categories, retry, substantive repair, and finalized result overwrites are handled.",
           "checks": [
-            {
-              "id": "summary-heading",
-              "type": "required_content",
-              "value": "## Review Summary (Logic & Error Handling)"
-            },
-            {
-              "id": "warning-severity",
-              "type": "required_content",
-              "value": "**[WARNING]**"
-            },
-            {
-              "id": "file-mentioned",
-              "type": "required_content",
-              "value": "src/cart.ts"
-            },
-            {
-              "id": "evidence-label",
-              "type": "required_content",
-              "value": "**Evidence:**"
-            },
-            {
-              "id": "trace-label",
-              "type": "required_content",
-              "value": "**Trace:**"
-            },
-            {
-              "id": "impact-label",
-              "type": "required_content",
-              "value": "**Impact:**"
-            },
-            {
-              "id": "no-clean-review",
-              "type": "forbidden_content",
-              "value": "No issues found"
-            }
-          ]
-        },
-        {
-          "id": "react-review-requires-react-doctor",
-          "prompt": "You are acting as @review-react for a code-review-workflow smoke test. Do not read files, write files, run shell commands, or invoke external tools. Load the review workflow and state the normal React Code Quality behavior for a React-applicable resolved scope: required analyzer command, analyzer status handling, severity mapping for errors/warnings/score regression, and the exact review summary heading.",
-          "checks": [
-            {
-              "id": "react-summary-heading",
-              "type": "required_content",
-              "value": "## Review Summary (React Code Quality)"
-            },
-            {
-              "id": "analyzer-status",
-              "type": "required_content",
-              "value": "Analyzer Status"
-            },
-            {
-              "id": "react-doctor-command",
-              "type": "required_content",
-              "value": "npx -y react-doctor@latest . --verbose --diff"
-            },
-            {
-              "id": "critical-errors",
-              "type": "required_content",
-              "value": "CRITICAL"
-            },
-            {
-              "id": "warning-warnings",
-              "type": "required_content",
-              "value": "WARNING"
-            },
-            {
-              "id": "score-regression",
-              "type": "required_content",
-              "value": "score regression"
-            }
+            {"id": "local", "type": "required_content", "value": "source_kind: local"},
+            {"id": "eight", "type": "required_content", "value": "eight"},
+            {"id": "agents", "type": "required_content", "value": "@code-quality-"},
+            {"id": "drift", "type": "required_content", "value": "drift"},
+            {"id": "blocked", "type": "required_content", "value": "BLOCKED"},
+            {"id": "gate", "type": "required_content", "value": "gate_result.py"},
+            {"id": "fences", "type": "required_content", "value": "fences"},
+            {"id": "normalization", "type": "required_content", "value": "canonical"},
+            {"id": "no-substantive-repair", "type": "required_content", "value": "substantive"},
+            {"id": "retry", "type": "required_content", "value": "retry"},
+            {"id": "overwrite", "type": "required_content", "value": "overwrite"},
+            {"id": "confirm", "type": "required_content", "value": "Proceed with these fixes?"},
+            {"id": "blocker", "type": "required_content", "value": "Blocker"},
+            {"id": "major", "type": "required_content", "value": "Major"},
+            {"id": "minor", "type": "required_content", "value": "Minor"}
           ]
         }
       ]
     }
   ],
   "configurations": {
-    "with_skill": {
-      "harness": "pi",
-      "force_skill": true,
-      "timeout_seconds": 180
-    },
-    "without_skill": {
-      "harness": "pi",
-      "force_skill": false,
-      "timeout_seconds": 180
-    }
+    "with_skill": {"harness": "kilo", "force_skill": true, "timeout_seconds": 180},
+    "without_skill": {"harness": "kilo", "force_skill": false, "timeout_seconds": 180}
   }
 }

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "code-quality",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {"type": "empty"},
+      "cases": [
+        {
+          "id": "packet-only-boundary",
+          "prompt": "State the code-quality ownership boundary and the required behavior when no Review Packet path is supplied. Do not call tools.",
+          "checks": [
+            {"id": "packet-required", "type": "required_content", "value": "Review Packet"},
+            {"id": "no-discovery", "type": "required_content", "value": "discover"},
+            {"id": "blocked", "type": "required_content", "value": "BLOCKED"}
+          ]
+        },
+        {
+          "id": "severity-and-anchor-contract",
+          "prompt": "Summarize the Quality Result status, severity, and category enum values, changed-cause anchor rule, default Nit policy, and bare-JSON output rule. Do not call tools.",
+          "checks": [
+            {"id": "status", "type": "required_content", "value": "FINDINGS"},
+            {"id": "blocker", "type": "required_content", "value": "Blocker"},
+            {"id": "major", "type": "required_content", "value": "Major"},
+            {"id": "minor", "type": "required_content", "value": "Minor"},
+            {"id": "suggestion", "type": "required_content", "value": "Suggestion"},
+            {"id": "nit", "type": "required_content", "value": "Nit"},
+            {"id": "changed-cause", "type": "required_content", "value": "changed cause"},
+            {"id": "style-only-nits", "type": "required_content", "value": "Style"},
+            {"id": "data-integrity", "type": "required_content", "value": "Data integrity"},
+            {"id": "bare-json", "type": "required_content", "value": "JSON"}
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {"harness": "kilo", "force_skill": true, "timeout_seconds": 180},
+    "without_skill": {"harness": "kilo", "force_skill": false, "timeout_seconds": 180}
+  }
+}

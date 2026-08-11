@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.kilo.dev/code-quality/quality-result.schema.json",
+  "title": "Code Quality Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_id",
+    "focus",
+    "status",
+    "summary",
+    "files_reviewed",
+    "coverage_notes",
+    "findings"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "review_id": {"type": "string", "minLength": 1},
+    "focus": {"enum": ["security", "logic", "types", "data", "resources", "style", "react", "tests"]},
+    "status": {"enum": ["FINDINGS", "PASS", "NOT_APPLICABLE", "BLOCKED"]},
+    "summary": {"type": "string", "minLength": 1},
+    "files_reviewed": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "coverage_notes": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "analyzer": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["command", "status", "notes"],
+      "properties": {
+        "command": {"type": "string", "minLength": 1},
+        "status": {"enum": ["PASS", "FAIL", "NOT_APPLICABLE"]},
+        "notes": {"type": "string"}
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "severity",
+          "category",
+          "title",
+          "anchor",
+          "supporting_locations",
+          "evidence",
+          "trace",
+          "impact",
+          "fix_direction"
+        ],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["Blocker", "Major", "Minor", "Suggestion", "Nit"]},
+          "category": {"enum": ["Correctness", "Data integrity", "Security", "Reliability", "Performance", "Maintainability", "Testing", "Style"]},
+          "title": {"type": "string", "minLength": 1},
+          "anchor": {"$ref": "#/$defs/location"},
+          "supporting_locations": {"type": "array", "items": {"$ref": "#/$defs/location"}},
+          "evidence": {"type": "string", "minLength": 1},
+          "trace": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "impact": {"type": "string", "minLength": 1},
+          "fix_direction": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "line"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "line": {"type": "integer", "minimum": 1},
+        "note": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.kilo.dev/code-quality/review-packet.schema.json",
+  "title": "Code Quality Review Packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_id",
+    "source_kind",
+    "artifact_root",
+    "source_root",
+    "diff_artifact",
+    "changed_files",
+    "instructions",
+    "workflow_context"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "review_id": {"type": "string", "minLength": 1},
+    "source_kind": {"enum": ["local", "pull_request"]},
+    "artifact_root": {"type": "string", "minLength": 1},
+    "source_root": {"type": "string", "minLength": 1},
+    "diff_artifact": {"type": "string", "minLength": 1},
+    "base": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {"type": ["string", "null"]},
+        "sha": {"type": ["string", "null"]}
+      }
+    },
+    "head": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {"type": ["string", "null"]},
+        "sha": {"type": ["string", "null"]}
+      }
+    },
+    "changed_files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "status", "patch_artifact", "line_ranges"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "status": {"enum": ["added", "modified", "renamed", "deleted", "untracked"]},
+          "previous_path": {"type": ["string", "null"]},
+          "patch_artifact": {"type": "string", "minLength": 1},
+          "previous_artifact": {"type": ["string", "null"]},
+          "sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+          "line_ranges": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["start", "end"],
+              "properties": {
+                "start": {"type": "integer", "minimum": 1},
+                "end": {"type": "integer", "minimum": 1}
+              }
+            }
+          }
+        }
+      }
+    },
+    "instructions": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "workflow_context": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}
