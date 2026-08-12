@@ -51,7 +51,7 @@ Read existing documentation first:
 
 If any files don't exist, proceed silently: don't flag absence or suggest creating them upfront.
 
-Then use the Agent tool with `subagent_type=Explore` to walk the codebase.
+Then launch `scout` through `subagent({ workflowScript })` to walk the codebase.
 Don't follow rigid heuristics; explore organically and note where you experience friction:
 
 - Where does understanding one concept require bouncing between many small modules?

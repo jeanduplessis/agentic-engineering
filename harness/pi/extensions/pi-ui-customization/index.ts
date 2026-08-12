@@ -1,11 +1,9 @@
-import { createRequire } from "node:module";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { getAgentDir, ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
+import { ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { isSkillReadPath, replaceBackgroundAnsi } from "./skill-read.ts";
 import { isTerminalImageLine, mapNonImageLines } from "./terminal-image-lines.ts";
+import { decideToolCollapse } from "./tool-collapse.ts";
 
 type TuiLike = {
 	mode?: string;
@@ -39,75 +37,15 @@ type ToolExecutionInternals = {
 type ToolTarget = {
 	url: string;
 	component: ToolExecutionInternals;
-	kind: "toggle" | "agent";
 };
 
-type AgentCall = {
-	toolCallId: string;
-	description?: string;
-	subagentType?: string;
-	sequence: number;
-	agentId?: string;
-};
-
-type StartedAgent = {
-	id: string;
-	type: string;
-	description: string;
-	sequence: number;
-};
-
-type AgentSessionLike = {
-	subscribe(listener: () => void): () => void;
-};
-
-type AgentRecordLike = {
-	id: string;
-	type: string;
-	description: string;
-	status: string;
-	startedAt: number;
-	completedAt?: number;
-	session?: AgentSessionLike;
-	[key: string]: unknown;
-};
-
-type SubagentsRegistry = {
-	getRecord(id: string): unknown;
-	listAgents?: () => unknown;
-};
-
-type ViewerComponent = {
-	handleInput(data: string): void;
-	render(width: number): string[];
-	invalidate(): void;
-	dispose?(): void;
-};
-
-type ConversationViewerModule = {
-	ConversationViewer: new (
-		tui: unknown,
-		session: AgentSessionLike,
-		record: AgentRecordLike,
-		activity: unknown,
-		theme: unknown,
-		done: (result: undefined) => void,
-		onStop?: () => void,
-		keybindings?: unknown,
-		onSteer?: (message: string) => void,
-	) => ViewerComponent;
-	VIEWPORT_HEIGHT_PCT: number;
-};
-
-type AgentViewerUI = ExtensionContext["ui"];
+type ToolUi = ExtensionContext["ui"];
 
 type PatchedPrototype = Record<PropertyKey, unknown>;
 
 const ORIGINAL_RENDER = Symbol.for("pi.pi-ui-customization.original-render");
 const CONTROLLER = Symbol.for("pi.pi-ui-customization.controller");
 const ORIGINAL_OPEN_URL = Symbol.for("pi.pi-ui-customization.original-open-url");
-const SUBAGENTS_MANAGER = Symbol.for("pi-subagents:manager");
-const VIEWER_MODULE = "@tintinweb/pi-subagents/dist/ui/conversation-viewer.js";
 const INTERNAL_URL_PREFIX = "pi://tool-output-expand/";
 const EXPAND_HINT = "to expand";
 const CLICK_HINT = "or click";
@@ -191,81 +129,18 @@ function asString(value: unknown): string | undefined {
 class PiUiCustomizationController {
 	private targets = new Map<string, ToolTarget>();
 	private targetsByComponent = new WeakMap<object, ToolTarget>();
-	private agentCalls = new Map<string, AgentCall>();
-	private startedAgents = new Map<string, StartedAgent>();
 	private tui?: TuiLike;
-	private uiContext?: AgentViewerUI;
+	private uiContext?: ToolUi;
 	private fallbackOpenUrl?: (url: string) => void;
-	private viewerModulePromise?: Promise<ConversationViewerModule | undefined>;
 	private nextTargetId = 0;
-	private eventSequence = 0;
 
-	reset(ui?: AgentViewerUI): void {
+	reset(ui?: ToolUi): void {
 		this.targets = new Map();
 		this.targetsByComponent = new WeakMap();
-		this.agentCalls = new Map();
-		this.startedAgents = new Map();
 		this.tui = undefined;
 		this.uiContext = ui;
 		this.fallbackOpenUrl = undefined;
 		this.nextTargetId = 0;
-		this.eventSequence = 0;
-	}
-
-	recordToolStart(toolCallId: string, args: unknown): void {
-		const params = asObject(args);
-		const call: AgentCall = {
-			toolCallId,
-			description: asString(params?.description),
-			subagentType: asString(params?.subagent_type),
-			sequence: ++this.eventSequence,
-		};
-		this.agentCalls.set(toolCallId, call);
-		this.correlateStartedAgent(call);
-	}
-
-	recordStartedAgent(data: unknown): void {
-		const event = asObject(data);
-		const id = asString(event?.id);
-		const type = asString(event?.type);
-		const description = asString(event?.description);
-		if (!id || !type || !description) return;
-
-		const started: StartedAgent = {
-			id,
-			type,
-			description,
-			sequence: ++this.eventSequence,
-		};
-		this.startedAgents.set(id, started);
-		for (const call of this.agentCalls.values()) this.correlateStartedAgent(call, started);
-	}
-
-	private correlateStartedAgent(call: AgentCall, started?: StartedAgent): void {
-		if (call.agentId) return;
-		const candidates = started ? [started] : [...this.startedAgents.values()];
-		const claimedIds = new Set(
-			[...this.agentCalls.values()]
-				.filter((other) => other !== call && other.agentId)
-				.map((other) => other.agentId),
-		);
-		const match = candidates
-			.filter((candidate) =>
-				!claimedIds.has(candidate.id) &&
-				candidate.sequence >= call.sequence &&
-				this.sameAgentType(call.subagentType, candidate.type) &&
-				this.sameDescription(call.description, candidate.description),
-			)
-			.sort((left, right) => right.sequence - left.sequence)[0];
-		if (match) call.agentId = match.id;
-	}
-
-	private sameAgentType(left: string | undefined, right: string | undefined): boolean {
-		return !!left && !!right && left.toLowerCase() === right.toLowerCase();
-	}
-
-	private sameDescription(left: string | undefined, right: string | undefined): boolean {
-		return !!left && !!right && left === right;
 	}
 
 	attach(ui: unknown): void {
@@ -298,19 +173,21 @@ class PiUiCustomizationController {
 		const hasExpandHint = skillLines.some(
 			(line) => !isTerminalImageLine(line) && this.hasExpansionHint(this.plainText(line)),
 		);
-		const isAgent = component.toolName === "Agent";
-		const isCompletedRead =
-			component.toolName === "read" && !component.isPartial && component.result?.isError === false;
-		const isClickable = isAgent || hasExpandHint || isCompletedRead;
-		const displayLines =
-			!component.expanded && hasExpandHint ? this.compactCollapsedLines(skillLines) : skillLines;
-		if (this.tui?.mode !== "fullscreen" || (!component.expanded && !isClickable)) {
+		const decision = decideToolCollapse({
+			toolName: component.toolName,
+			expanded: component.expanded,
+			isPartial: component.isPartial,
+			isError: component.result?.isError,
+			hasExpandHint,
+		});
+		const displayLines = decision.compact ? this.compactCollapsedLines(skillLines) : skillLines;
+		if (this.tui?.mode !== "fullscreen" || (!component.expanded && !decision.clickable)) {
 			return skillLines;
 		}
 
 		let target: ToolTarget | undefined;
 		return mapNonImageLines(displayLines, (line) => {
-			target ??= this.getTarget(component, isAgent ? "agent" : "toggle");
+			target ??= this.getTarget(component);
 			const visibleLine = component.expanded ? line : this.stripExpansionHint(line);
 			const paddedLine = this.padLineToWidth(visibleLine, width);
 			const borderedLine = this.addLeftBorder(paddedLine, component.expanded, width);
@@ -656,14 +533,13 @@ class PiUiCustomizationController {
 		return `${this.openLink(url)}${segment}${this.closeLink()}`;
 	}
 
-	private getTarget(component: ToolExecutionInternals, kind: ToolTarget["kind"]): ToolTarget {
+	private getTarget(component: ToolExecutionInternals): ToolTarget {
 		const existing = this.targetsByComponent.get(component as object);
 		if (existing) return existing;
 
 		const target: ToolTarget = {
 			url: `${INTERNAL_URL_PREFIX}${++this.nextTargetId}`,
 			component,
-			kind,
 		};
 		this.targetsByComponent.set(component as object, target);
 		this.targets.set(target.url, target);
@@ -681,12 +557,8 @@ class PiUiCustomizationController {
 	private handleOpenUrl = (url: string): void => {
 		const target = this.targets.get(url);
 		if (target) {
-			if (target.kind === "agent") {
-				void this.openAgentViewer(target.component);
-			} else {
-				target.component.setExpanded(!target.component.expanded);
-				this.tui?.requestRender?.();
-			}
+			target.component.setExpanded(!target.component.expanded);
+			this.tui?.requestRender?.();
 			return;
 		}
 
@@ -696,200 +568,6 @@ class PiUiCustomizationController {
 			// Opening external terminal links is best-effort.
 		}
 	};
-
-	private async openAgentViewer(component: ToolExecutionInternals): Promise<void> {
-		const ui = this.uiContext;
-		if (!ui) return;
-
-		let resolved: { record: AgentRecordLike; session: AgentSessionLike } | undefined;
-		try {
-			resolved = this.resolveAgent(component);
-		} catch {
-			resolved = undefined;
-		}
-		if (!resolved) {
-			this.notify("This Agent result is not connected to a live subagent session.", "info");
-			return;
-		}
-		const agent = resolved;
-		const viewer = await this.loadViewer().catch(() => undefined);
-		if (!viewer) {
-			this.notify("The optional pi-subagents conversation viewer is unavailable.", "warning");
-			return;
-		}
-
-		try {
-			await ui.custom<undefined>(
-				(tui, theme, keybindings, done) =>
-					new viewer.ConversationViewer(
-						tui,
-						agent.session,
-						agent.record,
-						undefined,
-						theme,
-						done,
-						undefined,
-						keybindings,
-					),
-				{
-					overlay: true,
-					overlayOptions: {
-						anchor: "center",
-						width: "90%",
-						maxHeight: `${viewer.VIEWPORT_HEIGHT_PCT}%`,
-					},
-				},
-			);
-		} catch {
-			this.notify("Unable to open the subagent conversation viewer.", "warning");
-		}
-	}
-
-	private resolveAgent(component: ToolExecutionInternals):
-		| { record: AgentRecordLike; session: AgentSessionLike }
-		| undefined {
-		const details = asObject(component.result?.details);
-		const detailsAgentId = asString(details?.agentId);
-		const call = this.agentCalls.get(component.toolCallId);
-		const directId = detailsAgentId ?? call?.agentId;
-		if (directId) {
-			const record = this.getRecord(directId);
-			if (record?.session) return { record, session: record.session };
-			return undefined;
-		}
-
-		const description = asString(details?.description) ?? call?.description;
-		const type = asString(details?.subagentType) ?? call?.subagentType;
-		const claimedIds = new Set(
-			[...this.agentCalls.values()]
-				.filter((other) => other !== call && other.agentId)
-				.map((other) => other.agentId),
-		);
-		const startedMatches = [...this.startedAgents.values()]
-			.filter(
-				(started) =>
-					!claimedIds.has(started.id) &&
-					this.sameAgentType(type, started.type) &&
-					this.sameDescription(description, started.description),
-			)
-			.sort((left, right) => right.sequence - left.sequence);
-		for (const started of startedMatches) {
-			const record = this.getRecord(started.id);
-			if (record?.session) return { record, session: record.session };
-		}
-
-		// The registry intentionally exposes only getRecord today. If a compatible
-		// version also exposes listAgents, use it as a bounded metadata match rather
-		// than guessing an unrelated session.
-		const registry = this.getRegistry();
-		let records: unknown;
-		try {
-			records = registry?.listAgents?.();
-		} catch {
-			records = undefined;
-		}
-		if (Array.isArray(records)) {
-			const matches = records
-				.map((candidate) => this.asAgentRecord(candidate))
-				.filter(
-					(record): record is AgentRecordLike =>
-						!!record &&
-						!!record.session &&
-						this.matchesAgent(record, description, type),
-				)
-				.sort((left, right) => right.startedAt - left.startedAt);
-			const record = matches[0];
-			if (record?.session) return { record, session: record.session };
-		}
-		return undefined;
-	}
-
-	private matchesAgent(record: AgentRecordLike, description?: string, type?: string): boolean {
-		if (!description && !type) return false;
-		if (description && record.description !== description) return false;
-		if (type && !this.sameAgentType(type, record.type)) return false;
-		return true;
-	}
-
-	private getRegistry(): SubagentsRegistry | undefined {
-		const value = (globalThis as unknown as Record<PropertyKey, unknown>)[SUBAGENTS_MANAGER];
-		const registry = asObject(value);
-		return typeof registry?.getRecord === "function"
-			? (registry as unknown as SubagentsRegistry)
-			: undefined;
-	}
-
-	private getRecord(id: string): AgentRecordLike | undefined {
-		try {
-			return this.asAgentRecord(this.getRegistry()?.getRecord(id));
-		} catch {
-			return undefined;
-		}
-	}
-
-	private asAgentRecord(value: unknown): AgentRecordLike | undefined {
-		const record = asObject(value);
-		if (
-			!record ||
-			typeof record.id !== "string" ||
-			typeof record.type !== "string" ||
-			typeof record.description !== "string" ||
-			typeof record.status !== "string" ||
-			typeof record.startedAt !== "number"
-		)
-			return undefined;
-		return record as unknown as AgentRecordLike;
-	}
-
-	private async loadViewer(): Promise<ConversationViewerModule | undefined> {
-		this.viewerModulePromise ??= (async () => {
-			let viewerPath: string | undefined;
-			const requireCandidates: Array<ReturnType<typeof createRequire> | undefined> = [];
-			try {
-				requireCandidates.push(createRequire(join(getAgentDir(), "npm", "package.json")));
-			} catch {
-				// Pi installations without the npm root use the fallback below.
-			}
-			try {
-				requireCandidates.push(createRequire(join(getAgentDir(), "package.json")));
-			} catch {
-				// The agent directory may not contain a package manifest.
-			}
-			try {
-				requireCandidates.push(createRequire(import.meta.url));
-			} catch {
-				// An unusual loader may not expose import.meta.url to createRequire.
-			}
-			for (const resolver of requireCandidates) {
-				if (!resolver) continue;
-				try {
-					viewerPath = resolver.resolve(VIEWER_MODULE);
-					break;
-				} catch {
-					// Try the next supported Pi/package resolution root.
-				}
-			}
-			if (!viewerPath) return undefined;
-			try {
-				const module = (await import(pathToFileURL(viewerPath).href)) as unknown as ConversationViewerModule;
-				return typeof module.ConversationViewer === "function" &&
-					typeof module.VIEWPORT_HEIGHT_PCT === "number"
-					? module
-					: undefined;
-			} catch {
-				return undefined;
-			}
-		})();
-		return this.viewerModulePromise;
-	}
-
-	private notify(message: string, type: "info" | "warning" | "error"): void {
-		try {
-			this.uiContext?.notify(message, type);
-		} catch {
-			// Notifications are best-effort and must not disrupt terminal links.
-		}
-	}
 }
 
 function installRenderPatch(controller: PiUiCustomizationController): void {
@@ -917,10 +595,6 @@ export default function piUiCustomization(pi: ExtensionAPI): void {
 	const controller = new PiUiCustomizationController();
 	installRenderPatch(controller);
 
-	pi.on("tool_execution_start", (event) => {
-		if (event.toolName === "Agent") controller.recordToolStart(event.toolCallId, event.args);
-	});
-	pi.events.on("subagents:started", (data) => controller.recordStartedAgent(data));
 	pi.on("session_start", (_event, ctx) => controller.reset(ctx.ui));
 	pi.on("session_shutdown", () => controller.reset());
 }
