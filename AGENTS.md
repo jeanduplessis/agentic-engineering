@@ -5,7 +5,7 @@ This repository is a local agent-resource package. Skills are shared across supp
 ## Directory map
 
 - `skills/` — shared-harness agent skills. Read `skills/AGENTS.md` before changing a skill.
-- `harness/pi/` — Pi-owned resources: `commands/` contains Pi prompt templates and `extensions/` contains the canonical sources of this repository's Pi extensions. Read the closest `AGENTS.md` before changing an extension.
+- `harness/pi/` — Pi-owned resources: `commands/` contains Pi prompt templates, `docs/` contains Pi-owned plans and runbooks, and `extensions/` contains the canonical sources of this repository's Pi extensions. Read the closest `AGENTS.md` before changing an extension.
 - `prompts/` — system-prompt resources. `prompts/COMPRESSED_OUTPUT_MODE.md` is the current prompt resource, not a slash command.
 - `skill-factory/` — skill authoring, validation, and evaluation resources. Read its closest `AGENTS.md` before editing.
 - `tools/ghh/`, `tools/gs/`, and `tools/gw/` — independent tool packages. Read each package's `AGENTS.md` before editing.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Pinned the custom Pi `frontend` agent to `kilo/moonshotai/kimi-k3` instead of the unavailable `kilo/kilo-internal/kimi-k3-fast`.
+- Added `harness/pi/docs/switch-to-nicobailon-pi-subagents.md`, the execution plan to replace `@tintinweb/pi-subagents` with nicobailon's `pi-subagents` while keeping Firecrawl for web access.
 - Fixed `session-title` never persisting a name for `custom-footer`, which left new sessions stuck on `New session`. Title generation now uses the session model registry, treats empty or failed model replies as errors, retries once after the next settled turn, and times out hung requests.
 - Recolored successful `SKILL.md` read blocks in `pi-ui-customization` from the green tool-success background to the theme's purple custom-message background.
 - Fixed `pi-ui-customization` breaking inline images from the `read` tool by leaving Kitty and iTerm2 graphics sequences unmodified.

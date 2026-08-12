@@ -32,6 +32,7 @@ pi -e /absolute/path/to/this-repository
 ## Resource layout
 
 - `harness/pi/commands/` contains Pi-owned slash-command prompt templates.
+- `harness/pi/docs/` contains Pi-owned plans and runbooks. It is not a Pi package resource.
 - `harness/pi/extensions/` contains Pi extensions, each linked into Pi individually by `./setup.sh`.
 - `skills/` contains shared-harness skills.
 - `prompts/` contains system-prompt resources. `prompts/COMPRESSED_OUTPUT_MODE.md` is the current repository-owned prompt resource.
