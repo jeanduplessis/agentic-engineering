@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
+import { titleReasoningEffort } from "./title-reasoning.ts";
 
 /**
  * Generate a title after the first settled agent run and persist it as Pi's
@@ -10,6 +11,7 @@ const TITLE_COMMAND = "session-title";
 const TITLE_MAX_LENGTH = 96;
 const CONVERSATION_MAX_LENGTH = 12_000;
 const TITLE_MAX_TOKENS = 128;
+const TITLE_REASONING_MAX_TOKENS = 1024;
 const TITLE_TIMEOUT_MS = 60_000;
 const MAX_AUTOMATIC_ATTEMPTS = 2;
 
@@ -118,14 +120,16 @@ async function generateTitle(
 
 	// Use the session model registry so custom providers (Kilo) keep their
 	// auth, base URL, and headers. Raw pi-ai complete() bypasses that path.
+	const reasoningEffort = titleReasoningEffort(model);
 	const response = await ctx.modelRegistry.complete(
 		model,
 		{ messages: [message] },
 		{
 			signal: combineSignals(signal, TITLE_TIMEOUT_MS),
-			maxTokens: TITLE_MAX_TOKENS,
+			maxTokens: reasoningEffort ? TITLE_REASONING_MAX_TOKENS : TITLE_MAX_TOKENS,
 			cacheRetention: "none",
 			sessionId: randomUUID(),
+			...(reasoningEffort ? { reasoningEffort } : {}),
 		},
 	);
 

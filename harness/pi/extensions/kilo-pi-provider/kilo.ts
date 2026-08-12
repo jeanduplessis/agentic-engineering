@@ -19,6 +19,7 @@ import type {
   OAuthLoginCallbacks,
 } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import { getKiloThinkingLevelMap } from "./thinking-map.ts";
 
 // =============================================================================
 // Constants
@@ -379,8 +380,6 @@ function isFreeModel(m: OpenRouterModel): boolean {
   return false;
 }
 
-type PiThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
-
 type KiloModelCompat = {
   thinkingFormat?: "openrouter";
   cacheControlFormat?: "anthropic";
@@ -438,74 +437,6 @@ function getKiloModelCompat(
   }
 
   return compat as ProviderModelConfig["compat"];
-}
-
-function mapVariantEffort(
-  variants: NonNullable<OpenRouterModel["opencode"]>["variants"],
-  key: string,
-): string | undefined {
-  const variant = variants?.[key];
-  if (!variant) return undefined;
-  const reasoning = variant.reasoning;
-  if (!reasoning) return key;
-  if (reasoning.enabled === false || reasoning.effort === "none") return "none";
-  return reasoning.effort ?? key;
-}
-
-function thinkingLevelMapFromVariants(
-  variants: NonNullable<OpenRouterModel["opencode"]>["variants"],
-): ProviderModelConfig["thinkingLevelMap"] | undefined {
-  if (!variants || Object.keys(variants).length === 0) return undefined;
-
-  const map: Partial<Record<PiThinkingLevel, string | null>> = {};
-  const off = mapVariantEffort(variants, "none") ?? mapVariantEffort(variants, "instant");
-  if (off !== undefined) map.off = off;
-
-  for (const level of ["minimal", "low", "medium", "high", "xhigh"] as const) {
-    const effort = mapVariantEffort(variants, level);
-    map[level] = effort === undefined ? null : effort;
-  }
-
-  // Pi has no separate "max" thinking level. Expose a Kilo/OpenCode max
-  // variant as Pi's xhigh when xhigh is absent.
-  if (map.xhigh === null) {
-    const max = mapVariantEffort(variants, "max");
-    if (max !== undefined) map.xhigh = max;
-  }
-
-  return map as ProviderModelConfig["thinkingLevelMap"];
-}
-
-function getKiloThinkingLevelMap(
-  m: OpenRouterModel,
-): ProviderModelConfig["thinkingLevelMap"] | undefined {
-  const fromVariants = thinkingLevelMapFromVariants(m.opencode?.variants);
-  if (fromVariants) return fromVariants;
-
-  if (m.id === "deepseek/deepseek-v4-pro") {
-    return {
-      minimal: null,
-      low: null,
-      medium: null,
-      high: "high",
-      xhigh: "max",
-    };
-  }
-
-  // Safety net for the current frontier OpenAI model while Kilo/OpenRouter
-  // model metadata is catching up.
-  if (m.id.includes("gpt-5.5")) {
-    return {
-      off: "none",
-      minimal: null,
-      low: "low",
-      medium: "medium",
-      high: "high",
-      xhigh: "xhigh",
-    };
-  }
-
-  return undefined;
 }
 
 function mapOpenRouterModel(m: OpenRouterModel): ProviderModelConfig {

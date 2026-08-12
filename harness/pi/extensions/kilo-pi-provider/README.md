@@ -11,6 +11,8 @@ login behavior from Kilo while leaving footer rendering to the local
   `custom-footer` to read.
 - Formats the balance as plain credit text such as `$573.60`, without an emoji
   prefix.
+- Marks a missing off/none thinking variant as unsupported so Pi does not send
+  `reasoning_effort: none` to models such as `kilo-internal/galaxy`.
 
 ## Installation
 
