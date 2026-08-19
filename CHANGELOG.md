@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Made native Pi compaction summary blocks clickable in `pi-ui-customization`, so clicking toggles the summary's expanded content.
+- Collapsed every `pi-ui-customization` tool row by default. Clicking a block still expands that tool's output; the previous expand-hint, completed-`read`, and `edit`-only exceptions are gone.
+- Rendered `cache-miss-gate` warnings as a dark amber chat block and dropped the compaction-cost footnote from that message.
 - Pinned the custom Pi `frontend` agent to `kilo/moonshotai/kimi-k3` instead of the unavailable `kilo/kilo-internal/kimi-k3-fast`.
 - Switched Pi subagent orchestration to nicobailon `pi-subagents@0.47.1`. `pi-ui-customization` dropped the `@tintinweb/pi-subagents` conversation viewer, manager symbol, and `subagent_type` handling; click-to-expand remains, and a missing viewer is a no-op. `improve-codebase-architecture` now launches `scout` through `subagent` instead of `Agent` / `Explore`.
 - Added `harness/pi/docs/switch-to-nicobailon-pi-subagents.md`, the execution plan to replace `@tintinweb/pi-subagents` with nicobailon's `pi-subagents` while keeping Firecrawl for web access.

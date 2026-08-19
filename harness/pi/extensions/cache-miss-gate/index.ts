@@ -4,6 +4,7 @@ import type {
 	InputEvent,
 } from "@earendil-works/pi-coding-agent";
 import type { AssistantMessage, ImageContent, Model } from "@earendil-works/pi-ai";
+import { Box, Text } from "@earendil-works/pi-tui";
 
 const OPTIONS = {
 	/** Do not interrupt smaller prompts, even when their cache may have expired. */
@@ -25,6 +26,21 @@ const CHOICE_NEW_CONTEXT = "Start a new context window";
 const CHOICE_SEND = "Send anyway";
 const CHOICE_CANCEL = "Cancel and restore prompt";
 const NEW_CONTEXT_COMMAND = "cache-miss-new-context";
+const CACHE_MISS_ENTRY = "cache-miss-warning";
+const WARNING_BG = { r: 77, g: 56, b: 18 };
+const WARNING_BG_256 = 58;
+
+type CacheMissWarningData = {
+	summary: string;
+	reasons: string[];
+};
+
+function applyWarningBg(theme: { getColorMode(): string }, text: string): string {
+	if (theme.getColorMode() === "truecolor") {
+		return `\x1b[48;2;${WARNING_BG.r};${WARNING_BG.g};${WARNING_BG.b}m${text}\x1b[49m`;
+	}
+	return `\x1b[48;5;${WARNING_BG_256}m${text}\x1b[49m`;
+}
 
 type GateReason = {
 	message: string;
@@ -162,6 +178,17 @@ function continueAfterCompaction(event: InputEvent, pi: ExtensionAPI, ctx: Exten
 export default function cacheMissGate(pi: ExtensionAPI) {
 	let pendingNewContext: PendingNewContext | undefined;
 
+	pi.registerEntryRenderer<CacheMissWarningData>(CACHE_MISS_ENTRY, (entry, _options, theme) => {
+		const data = entry.data ?? { summary: "A previously cached request may miss.", reasons: [] };
+		const box = new Box(1, 1, (text) => applyWarningBg(theme, text));
+		const lines = [
+			theme.fg("warning", `${theme.bold("Warning:")} ${data.summary}`),
+			...data.reasons.map((reason) => theme.fg("warning", `• ${reason}`)),
+		];
+		box.addChild(new Text(lines.join("\n"), 0, 0));
+		return box;
+	});
+
 	// Session replacement is available only from command contexts. Stage the
 	// prompt as a command so the user can submit it after choosing this action.
 	pi.registerCommand(NEW_CONTEXT_COMMAND, {
@@ -250,13 +277,10 @@ export default function cacheMissGate(pi: ExtensionAPI) {
 		const estimate = estimatedCost && estimatedCost >= 0.01
 			? ` (~$${estimatedCost.toFixed(2)} versus a cache read)`
 			: "";
-		const detail = [
-			`A request with about ${formatTokens(exposedTokens)} previously cached tokens may miss${estimate}.`,
-			...reasons.map((reason) => `• ${reason.message}`),
-			"Compaction itself uses an uncached summarization request, but reduces later turns.",
-		].join("\n");
-
-		ctx.ui.notify(detail, "warning");
+		pi.appendEntry<CacheMissWarningData>(CACHE_MISS_ENTRY, {
+			summary: `A request with about ${formatTokens(exposedTokens)} previously cached tokens may miss${estimate}.`,
+			reasons: reasons.map((reason) => reason.message),
+		});
 		const choice = await ctx.ui.select("Possible prompt-cache miss — choose how to proceed", [
 			CHOICE_COMPACT,
 			CHOICE_NEW_CONTEXT,

@@ -1,5 +1,8 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
+import {
+	CompactionSummaryMessageComponent,
+	ToolExecutionComponent,
+} from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { isSkillReadPath, replaceBackgroundAnsi } from "./skill-read.ts";
 import { isTerminalImageLine, mapNonImageLines } from "./terminal-image-lines.ts";
@@ -23,20 +26,23 @@ type ToolResult = {
 	isError: boolean;
 };
 
-type ToolExecutionInternals = {
+type ExpandableComponent = {
+	expanded: boolean;
+	setExpanded(expanded: boolean): void;
+};
+
+type ToolExecutionInternals = ExpandableComponent & {
 	toolName: string;
 	toolCallId: string;
 	args?: unknown;
-	expanded: boolean;
 	ui: TuiLike;
-	setExpanded(expanded: boolean): void;
 	isPartial: boolean;
 	result?: ToolResult;
 };
 
 type ToolTarget = {
 	url: string;
-	component: ToolExecutionInternals;
+	component: ExpandableComponent;
 };
 
 type ToolUi = ExtensionContext["ui"];
@@ -168,17 +174,17 @@ class PiUiCustomizationController {
 		}
 	}
 
+	decorateExpandable(component: ExpandableComponent, lines: string[]): string[] {
+		if (this.tui?.mode !== "fullscreen") return lines;
+
+		const target = this.getTarget(component);
+		return mapNonImageLines(lines, (line) => this.wrapOutsideHyperlinks(line, target.url));
+	}
+
 	decorate(component: ToolExecutionInternals, lines: string[], width: number): string[] {
 		const skillLines = this.recolorSkillRead(component, lines);
-		const hasExpandHint = skillLines.some(
-			(line) => !isTerminalImageLine(line) && this.hasExpansionHint(this.plainText(line)),
-		);
 		const decision = decideToolCollapse({
-			toolName: component.toolName,
 			expanded: component.expanded,
-			isPartial: component.isPartial,
-			isError: component.result?.isError,
-			hasExpandHint,
 		});
 		const displayLines = decision.compact ? this.compactCollapsedLines(skillLines) : skillLines;
 		if (this.tui?.mode !== "fullscreen" || (!component.expanded && !decision.clickable)) {
@@ -533,7 +539,7 @@ class PiUiCustomizationController {
 		return `${this.openLink(url)}${segment}${this.closeLink()}`;
 	}
 
-	private getTarget(component: ToolExecutionInternals): ToolTarget {
+	private getTarget(component: ExpandableComponent): ToolTarget {
 		const existing = this.targetsByComponent.get(component as object);
 		if (existing) return existing;
 
@@ -591,9 +597,30 @@ function installRenderPatch(controller: PiUiCustomizationController): void {
 	};
 }
 
+function installCompactionRenderPatch(controller: PiUiCustomizationController): void {
+	const prototype = CompactionSummaryMessageComponent.prototype as unknown as PatchedPrototype;
+	prototype[CONTROLLER] = controller;
+
+	if (prototype[ORIGINAL_RENDER]) return;
+
+	const originalRender = CompactionSummaryMessageComponent.prototype.render;
+	prototype[ORIGINAL_RENDER] = originalRender;
+
+	CompactionSummaryMessageComponent.prototype.render = function (width: number): string[] {
+		const component = this as unknown as ExpandableComponent;
+		const activeController = (CompactionSummaryMessageComponent.prototype as unknown as PatchedPrototype)[
+			CONTROLLER
+		] as PiUiCustomizationController | undefined;
+
+		const lines = originalRender.call(this, width);
+		return activeController?.decorateExpandable(component, lines) ?? lines;
+	};
+}
+
 export default function piUiCustomization(pi: ExtensionAPI): void {
 	const controller = new PiUiCustomizationController();
 	installRenderPatch(controller);
+	installCompactionRenderPatch(controller);
 
 	pi.on("session_start", (_event, ctx) => controller.reset(ctx.ui));
 	pi.on("session_shutdown", () => controller.reset());
