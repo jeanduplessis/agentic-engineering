@@ -1,0 +1,29 @@
+{
+  "harness": "pi",
+  "harness_mode": "real",
+  "provider": "kilo",
+  "model": "anthropic/claude-opus-5",
+  "thinking": "high",
+  "skill_version": "3.0.1",
+  "skill_sha256": "afb66d2f1e0a0e5d593fb4d8cfc60a0f1120c0b9d5757e1b3a35ccfebeedec52",
+  "cases": [
+    {
+      "source_run_id": "workflow/leave-effective-personal-voice-alone/with_skill",
+      "regression_case_id": "regression-workflow-leave-effective-personal-voice-alone-with_skill",
+      "skill_read_observed": true,
+      "response": "I like boring deploys—the ones I can forget about by lunch.\n\nNo change needed: the voice, opinion, and em dash already work.",
+      "original_failed_checks": [
+        "no-unnecessary-rewrite"
+      ]
+    },
+    {
+      "source_run_id": "workflow/protect-non-prose-and-real-lists/with_skill",
+      "regression_case_id": "regression-workflow-protect-non-prose-and-real-lists-with_skill",
+      "skill_read_observed": true,
+      "response": "---\ntitle: RetryPolicy\n---\n\n# RetryPolicy\n\nRetryPolicy can retry requests. The API is not thread-safe. The only supported operations are read, write, and retry.\n\n> “A vibrant tapestry,” wrote Mina.\n\nSee [RetryPolicy](https://example.invalid/api/retry?mode=robust#usage).\n\n```ts\nconst retryPolicy = { mode: \"robust\", attempts: 3 };\n```\n\nChanges: dropped \"It is important to note that\" and replaced \"has the ability to retry\" with \"can retry.\" Left the exhaustive \"only supported operations\" list, the quotation, the link target, the frontmatter, and the code block untouched.",
+      "original_failed_checks": [
+        "prose-framing-removed"
+      ]
+    }
+  ]
+}

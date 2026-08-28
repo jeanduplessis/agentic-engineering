@@ -1,0 +1,19 @@
+{
+  "source_run_id": "workflow/readme-describes-current-behavior/with_skill",
+  "harness": "pi",
+  "harness_mode": "real",
+  "provider": "openai-codex",
+  "model": "gpt-5.4",
+  "thinking": "high",
+  "skill_version": "3.0.0",
+  "skill_sha256": "c5875d71eed58028b30e8412cea501c8c9509c57e98801b3e75ffb55810488a7",
+  "response": "ResponseCache stores up to 200 entries and, once full, evicts the least recently used entry; it replaced FileCache last month.",
+  "failed_checks": [
+    "no-previous-implementation-narration",
+    "no-relative-edit-date"
+  ],
+  "traced_confirmation": {
+    "skill_read_observed": true,
+    "response": "`ResponseCache` stores up to 200 entries and evicts the least recently used entry when it reaches capacity. It replaced `FileCache` last month."
+  }
+}

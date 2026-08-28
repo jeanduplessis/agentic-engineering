@@ -1,0 +1,228 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "human-writing",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {"type": "empty"},
+      "cases": [
+        {
+          "id": "release-note-from-supplied-facts",
+          "prompt": "Draft a customer-facing release note for Desk 2.4 from these engineering notes: Added CSV export. Added keyboard shortcuts. Return only the publishable copy.",
+          "checks": [
+            {"id": "version", "type": "required_content", "value": "2.4"},
+            {"id": "export-feature", "type": "regex", "pattern": "(?i)CSV export|export.{0,30}CSV"},
+            {"id": "shortcut-feature", "type": "regex", "pattern": "(?i)keyboard shortcuts"},
+            {"id": "no-example-fabrications", "type": "regex", "pattern": "(?i)\\A(?!.*\\b(?:offline|beta|faster)\\b).+\\Z"},
+            {"id": "no-editorial-workflow-output", "type": "regex", "pattern": "(?i)\\A(?!.*(?:AI[- ]tell score|patterns (?:found|removed)|human-writing|draft rewrite)).+\\Z"}
+          ]
+        },
+        {
+          "id": "preserve-factual-limits",
+          "prompt": "Copy-edit this operations handbook paragraph. Return only the revised paragraph.\n\nIt is important to note that as of 2026-06-10, the archive holds over 3,000 records. The pilot may reduce lookup delays. Operators must retain logs for at least 30 days.",
+          "checks": [
+            {"id": "effective-date", "type": "regex", "pattern": "(?i)\\b(?:2026-06-10|Jun(?:e|\\.)?\\s+10(?:th)?,?\\s+2026|10(?:th)?\\s+Jun(?:e|\\.)?\\s+2026)\\b"},
+            {"id": "quantity-is-a-lower-bound", "type": "regex", "pattern": "(?i)(over|more than|exceed(?:s|ing)?)\\s+3,?000"},
+            {"id": "uncertainty-remains", "type": "regex", "pattern": "(?i)\\b(may|might|could|possibly|potentially)\\b"},
+            {"id": "retention-obligation-and-minimum", "type": "regex", "pattern": "(?i)(must|required to).{0,50}(keep|retain).{0,40}(at least|minimum of)\\s+30 days"},
+            {"id": "empty-framing-removed", "type": "regex", "pattern": "(?i)\\A(?!.*it is important to note).+\\Z"}
+          ]
+        },
+        {
+          "id": "missing-founding-date-stays-uncertain",
+          "prompt": "Improve the wording of this paragraph for an internal company profile. Return only the revised paragraph.\n\nThe company may have been founded in the 1990s, but this is an unverified estimate. Its exact founding date is not documented in the available sources.",
+          "checks": [
+            {"id": "approximate-period-preserved", "type": "required_content", "value": "1990s"},
+            {"id": "tentative-claim-preserved", "type": "regex", "pattern": "(?i)(?:\\b(?:may|might|could|appears?|seems?|likely|probably|apparently|suggests?|thought|believed|estimat(?:ed|es?))\\b[^.!?;]{0,120}\\b1990s\\b|\\b1990s\\b(?:(?!\\b(?:exact|precise)\\b)[^.!?;]){0,100}\\b(?:estimate|unverified|uncertain|unconfirmed)\\b)"},
+            {"id": "evidence-gap-preserved", "type": "regex", "pattern": "(?i)not documented|undocumented|unknown|uncertain|unconfirmed|not (?:yet )?known|unclear|\\b(?:do(?:es)? not|don['’]t|doesn['’]t)\\b[^.!?;]{0,100}\\b(?:document|provide|record|establish)\\b[^.!?;]{0,60}\\b(?:exact|precise) (?:founding )?date\\b|\\bno (?:exact|precise) (?:founding )?date (?:is |has been )?(?:documented|recorded|known|available)\\b"},
+            {"id": "no-invented-specific-year", "type": "regex", "pattern": "\\A(?!.*\\b(?:19|20)\\d{2}\\b).+\\Z"},
+            {"id": "no-invented-registration-records", "type": "regex", "pattern": "(?i)\\A(?!.*registration (?:documents|records)).+\\Z"}
+          ]
+        },
+        {
+          "id": "copy-ready-unchanged-sentence",
+          "prompt": "Copy-edit this sentence for my engineering newsletter. Return only the sentence.\n\nThe rollback was uneventful, which is exactly how I like it.",
+          "checks": [
+            {"id": "unchanged-artifact-only", "type": "regex", "pattern": "\\A\\s*The rollback was uneventful, which is exactly how I like it\\.\\s*\\Z"}
+          ]
+        },
+        {
+          "id": "copy-ready-rotation-instructions",
+          "prompt": "Copy-edit this paragraph for an administrator guide. Return only the revised paragraph.\n\nIn order to rotate a token, select Rotate token in Settings. The old token remains valid for 15 minutes.",
+          "checks": [
+            {"id": "action-label-preserved", "type": "required_content", "value": "Rotate token"},
+            {"id": "location-preserved", "type": "required_content", "value": "Settings"},
+            {"id": "old-token-lifetime-preserved", "type": "regex", "pattern": "(?i)\\b(?:old|previous|existing) token\\b[^.!?]{0,60}\\b(?:valid|active|usable|expires)\\b[^.!?]{0,30}\\b(?:15|fifteen) minutes\\b"},
+            {"id": "filler-removed", "type": "regex", "pattern": "(?i)\\A(?!.*in order to).+\\Z"},
+            {"id": "single-paragraph-only", "type": "regex", "pattern": "\\A[^\\r\\n]+(?:\\r?\\n[^\\r\\n]+)*\\s*\\Z"},
+            {"id": "no-editorial-commentary", "type": "regex", "pattern": "(?i)\\A(?!.*(?:\\bchanges?:|\\bno (?:changes?|edits?) (?:needed|necessary)|\\b(?:I|we) (?:changed|removed|replaced|kept)\\b|\\bhere(?:['’]s| is) (?:the|your) (?:edited|revised)|\\blet me know\\b)).+\\Z"}
+          ]
+        },
+        {
+          "id": "migration-guide-preserves-change-history",
+          "prompt": "Draft a migration-guide note from these facts: Version 2.4 raises the minimum log retention period from 14 days to 30 days. Operators must set `keep_days=30` before upgrading. Return only the note.",
+          "checks": [
+            {"id": "version", "type": "required_content", "value": "2.4"},
+            {"id": "previous-retention-preserved", "type": "regex", "pattern": "\\b14\\b"},
+            {"id": "new-retention-preserved", "type": "regex", "pattern": "\\b30\\b"},
+            {"id": "configuration-preserved", "type": "required_content", "value": "`keep_days=30`"},
+            {"id": "upgrade-order-preserved", "type": "regex", "pattern": "(?i)before (?:you )?upgrad(?:e|ing)|prior to (?:the )?upgrad(?:e|ing)"}
+          ]
+        },
+        {
+          "id": "email-draft-in-chat-is-an-artifact",
+          "prompt": "Draft a plain-text email to Mira asking her to send the worker logs by Friday. Sign off with Thanks, Rowan. Return only the email so I can send it.",
+          "checks": [
+            {"id": "recipient", "type": "required_content", "value": "Mira"},
+            {"id": "deadline", "type": "required_content", "value": "Friday"},
+            {"id": "request", "type": "regex", "pattern": "(?i)worker logs"},
+            {"id": "signoff-is-not-chat-residue", "type": "regex", "pattern": "Thanks,\\s+Rowan"},
+            {"id": "plain-text-delivery", "type": "regex", "pattern": "\\A(?!.*(?:^#{1,6} |\\*\\*|```)).+\\Z"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "regression",
+      "type": "regression",
+      "mode": "forced",
+      "fixture": {"type": "empty"},
+      "cases": [
+        {
+          "id": "regression-workflow-readme-describes-current-behavior-with_skill",
+          "prompt": "Draft a README paragraph documenting ResponseCache from these notes: ResponseCache holds at most 200 entries. When full, it evicts the least recently used entry. It replaced FileCache last month. Return only the paragraph.",
+          "checks": [
+            {"id": "capacity-limit-preserved", "type": "regex", "pattern": "(?i)(at most|up to|maximum of|limited to|limit of)\\s+200|200[- ]entr(?:y|ies).{0,20}(limit|maximum|capacity)"},
+            {"id": "eviction-policy-preserved", "type": "regex", "pattern": "(?i)least[\\s‐‑-]+recently[\\s‐‑-]+used|\\bLRU\\b"},
+            {"id": "no-previous-implementation-narration", "type": "forbidden_content", "value": "FileCache"},
+            {"id": "no-relative-edit-date", "type": "regex", "pattern": "(?i)\\A(?!.*last month).+\\Z"}
+          ],
+          "regression_from": "workflow/readme-describes-current-behavior/with_skill",
+          "source_run_id": "workflow/readme-describes-current-behavior/with_skill",
+          "trace_path": "evidence/readme-history.json",
+          "failure_summary": "Current-state README retained the previous implementation name and relative edit date after the skill was read.",
+          "source_suite": "workflow",
+          "source_case_id": "readme-describes-current-behavior",
+          "source_configuration": "with_skill",
+          "harness_mode": "real"
+        },
+        {
+          "id": "regression-workflow-leave-effective-personal-voice-alone-with_skill",
+          "prompt": "Copy-edit this sentence for my blog. Return only the sentence.\n\nI like boring deploys—the ones I can forget about by lunch.",
+          "checks": [
+            {"id": "no-unnecessary-rewrite", "type": "regex", "pattern": "\\A\\s*I like boring deploys—the ones I can forget about by lunch\\.\\s*\\Z"}
+          ],
+          "regression_from": "workflow/leave-effective-personal-voice-alone/with_skill",
+          "source_run_id": "workflow/leave-effective-personal-voice-alone/with_skill",
+          "trace_path": "evidence/editorial-notes.json",
+          "failure_summary": "Opus returned the unchanged sentence but appended an unrequested no-change explanation after reading the skill.",
+          "source_suite": "workflow",
+          "source_case_id": "leave-effective-personal-voice-alone",
+          "source_configuration": "with_skill",
+          "harness_mode": "real"
+        },
+        {
+          "id": "regression-workflow-protect-non-prose-and-real-lists-with_skill",
+          "prompt": "Copy-edit the prose in this README excerpt. Return the edited excerpt as Markdown, without wrapping the whole thing in a code fence.\n\n---\ntitle: RetryPolicy\n---\n\n# RetryPolicy\n\nIt is important to note that RetryPolicy has the ability to retry requests. The API is not thread-safe. The only supported operations are read, write, and retry.\n\n> “A vibrant tapestry,” wrote Mina.\n\nSee [RetryPolicy](https://example.invalid/api/retry?mode=robust#usage).\n\n```ts\nconst retryPolicy = { mode: \"robust\", attempts: 3 };\n```",
+          "checks": [
+            {"id": "frontmatter-preserved", "type": "required_content", "value": "---\ntitle: RetryPolicy\n---"},
+            {"id": "technical-limitation-preserved", "type": "required_content", "value": "not thread-safe"},
+            {"id": "all-three-operations-preserved", "type": "regex", "pattern": "(?i)\\bread\\b.{0,60}\\bwrite\\b.{0,60}\\bretry\\b"},
+            {"id": "exhaustive-scope-preserved", "type": "regex", "pattern": "(?i)\\b(?:only|exclusively|limited to|no other operations)\\b"},
+            {"id": "quotation-preserved", "type": "required_content", "value": "> “A vibrant tapestry,” wrote Mina."},
+            {"id": "link-target-preserved", "type": "required_content", "value": "https://example.invalid/api/retry?mode=robust#usage"},
+            {"id": "code-preserved", "type": "required_content", "value": "```ts\nconst retryPolicy = { mode: \"robust\", attempts: 3 };\n```"},
+            {"id": "prose-framing-removed", "type": "regex", "pattern": "(?i)\\A(?!.*it is important to note).+\\Z"},
+            {"id": "no-editorial-commentary", "type": "regex", "pattern": "(?i)\\A(?!.*(?:\\bchanges?:|\\bno (?:changes?|edits?) (?:needed|necessary)|\\b(?:I|we) (?:changed|removed|replaced|kept)\\b|\\bhere(?:['’]s| is) (?:the|your) (?:edited|revised)|\\blet me know\\b)).+\\Z"}
+          ],
+          "regression_from": "workflow/protect-non-prose-and-real-lists/with_skill",
+          "source_run_id": "workflow/protect-non-prose-and-real-lists/with_skill",
+          "trace_path": "evidence/editorial-notes.json",
+          "failure_summary": "Opus edited the excerpt correctly but appended an unrequested change report after reading the skill.",
+          "source_suite": "workflow",
+          "source_case_id": "protect-non-prose-and-real-lists",
+          "source_configuration": "with_skill",
+          "harness_mode": "real"
+        }
+      ]
+    },
+    {
+      "name": "trigger",
+      "type": "trigger",
+      "mode": "natural",
+      "fixture": {"type": "empty"},
+      "unsupported_reason": "Automatic skill activation is not implemented by the current runner; these cases record the discovery contract only.",
+      "cases": [
+        {
+          "id": "positive-human-documentation",
+          "prompt": "Write a README section explaining how operators rotate API keys.",
+          "should_trigger": true,
+          "expected_skill": "human-writing"
+        },
+        {
+          "id": "positive-email-delivered-in-chat",
+          "prompt": "Draft an email I can send to customers about tomorrow's maintenance window.",
+          "should_trigger": true,
+          "expected_skill": "human-writing"
+        },
+        {
+          "id": "positive-pr-description-revision",
+          "prompt": "Rewrite this PR description for the engineers who will review it.",
+          "should_trigger": true,
+          "expected_skill": "human-writing"
+        },
+        {
+          "id": "negative-ordinary-explanation",
+          "prompt": "Can you explain what a cache miss is? I just want to understand it.",
+          "should_trigger": false,
+          "expected_skill": null
+        },
+        {
+          "id": "negative-progress-update",
+          "prompt": "How is the implementation going? Give me a quick progress update.",
+          "should_trigger": false,
+          "expected_skill": null
+        },
+        {
+          "id": "negative-agent-facing-markdown",
+          "prompt": "Write a SKILL.md that tells coding agents how to choose test boundaries.",
+          "should_trigger": false,
+          "expected_skill": null
+        },
+        {
+          "id": "negative-prompt-rewrite",
+          "prompt": "Tighten this system prompt so the model follows its tool restrictions reliably.",
+          "should_trigger": false,
+          "expected_skill": null
+        },
+        {
+          "id": "negative-code-change",
+          "prompt": "Fix the cache eviction bug in cache.py without changing the documentation.",
+          "should_trigger": false,
+          "expected_skill": null
+        },
+        {
+          "id": "negative-data-transformation",
+          "prompt": "Convert this JSON configuration into YAML without changing any values.",
+          "should_trigger": false,
+          "expected_skill": null
+        },
+        {
+          "id": "negative-read-only-document-discussion",
+          "prompt": "Read this design document and tell me in chat whether it mentions retry limits. Do not change it or draft a report.",
+          "should_trigger": false,
+          "expected_skill": null
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {"harness": "pi", "force_skill": true},
+    "without_skill": {"harness": "pi", "force_skill": false}
+  }
+}

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Reworked `human-writing` as automatic guidance only for durable, human-facing prose. Added fact-preservation and voice safeguards, replaced blanket style rules and unsupported examples, and added maintenance guidance plus workflow and trigger eval cases.
+- Tightened `human-writing` after live evaluation: distinguish selecting relevant source notes from preserving claims, omit incidental documentation history, and preserve tentative and exhaustive scope. Added the confirmed README regression and grader tests that accept equivalent dates, technical-term hyphenation, and evidence-gap phrasing.
+- Clarified `human-writing` copy-ready delivery: editorial notes require a request and stay outside the artifact; no-change examples now return the original text. Preserved two observed Opus commentary failures as regressions and added separate cases for bounded repeated testing.
 - Made native Pi compaction summary blocks clickable in `pi-ui-customization`, so clicking toggles the summary's expanded content.
 - Collapsed every `pi-ui-customization` tool row by default. Clicking a block still expands that tool's output; the previous expand-hint, completed-`read`, and `edit`-only exceptions are gone.
 - Rendered `cache-miss-gate` warnings as a dark amber chat block and dropped the compaction-cost footnote from that message.
