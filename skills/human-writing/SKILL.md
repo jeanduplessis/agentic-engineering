@@ -4,10 +4,9 @@ user-invocable: false
 metadata:
   version: "3.0.2"
 description: |
-  Writing guidance applied automatically. Use when creating or revising durable prose for human readers:
-  documentation, reports, PR descriptions, release notes, articles, proposals, and emails drafted for sending.
-  Includes drafts delivered in chat when intended for use outside the conversation. Not for ordinary chat replies,
-  progress updates, code or data transformations, or agent-facing prompts, instructions, and skills.
+  Use when creating or revising durable human-facing prose: documentation, reports, PR descriptions,
+  release notes, articles, proposals, and emails. Includes drafts delivered in chat for use outside the conversation.
+  Not for ordinary chat, progress updates, or agent-facing instructions.
 ---
 
 # Human-facing writing
