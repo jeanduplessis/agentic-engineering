@@ -18,6 +18,10 @@ import {
 	readOpenAIExtendedSupportState,
 	type OpenAIExtendedSupportState,
 } from "../openai-extended-support/state";
+import {
+	collectLoadedSkillNames,
+	type LoadedSkillCatalogEntry,
+} from "./loaded-skills";
 
 const UNAVAILABLE = "﹍";
 const KILO_STATUS_KEY = "kilo-credits";
@@ -435,9 +439,22 @@ function renderSubscriptionQuota(
 	return wrapPreservingAnsi(line, width);
 }
 
-function renderModelTable(rows: ModelRow[], theme: Theme, width: number): string[] {
-	if (width <= 0) return [];
-	const lines = [theme.fg("dim", "─".repeat(width))];
+function renderLoadedSkills(names: string[], theme: Theme, width: number): string[] {
+	if (names.length === 0 || width <= 0) return [];
+	const separator = theme.fg("dim", " • ");
+	const line =
+		symbolColor(theme, "◈ ") + names.map((name) => theme.fg("text", name)).join(separator);
+	return [
+		theme.fg("dim", "─".repeat(width)),
+		...wrapPreservingAnsi(line, width),
+	];
+}
+
+function renderModelTable(rows: ModelRow[], theme: Theme, availableWidth: number): string[] {
+	if (availableWidth <= 0) return [];
+	const lines = [theme.fg("dim", "─".repeat(availableWidth))];
+	// Keep the table compact without limiting the section divider.
+	const width = Math.min(availableWidth, 120);
 	const stepWidth = Math.max("Steps".length, ...rows.map((row) => String(row.steps).length));
 	const costs = rows.map((row) => `$${row.cost.toFixed(2)}`);
 	const costWidth = Math.max("Cost".length, ...costs.map((cost) => cost.length));
@@ -496,7 +513,28 @@ export default function customFooterExtension(pi: ExtensionAPI) {
 		| undefined;
 	let latestRate: number | undefined;
 	let sessionName: string | undefined;
+	let loadedSkillsCache: { key: string; names: string[] } | undefined;
 	let priorityModeActive = readOpenAIExtendedSupportState()?.active === true;
+
+	function getLoadedSkills(ctx: ExtensionContext): string[] {
+		// Discovery contributions are applied after resources_discover handlers finish.
+		// Read the live catalog here, including before the first prompt on resume/reload.
+		const catalog = pi.getCommands().flatMap((command): LoadedSkillCatalogEntry[] => {
+			if (command.source !== "skill" || !command.name.startsWith("skill:")) return [];
+			return [{ name: command.name.slice(6), filePath: command.sourceInfo.path }];
+		});
+		const key = JSON.stringify([
+			ctx.sessionManager.getSessionId(), ctx.cwd, ctx.sessionManager.getLeafId(), catalog,
+		]);
+		// Avoid repeated filesystem lookups and YAML parsing during streaming redraws.
+		if (loadedSkillsCache?.key !== key) {
+			loadedSkillsCache = {
+				key,
+				names: collectLoadedSkillNames(ctx.sessionManager.buildContextEntries(), catalog, ctx.cwd),
+			};
+		}
+		return loadedSkillsCache.names;
+	}
 
 	function restoreLatestRate(ctx: ExtensionContext): void {
 		latestRate = undefined;
@@ -539,6 +577,7 @@ export default function customFooterExtension(pi: ExtensionAPI) {
 					const location = formatLocation(ctx.cwd, footerData.getGitBranch(), contentWidth);
 					const titleLine = renderSessionLine(sessionTitle, location, theme, contentWidth);
 					const extendedSupportState = readOpenAIExtendedSupportState();
+					const loadedSkills = getLoadedSkills(ctx);
 					const lines = [
 						titleLine,
 						...renderContextAndModel(
@@ -557,10 +596,11 @@ export default function customFooterExtension(pi: ExtensionAPI) {
 							contentWidth,
 						),
 						...renderSubscriptionQuota(extendedSupportState, theme, contentWidth),
+						...renderLoadedSkills(loadedSkills, theme, contentWidth),
 					];
 					const completedModels = totals.models.filter((row) => row.id !== "other" && row.steps > 0);
 					if (completedModels.length > 1) {
-						lines.push(...renderModelTable(totals.models, theme, Math.min(contentWidth, 120)));
+						lines.push(...renderModelTable(totals.models, theme, contentWidth));
 					}
 					return lines.map((line) => ` ${padRight(fit(line, contentWidth), contentWidth)} `);
 				},
@@ -581,7 +621,10 @@ export default function customFooterExtension(pi: ExtensionAPI) {
 		requestRender?.();
 	});
 
+	pi.on("before_agent_start", () => requestRender?.());
+
 	pi.on("session_start", (_event, ctx) => {
+		loadedSkillsCache = undefined;
 		activeAssistantStream = undefined;
 		sessionName = ctx.sessionManager.getSessionName();
 		restoreLatestRate(ctx);
@@ -589,6 +632,7 @@ export default function customFooterExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("resources_discover", (_event, ctx) => {
+		loadedSkillsCache = undefined;
 		install(ctx);
 	});
 
@@ -634,8 +678,10 @@ export default function customFooterExtension(pi: ExtensionAPI) {
 	});
 
 	// message_end handlers run before Pi persists the finalized message. Repaint
-	// again at turn_end, when session totals include that message.
+	// at turn boundaries, when session totals and loaded-skill reads are present.
+	pi.on("turn_start", () => requestRender?.());
 	pi.on("turn_end", () => requestRender?.());
+	pi.on("session_compact", () => requestRender?.());
 	pi.on("model_select", () => requestRender?.());
 	pi.on("thinking_level_select", () => requestRender?.());
 	pi.on("session_tree", (_event, ctx) => {
