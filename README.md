@@ -15,6 +15,8 @@ Pi extensions live in `harness/pi/extensions/`. This checkout is their source of
 
 An extension with npm dependencies (for example `openai-images`) needs `npm install` inside its directory in this checkout. `node_modules/` and extension-written runtime state are untracked.
 
+The repository-owned [`compaction-model`](harness/pi/extensions/compaction-model/README.md) extension routes Pi's native compaction through a dedicated model. Select it in setup, then configure `compactionModel` in Pi's settings; no third-party extension package is needed.
+
 This repository's skills remain under `skills/`. They are written for shared behavior across supported harnesses. Install or link them according to the target harness's documented discovery mechanism; installation paths are separate from this source checkout.
 
 Use this repository as a local Pi package:
