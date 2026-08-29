@@ -259,12 +259,14 @@ class PiUiCustomizationController {
 			}
 		}
 
-		// ToolExecutionComponent's Box adds a styled bottom-padding row. Keep
-		// trailing blank rows so the collapsed block retains its background below
-		// the visible content.
+		// Keep one bottom-padding row, not trailing newlines from streaming
+		// content: those would make the collapsed block grow and shrink as the
+		// next line arrives. Image blocks need their trailing image-height rows.
+		const hasImages = lines.some(isTerminalImageLine);
 		for (let index = lines.length - 1; index > firstContentIndex; index--) {
 			if (this.plainText(lines[index]!).trim().length > 0) break;
 			keep.add(index);
+			if (!hasImages) break;
 		}
 
 		return lines.filter((_line, index) => keep.has(index));
