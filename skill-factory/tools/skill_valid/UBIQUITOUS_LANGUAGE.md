@@ -70,10 +70,10 @@
   Avoid aliases: Ignored suite, metadata suite.
 
 - **With-Skill Configuration**: The eval configuration that runs a supported live harness with the **Target Skill**
-  force-loaded. Avoid aliases: Candidate config, enabled config.
+  available. Pi advertises its metadata; Kilo attaches its instructions. Avoid aliases: Candidate config, enabled config.
 
-- **Live Eval Gate**: The **Live Gate** that runs required eval suites through `tools.skill_eval` using only
-  the **With-Skill Configuration**. Avoid aliases: Behavior gate, eval gate.
+- **Live Eval Gate**: The **Live Gate** that runs workflow/regression suites through `tools.skill_eval` using
+  the **With-Skill Configuration**, plus Pi discovery profiles when `--include-trigger` is selected. Avoid aliases: Behavior gate, eval gate.
 
 - **Strict Real-Run Success**: The eval pass rule requiring every run to be real, non-synthetic,
   process-passed, and content-passed. Avoid aliases: 100% pass, clean eval pass.
@@ -125,7 +125,8 @@
 
 - The **Live Eval Gate** always runs the **Workflow Suite** and also runs the **Regression Suite** when present.
 
-- The **Live Eval Gate** executes only the **With-Skill Configuration** in v1.
+- The **Live Eval Gate** executes the **With-Skill Configuration** for workflow/regression. `--include-trigger`
+  adds natural Pi trigger cases using their discovery profiles, with separate live opt-in still required.
 
 - **Failure Artifacts** may exist only for failed runs; successful runs delete temporary child artifacts.
 

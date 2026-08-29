@@ -26,6 +26,8 @@ PYTHONPATH=skill-factory python3 -m tools.llm_optimal_check skills/custom-comman
 ```
 
 No-live `--require-real` run must skip honestly. Run live harness eval only with explicit approval.
+Trigger suites now support Pi-only natural discovery; capability remains unsupported. Before live trigger evaluation,
+provide a failing-test fixture for the negative case so it measures selection on an executable task.
 
 ## Change guidelines
 

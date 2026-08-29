@@ -18,7 +18,7 @@ before changing a tool's internals.
   `smell_test.py` wrapper..
 
 - `tools.skill_eval`: Purpose: Skill behavior evaluation framework.. Primary CLI/API: `PYTHONPATH=skill-factory python3 -m
-  tools.skill_eval <manifest> <suite> --results <dir>`. Notes: Runs workflow/regression suites, writes trace
+  tools.skill_eval <manifest> <suite> --results <dir>`. Notes: Runs workflow/regression and Pi-only natural trigger suites, writes trace
   bundles, supports static/replay/real harness modes, and labels synthetic results honestly..
 
 - `tools.skill_valid`: Purpose: End-to-end validity gate for one repo-local skill.. Primary CLI/API: `python3

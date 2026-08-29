@@ -10,12 +10,12 @@ from pathlib import Path
 from typing import Any
 
 from .grading import checks_from_legacy_expectations, grade_response
-from .manifest import EvalCase, load_manifest
+from .manifest import EvalCase, load_manifest, suite_configurations
 from .reporting import write_reports
 from .sandbox import create_sandbox
 
 
-EXECUTABLE_SUITE_TYPES = {"workflow", "regression"}
+EXECUTABLE_SUITE_TYPES = {"workflow", "regression", "trigger"}
 REAL_HARNESSES = {"pi", "kilo"}
 LIVE_OPT_IN_ENV = "SKILL_EVAL_ALLOW_LIVE"
 LEGACY_PI_LIVE_OPT_IN_ENV = "SKILL_EVAL_ALLOW_LIVE_PI"
@@ -31,7 +31,12 @@ def run_suite(
 ) -> dict[str, Any]:
     manifest = load_manifest(manifest_path)
     suite = manifest.suite(suite_name)
-    configs = configurations or manifest.configurations or {"default": {"harness": "static", "response": ""}}
+    configs = suite_configurations(manifest, suite)
+    if configurations is not None and (configurations or suite.type == "trigger"):
+        configs = configurations
+    if suite.type == "trigger":
+        from .trigger import validate_trigger_suite
+        validate_trigger_suite(manifest, suite, configs)
     if require_real:
         synthetic_configs = [name for name, config in configs.items() if _harness_contract(config)["synthetic"]]
         if synthetic_configs:
@@ -39,7 +44,9 @@ def run_suite(
                 "Benchmark-quality run requires real harness; "
                 f"synthetic configurations are not allowed: {', '.join(synthetic_configs)}"
             )
-    result_root = Path(result_root)
+    result_root = Path(result_root).resolve()
+    if suite.type == "trigger" and result_root.exists() and any(result_root.iterdir()):
+        raise FileExistsError("Trigger results require a fresh directory; prior evidence will not be overwritten.")
     result_root.mkdir(parents=True, exist_ok=True)
     runs = []
 
@@ -55,6 +62,11 @@ def run_suite(
         (result_root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True))
         return summary
 
+    trigger_plan = None
+    if suite.type == "trigger":
+        from .trigger import freeze_trigger_inputs
+        trigger_plan = freeze_trigger_inputs(manifest, suite, configs, result_root)
+
     for case in suite.cases:
         for config_name, config in configs.items():
             run_dir = result_root / manifest.skill.get("name", "unknown-skill") / suite.name / case.id / config_name
@@ -62,7 +74,7 @@ def run_suite(
             sandbox = create_sandbox(
                 result_root,
                 f"{suite.name}-{case.id}-{config_name}",
-                _resolve_fixture(manifest.path, suite.fixture),
+                trigger_plan["fixture"] if trigger_plan else _resolve_fixture(manifest.path, suite.fixture),
             )
             run = _run_case(
                 case,
@@ -77,6 +89,7 @@ def run_suite(
                     "schema_version": manifest.schema_version,
                 },
                 suite_name=suite.name,
+                trigger_plan=trigger_plan,
             )
             runs.append(run)
 
@@ -111,15 +124,21 @@ def _run_case(
     custom_grader_path: Path | None = None,
     manifest_metadata: dict[str, Any] | None = None,
     suite_name: str | None = None,
+    trigger_plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     start = time.perf_counter()
     started_at = time.time()
     before_workspace = _snapshot_workspace(sandbox_path)
-    harness_result = _execute_harness(case, config, sandbox_path=sandbox_path, skill_path=skill_path)
+    harness_result = _execute_harness(
+        case, config, sandbox_path=sandbox_path, skill_path=skill_path,
+        trigger_plan=trigger_plan, config_name=config_name, run_dir=run_dir,
+    )
     response = harness_result["response"]
     elapsed_ms = round((time.perf_counter() - start) * 1000, 3)
     finished_at = time.time()
     contract = _harness_contract(config)
+    if trigger_plan:
+        contract["metric_provenance"]["pass_rate"] = "observed_pi_skill_selection"
     raw_output = {
         "harness": config.get("harness", "static"),
         "harness_mode": contract["mode"],
@@ -140,11 +159,40 @@ def _run_case(
     artifact_manifest = _artifact_manifest(before_workspace, after_workspace)
     workspace_diff = _workspace_diff(before_workspace, after_workspace)
     checks = list(case.checks) or checks_from_legacy_expectations(case.expected_output, case.expectations)
+    trigger_observation = None
+    if trigger_plan is not None:
+        from .trigger import inputs_unchanged, inspect_trigger_trace
+        (run_dir / "pi-events.jsonl").write_text(raw_output.get("stdout", ""))
+        observer_path = run_dir / "observer-context.jsonl"
+        try:
+            observer_output = observer_path.read_text() if observer_path.exists() else ""
+        except (OSError, UnicodeError):
+            observer_output = "unreadable observer evidence"
+        trigger_observation = inspect_trigger_trace(
+            raw_output.get("stdout", ""), plan=trigger_plan, sandbox=sandbox_path, config=config,
+            observer_output=observer_output,
+        )
+        if not inputs_unchanged(trigger_plan, config_name) or workspace_diff:
+            trigger_observation["errors"].append("inputs_or_workspace_changed")
+            trigger_observation["valid"] = False
+        response = trigger_observation["response"]
+        usage["output_chars"] = len(response)
+        harness_result["skill_paths_loaded"] = [trigger_plan["skill_path"]] if trigger_observation["loaded"] else []
+        harness_result["skill_paths_advertised"] = [trigger_plan["skill_path"]] if trigger_observation["advertised"] else []
+        if raw_output["status"] == "passed" and not trigger_observation["valid"]:
+            raw_output["status"] = "trace_invalid"
+            raw_output["error"] = ", ".join(trigger_observation["errors"])
+        (run_dir / "trigger.json").write_text(json.dumps(trigger_observation, indent=2, sort_keys=True))
     if raw_output["status"] == "skipped":
         grade = _not_graded(raw_output.get("skip_reason", "Run skipped."), "run_skipped")
     elif raw_output["status"] != "passed":
         reason = raw_output.get("error") or raw_output.get("stderr") or f"Harness status: {raw_output['status']}"
-        grade = _not_graded(f"Process failure; deterministic grading not run: {reason}", "process_failed")
+        kind = "trace_invalid" if raw_output["status"] == "trace_invalid" else "process_failed"
+        label = "Invalid trace" if kind == "trace_invalid" else "Process failure"
+        grade = _not_graded(f"{label}; deterministic grading not run: {reason}", kind)
+    elif trigger_observation is not None:
+        from .trigger import grade_trigger
+        grade = grade_trigger(trigger_observation, case.metadata["should_trigger"])
     else:
         grade = grade_response(
             response,
@@ -164,6 +212,7 @@ def _run_case(
     events = [
         {"event": "run_started", "case_id": case.id, "configuration": config_name, "time_unix": started_at},
         {"event": "harness_finished", "exit_code": raw_output.get("exit_code"), "status": raw_output["status"], "time_unix": finished_at},
+        *(trigger_observation["events"] if trigger_observation else []),
         {"event": "run_finished", "case_id": case.id, "configuration": config_name, "time_unix": finished_at},
     ]
 
@@ -183,6 +232,8 @@ def _run_case(
         "manifest": manifest_metadata or {},
         "harness": contract,
         "skill_paths_loaded": harness_result.get("skill_paths_loaded", []),
+        "skill_paths_advertised": harness_result.get("skill_paths_advertised", []),
+        "skill_loading_evidence": "pi_tool_events" if trigger_plan else "unobserved",
     }, indent=2, sort_keys=True))
 
     return {
@@ -200,6 +251,10 @@ def _run_case(
         "model": contract.get("model"),
         "provider": contract.get("provider"),
         "grade_summary": grade["summary"],
+        **({"should_trigger": case.metadata["should_trigger"],
+            "trigger_outcome": grade.get("outcome", "invalid"),
+            "observed_model": trigger_observation["model"],
+            "observed_provider": trigger_observation["provider"]} if trigger_observation else {}),
     }
 
 
@@ -298,6 +353,9 @@ def _execute_harness(
     *,
     sandbox_path: Path,
     skill_path: Path | None,
+    trigger_plan: dict[str, Any] | None = None,
+    config_name: str = "",
+    run_dir: Path | None = None,
 ) -> dict[str, Any]:
     harness = config.get("harness", "static")
     if harness == "static":
@@ -329,7 +387,8 @@ def _execute_harness(
             "skill_paths_loaded": [],
         }
     if harness == "pi":
-        return _execute_pi_harness(case, config, sandbox_path=sandbox_path, skill_path=skill_path)
+        return _execute_pi_harness(case, config, sandbox_path=sandbox_path, skill_path=skill_path,
+                                   trigger_plan=trigger_plan, config_name=config_name, run_dir=run_dir)
     if harness == "kilo":
         return _execute_kilo_harness(case, config, sandbox_path=sandbox_path, skill_path=skill_path)
     raise ValueError(f"Unsupported harness: {harness}")
@@ -367,8 +426,8 @@ def _process_harness_result(
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
-        stdout = exc.stdout or ""
-        stderr = exc.stderr or ""
+        stdout = exc.stdout.decode(errors="replace") if isinstance(exc.stdout, bytes) else exc.stdout or ""
+        stderr = exc.stderr.decode(errors="replace") if isinstance(exc.stderr, bytes) else exc.stderr or ""
         return {
             "response": stdout,
             "raw_output": {
@@ -381,6 +440,13 @@ def _process_harness_result(
                 "error": "timeout",
             },
             "skill_paths_loaded": skill_paths_loaded,
+        }
+    except OSError as exc:
+        return {
+            "response": "", "skill_paths_loaded": skill_paths_loaded,
+            "raw_output": {"status": "process_failed", "stdout": "", "stderr": str(exc),
+                           "exit_code": None, "command": command, "cwd": str(sandbox_path),
+                           "error": "process_start_failed"},
         }
 
     return {
@@ -403,11 +469,19 @@ def _execute_pi_harness(
     *,
     sandbox_path: Path,
     skill_path: Path | None,
+    trigger_plan: dict[str, Any] | None = None,
+    config_name: str = "",
+    run_dir: Path | None = None,
 ) -> dict[str, Any]:
     if not _live_execution_allowed(config):
         return _skipped_harness_result(
             f"live harness execution is disabled; set allow_live or {LIVE_OPT_IN_ENV}=1"
         )
+
+    if trigger_plan is not None:
+        from .trigger import inputs_unchanged
+        if not inputs_unchanged(trigger_plan, config_name):
+            return _skipped_harness_result("Frozen trigger inputs changed; refusing another process.")
 
     executable = str(config.get("executable") or "pi")
     resolved_executable = _resolve_executable(config, "pi")
@@ -429,23 +503,32 @@ def _execute_pi_harness(
     if config.get("thinking"):
         command.extend(["--thinking", str(config["thinking"])])
 
-    skill_paths_loaded: list[str] = []
-    if config.get("force_skill"):
+    advertised: list[str] = []
+    trigger_env: dict[str, str] = {}
+    if trigger_plan is not None:
+        from .trigger import trigger_command
+        assert run_dir is not None
+        command, trigger_env = trigger_command(command, trigger_plan, config_name, sandbox_path, run_dir)
+        advertised.append(trigger_plan["skill_path"])
+    elif config.get("force_skill"):
         if skill_path is None:
             return _skipped_harness_result("force_skill requested but manifest skill.path is missing")
         command.extend(["--skill", str(skill_path)])
-        skill_paths_loaded.append(str(skill_path))
+        advertised.append(str(skill_path))
 
-    command.extend(["-p", case.prompt])
+    command.extend(["-p", "--", case.prompt])
     env = os.environ.copy()
     env.update({str(key): str(value) for key, value in dict(config.get("env", {})).items()})
-    return _process_harness_result(
+    env.update(trigger_env)
+    result = _process_harness_result(
         command,
         sandbox_path=sandbox_path,
         env=env,
         timeout_seconds=float(config.get("timeout_seconds", 120)),
-        skill_paths_loaded=skill_paths_loaded,
+        skill_paths_loaded=[],
     )
+    result["skill_paths_advertised"] = advertised
+    return result
 
 
 def _execute_kilo_harness(

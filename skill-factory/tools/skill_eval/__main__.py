@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from .manifest import load_manifest, suite_configurations
 from .regression import promote_failures_to_regression_cases
 from .runner import run_suite
 
@@ -32,18 +33,20 @@ def main() -> None:
     parser.add_argument("suite", help="Suite name to run")
     parser.add_argument("--results", type=Path, default=Path("skill-eval-results"), help="Result directory")
     parser.add_argument("--require-real", action="store_true", help="Reject static/replay harness configurations")
+    parser.add_argument("--configuration", action="append", help="Run only this named configuration (repeatable)")
     parser.add_argument("--allow-live", action="store_true", help="Explicitly allow real harness/model execution")
     parser.add_argument("--allow-live-pi", action="store_true", help="Deprecated alias for --allow-live")
     args = parser.parse_args()
 
-    configurations = None
+    manifest = load_manifest(args.manifest)
+    configurations = suite_configurations(manifest, manifest.suite(args.suite))
+    if args.configuration:
+        unknown = set(args.configuration) - configurations.keys()
+        if unknown:
+            parser.error(f"Unknown configurations: {', '.join(sorted(unknown))}")
+        configurations = {name: config for name, config in configurations.items() if name in args.configuration}
     if args.allow_live or args.allow_live_pi:
-        from .manifest import load_manifest
-
-        configurations = {
-            name: {**config, "allow_live": True}
-            for name, config in load_manifest(args.manifest).configurations.items()
-        }
+        configurations = {name: {**config, "allow_live": True} for name, config in configurations.items()}
     summary = run_suite(
         args.manifest,
         args.suite,

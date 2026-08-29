@@ -41,6 +41,23 @@ reports multiple missing requirements at once; those
 failures do not create live-run artifacts or call a harness. The `llm_optimal_check` gate may return `warn`; warnings
 are visible but non-blocking.
 
+### Optional Pi trigger suite
+
+Pass `--include-trigger` to validate the `trigger` suite's natural-discovery contract. With separate
+`--allow-live`, the live eval gate also runs its suite-local discovery configurations (or the default Pi
+`discovery` profile). This requires the Pi harness and adds cases × discovery profiles to the process budget;
+provider/model/thinking overrides also apply to these profiles. Without live opt-in, no processes run.
+
+```sh
+./skill-factory/tools/skill_valid/skill_validate.sh skills/human-writing --include-trigger
+# Add --allow-live --harness pi only after approving the additional live run budget.
+```
+
+Skipped, invalid, missing, duplicated, or failed trigger runs fail live validation. Do not confuse a completed
+process with successful activation/avoidance. See [skill_eval](../skill_eval/README.md#natural-trigger-evals-pi-only)
+for the target-only read profile, evidence contract, configuration fields, and limitations. Use `skill_eval`
+directly to retain successful benchmark artifacts; this validator still deletes successful temporary runs.
+
 ## stdout JSON contract
 
 The only machine contract is one compact stdout JSON object. Progress and diagnostics go to stderr.
@@ -126,7 +143,8 @@ Exit code is `0` only when `valid` is `true`. Gate statuses are `passed`, `warn`
 
 8. `live_eval` — when enabled, runs `tools.skill_eval.runner.run_suite` in-process for
    `workflow` and optional `regression`, using only a generated live `with_skill` configuration and
-   `require_real=True`.
+   `require_real=True`. With `--include-trigger`, also runs the Pi `trigger` suite using its discovery profiles,
+   not a generated with-skill configuration.
 
 `skill_spec`, `eval_manifest`, `agents_md`, `llm_optimal_check`, and `live_opt_in` are all checked before live
 gates so the result reports deterministic prerequisites together. Live gates run only when those prerequisite

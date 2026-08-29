@@ -27,6 +27,7 @@ class EvalSuite:
     mode: str = "forced"
     unsupported_reason: str | None = None
     custom_grader: str | None = None
+    configurations: dict[str, dict[str, Any]] | None = None
 
 
 @dataclass(frozen=True)
@@ -70,7 +71,18 @@ def _suite_from_dict(data: dict[str, Any], base_dir: Path) -> EvalSuite:
         mode=data.get("mode", "forced"),
         unsupported_reason=data.get("unsupported_reason"),
         custom_grader=data.get("custom_grader"),
+        configurations={name: dict(config) for name, config in data["configurations"].items()}
+        if "configurations" in data else None,
     )
+
+
+def suite_configurations(manifest: EvalManifest, suite: EvalSuite) -> dict[str, dict[str, Any]]:
+    """Suite-local profiles take precedence; trigger probes never inherit with/without controls."""
+    if suite.configurations is not None:
+        return suite.configurations
+    if suite.type == "trigger":
+        return {"discovery": {"harness": "pi"}}
+    return manifest.configurations or {"default": {"harness": "static", "response": ""}}
 
 
 def _load_legacy_cases(path: Path) -> list[dict[str, Any]]:

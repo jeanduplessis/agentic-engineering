@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Callable, TextIO
 
 from tools.llm_optimal_check import check_path as default_llm_optimal_check
-from tools.skill_eval.manifest import EvalManifest, load_manifest
+from tools.skill_eval.manifest import EvalManifest, load_manifest, suite_configurations
 from tools.skill_eval.runner import run_suite
 from tools.skill_valid.spec_checks import run_skill_spec_checks, summarize_checks
 
@@ -37,6 +37,7 @@ class ValidationOptions:
     harness_executable: str | None = None
     pi_executable: str = "pi"
     validate_timeout_seconds: float = 300.0
+    include_trigger: bool = False
 
 
 @dataclass(frozen=True)
@@ -374,6 +375,15 @@ def _gate_eval_manifest(ctx: ValidationContext) -> None:
         regression_case_count=len(regression.cases) if regression else 0,
         with_skill_config=dict(with_skill),
     )
+    if ctx.options.include_trigger:
+        from tools.skill_eval.trigger import validate_trigger_suite
+        try:
+            trigger = manifest.suite("trigger")
+            if trigger.type != "trigger" or _selected_harness(ctx) != "pi":
+                raise ValueError("--include-trigger requires a trigger suite and the Pi harness.")
+            validate_trigger_suite(manifest, trigger, _generated_trigger_configs(ctx))
+        except (KeyError, ValueError) as exc:
+            raise GateFailure("eval_manifest", f"Invalid trigger configuration: {exc}") from exc
     _pass_gate(
         ctx,
         "eval_manifest",
@@ -676,24 +686,34 @@ def _gate_live_eval(ctx: ValidationContext) -> None:
     assert ctx.manifest_info is not None
     artifact_dir = ctx.artifacts.child("skill_eval") if ctx.artifacts else None
     config = _generated_with_skill_config(ctx)
-    required = [(ctx.manifest_info.workflow_suite, ctx.manifest_info.workflow_case_count)]
+    required = [(ctx.manifest_info.workflow_suite, ctx.manifest_info.workflow_case_count, {"with_skill": dict(config)})]
     if ctx.manifest_info.regression_suite:
-        required.append((ctx.manifest_info.regression_suite, ctx.manifest_info.regression_case_count))
+        required.append((ctx.manifest_info.regression_suite, ctx.manifest_info.regression_case_count, {"with_skill": dict(config)}))
+    if ctx.options.include_trigger:
+        trigger = ctx.manifest_info.manifest.suite("trigger")
+        profiles = _generated_trigger_configs(ctx)
+        required.append((trigger.name, len(trigger.cases) * len(profiles), profiles))
     summaries: list[dict[str, Any]] = []
-    for suite_name, expected_cases in required:
+    for suite_name, expected_cases, profiles in required:
         result_root = (artifact_dir / suite_name) if artifact_dir else Path(tempfile.mkdtemp(prefix=f"skill-valid-eval-{suite_name}-"))
         try:
             summary = ctx.deps.eval_runner(
                 ctx.manifest_info.manifest_path,
                 suite_name,
                 result_root,
-                {"with_skill": dict(config)},
+                profiles,
                 require_real=True,
             )
         except Exception as exc:
             raise GateFailure("live_eval", f"skill_eval runner failed for {suite_name}: {exc}") from exc
         summaries.append(summary)
-        _enforce_strict_real_run_success(summary, suite_name=suite_name, expected_cases=expected_cases)
+        _enforce_strict_real_run_success(summary, suite_name=suite_name, expected_cases=expected_cases,
+                                       configurations=set(profiles))
+        if suite_name == "trigger":
+            expected = {(case.id, name) for case in trigger.cases for name in profiles}
+            actual = [(run.get("case_id"), run.get("configuration")) for run in summary["runs"]]
+            if len(actual) != len(expected) or set(actual) != expected:
+                raise GateFailure("live_eval", "Trigger suite has duplicate, missing, or unexpected runs.")
     _pass_gate(ctx, "live_eval", "Live skill eval suites passed strict real-run success.", {"suites": [summary.get("suite") for summary in summaries]})
 
 
@@ -715,7 +735,26 @@ def _generated_with_skill_config(ctx: ValidationContext) -> dict[str, Any]:
     return config
 
 
-def _enforce_strict_real_run_success(summary: dict[str, Any], *, suite_name: str, expected_cases: int) -> None:
+def _generated_trigger_configs(ctx: ValidationContext) -> dict[str, dict[str, Any]]:
+    assert ctx.manifest_info is not None
+    manifest = ctx.manifest_info.manifest
+    configs = suite_configurations(manifest, manifest.suite("trigger"))
+    result = {}
+    for name, config in configs.items():
+        profile = {**config, "allow_live": True}
+        for field in ("provider", "model", "thinking"):
+            if getattr(ctx.options, field):
+                profile[field] = getattr(ctx.options, field)
+        if ctx.options.harness_executable:
+            profile["executable"] = ctx.options.harness_executable
+        elif ctx.options.pi_executable != "pi":
+            profile["executable"] = ctx.options.pi_executable
+        result[name] = profile
+    return result
+
+
+def _enforce_strict_real_run_success(summary: dict[str, Any], *, suite_name: str, expected_cases: int,
+                                   configurations: set[str] | None = None) -> None:
     if summary.get("status") != "completed":
         raise GateFailure("live_eval", f"Suite {suite_name} did not complete: {summary.get('status')}")
     runs = summary.get("runs")
@@ -727,8 +766,8 @@ def _enforce_strict_real_run_success(summary: dict[str, Any], *, suite_name: str
         case_id = run.get("case_id", "unknown") if isinstance(run, dict) else "unknown"
         if not isinstance(run, dict):
             raise GateFailure("live_eval", f"Suite {suite_name} contains a malformed run.")
-        if run.get("configuration") != "with_skill":
-            raise GateFailure("live_eval", f"Suite {suite_name} run {case_id} did not use with_skill configuration.")
+        if run.get("configuration") not in (configurations or {"with_skill"}):
+            raise GateFailure("live_eval", f"Suite {suite_name} run {case_id} did not use an expected configuration.")
         if run.get("synthetic") is True or run.get("harness_mode") != "real":
             raise GateFailure("live_eval", f"Suite {suite_name} run {case_id} is synthetic, not a strict real run.")
         if run.get("status") != "passed":
@@ -751,6 +790,7 @@ def main(
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help="Repository root; defaults to current directory")
     parser.add_argument("--allow-live", action="store_true", help="Explicitly allow live harness/model calls")
     parser.add_argument("--allow-live-pi", action="store_true", help="Deprecated alias for --allow-live")
+    parser.add_argument("--include-trigger", action="store_true", help="Also validate and, with live opt-in, execute the Pi trigger suite")
     parser.add_argument("--harness", choices=("pi", "kilo"), help="Real harness override; defaults to manifest with_skill harness")
     parser.add_argument("--provider", help="Provider override for live harness gates")
     parser.add_argument("--model", help="Model override for live harness gates")
@@ -764,6 +804,7 @@ def main(
         repo_root=args.repo_root,
         allow_live=args.allow_live,
         allow_live_pi=args.allow_live_pi,
+        include_trigger=args.include_trigger,
         harness=args.harness,
         provider=args.provider,
         model=args.model,

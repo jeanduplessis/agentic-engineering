@@ -54,7 +54,7 @@ class SkillValidTests(unittest.TestCase):
             {
                 "name": "trigger",
                 "type": "trigger",
-                "unsupported_reason": "represented but not executable",
+                "mode": "natural",
                 "cases": [{"id": "trigger-case", "prompt": "Maybe trigger", "should_trigger": True}],
             },
         ]
@@ -133,6 +133,9 @@ class SkillValidTests(unittest.TestCase):
                         "synthetic": False,
                     }
                 ]
+            elif suite_name == "trigger":
+                runs = [{"case_id": "trigger-case", "configuration": name, "status": "passed", "passed": True,
+                         "harness_mode": "real", "synthetic": False} for name in configurations]
             return {"suite": suite_name, "suite_type": suite_name, "status": "completed", "runs": runs}
 
         def default_llm_check(path):
@@ -147,6 +150,54 @@ class SkillValidTests(unittest.TestCase):
         deps, calls = self.passing_deps(**kwargs.pop("deps_kwargs", {}))
         options = ValidationOptions(target=target, repo_root=root, allow_live_pi=True, **kwargs)
         return validate_skill(options, deps=deps), calls
+
+    def test_trigger_opt_in_preserves_live_gate_and_uses_discovery_profiles(self):
+        with self.make_repo() as (_, root):
+            target = self.write_valid_skill(root)
+            deps, calls = self.passing_deps()
+            code, result = validate_skill(ValidationOptions(target=target, repo_root=root, include_trigger=True, env={}), deps=deps)
+            self.assertEqual(code, 0)
+            self.assertEqual(calls["pi"], [])
+            self.assertEqual(calls["eval"], [])
+            code, result = validate_skill(ValidationOptions(target=target, repo_root=root, include_trigger=True,
+                                                          allow_live=True, model="test-model", env={}), deps=deps)
+            self.assertEqual(code, 0, result)
+            self.assertEqual([c["suite_name"] for c in calls["eval"]], ["workflow", "regression", "trigger"])
+            profile = calls["eval"][-1]["configurations"]["discovery"]
+            self.assertNotIn("force_skill", profile)
+            self.assertEqual(profile["model"], "test-model")
+            self.assertEqual(profile["harness"], "pi")
+            self.assertTrue(profile["allow_live"])
+
+    def test_invalid_trigger_contract_blocks_all_live_work(self):
+        with self.make_repo() as (_, root):
+            target = self.write_valid_skill(root)
+            manifest_path = target / "evals/manifest.json"
+            manifest = json.loads(manifest_path.read_text())
+            next(s for s in manifest["suites"] if s["type"] == "trigger")["cases"][0]["should_trigger"] = "yes"
+            manifest_path.write_text(json.dumps(manifest))
+            deps, calls = self.passing_deps()
+            code, result = validate_skill(ValidationOptions(target=target, repo_root=root, include_trigger=True,
+                                                          allow_live=True, env={}), deps=deps)
+            self.assertEqual(code, 1)
+            self.assertEqual(result["gates"]["eval_manifest"]["status"], "failed")
+            self.assertEqual(calls["pi"], [])
+            self.assertEqual(calls["eval"], [])
+
+    def test_trigger_validation_rejects_duplicate_run_coverage(self):
+        with self.make_repo() as (_, root):
+            target = self.write_valid_skill(root)
+            deps, calls = self.passing_deps()
+            def duplicate(manifest_path, suite_name, result_root, configurations, *, require_real):
+                summary = deps.eval_runner(manifest_path, suite_name, result_root, configurations, require_real=require_real)
+                if suite_name == "trigger":
+                    summary["runs"] *= 2
+                return summary
+            injected = ValidationDependencies(pi_runner=deps.pi_runner, eval_runner=duplicate, llm_optimal_checker=deps.llm_optimal_checker)
+            code, result = validate_skill(ValidationOptions(target=target, repo_root=root, include_trigger=True,
+                                                          allow_live=True, env={}), deps=injected)
+            self.assertEqual(code, 1)
+            self.assertIn("duplicate", result["gates"]["live_eval"]["message"])
 
     def test_cli_emits_compact_stdout_json_for_missing_skill_md_and_logs_to_stderr(self):
         with self.make_repo() as (tmp, root):

@@ -9,7 +9,8 @@ Usage:
 Runs deterministic skill validation by default:
   - validates target shape, required eval manifest, skill-local AGENTS.md, and LLM optimization readiness
   - with --allow-live, runs the validate-skills qualitative gate
-  - with --allow-live and a manifest, runs workflow/regression suites with the target skill force-loaded
+  - with --allow-live and a manifest, runs workflow/regression suites with the target skill available
+  - --include-trigger also validates the Pi trigger contract and runs discovery cases only with live opt-in
   - live behavior evals require strict real-run success
 
 Environment overrides:

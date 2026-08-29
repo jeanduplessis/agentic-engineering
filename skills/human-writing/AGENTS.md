@@ -27,7 +27,7 @@ input skill hashes, and traced confirmation that the models read the skill.
 
 Prompts request ordinary writing tasks rather than invoking the skill as a command. The founding-period fixture
 explicitly marks the decade as an unverified estimate; preserving uncertainty about the exact date alone is insufficient.
-The supported-operations fixture explicitly makes its list exhaustive. There are no copy fixtures or custom graders.
+The supported-operations fixture explicitly makes its list exhaustive. Workflow/regression cases have no copy fixtures or custom graders; the trigger suite uses `evals/fixtures/trigger` with `cache.py` and `design.md`.
 `evals/test_checks.py` tests semantic-equivalence boundaries, copy-ready delivery, and recorded regressions with fixed
 samples, not models. The `copy-ready-unchanged-sentence` and `copy-ready-rotation-instructions` workflow cases are separate
 from the original failure prompts and can be selected for a bounded repeated check. Set the case/model/repetition budget
@@ -35,8 +35,10 @@ before live execution; do not rerun until passing or change checks without retai
 
 The with-skill configuration exposes the target skill; the baseline omits it. Pi's explicit skill path registers it
 for discovery rather than guaranteeing a body read. Inspect read events before attributing a result to the full skill.
-Checks cover specific observable failures, not complete factual fidelity or writing quality. The trigger suite records
-positive and negative scope cases but is unsupported by the current runner; these runs do not prove activation boundaries.
+Checks cover specific observable failures, not complete factual fidelity or writing quality. The trigger suite has three
+positive and seven negative scope cases with complete inputs. It uses Pi's natural, target-only read-only profile and its own
+`discovery` configuration; successful target reads and avoidance are graded from observed events, not response text.
+This profile does not measure competition among skills or prove that the loaded instructions were followed.
 
 When a live output reveals a grader false positive, preserve the original grades, add valid and invalid checker samples,
 and label any regrading of saved outputs separately. Do not present regrading as a new model run.
@@ -51,7 +53,13 @@ PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/human-writing/evals/
   --results /tmp/human-writing-eval/workflow --require-real
 PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/human-writing/evals/manifest.json regression \
   --results /tmp/human-writing-eval/regression --require-real
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/human-writing/evals/manifest.json trigger \
+  --configuration discovery --results /tmp/human-writing-trigger-new-run --require-real
 ```
+
+Use a new/empty trigger results directory each time; the runner preserves frozen inputs and refuses to overwrite evidence.
+`skill_valid --include-trigger` also checks this suite and runs it only with live opt-in. Trigger failure promotion into
+workflow regressions is rejected; retain the trace and add a natural trigger case instead.
 
 The suite commands should skip real runs without live opt-in. Run live harness/model evaluations only with explicit
 approval; skipped runs and synthetic checks are not evidence of skill effectiveness. The optimization check may

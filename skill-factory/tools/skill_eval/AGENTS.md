@@ -22,7 +22,9 @@ and explicit about whether results are synthetic or real.
 
 - Regression suites run through the same case runner as workflow suites.
 
-- Trigger and capability suites may be represented in manifests, but execution is currently unsupported and should return an explicit unsupported summary.
+- Trigger suites execute only through Pi in natural mode, using a frozen target-only, read-only profile and trace-based grading. Capability suites remain explicitly unsupported.
+
+- Suite-local configurations override manifest profiles. Trigger defaults are discovery-only; never infer avoidance from a without-skill control.
 
 - Real harness adapters are Pi (`harness: "pi"`) and OpenCode-compatible Kilo (`harness: "kilo"`). Live
   execution must be gated by `allow_live: true`, `--allow-live`, or `SKILL_EVAL_ALLOW_LIVE=1`; Pi-specific
@@ -31,6 +33,12 @@ and explicit about whether results are synthetic or real.
 ## Important contracts
 
 - Do not fake real outputs. If live execution is unavailable, skip honestly.
+
+- Trigger activation requires a successful non-empty target read. Avoidance requires no target-read attempt and a complete valid trace; missing catalog or execution evidence is not a pass. Failed positive reads are not graded, while negative read attempts are false positives.
+
+- Keep raw Pi events, separate `observer-context.jsonl` catalog evidence, all assistant text, observed model identity, and frozen input hashes. Pi redirects extension stdout; never depend on it for observer records or infer catalog exposure from stderr. Reject result-directory reuse and trigger-to-workflow regression promotion. Do not serialize config environment values.
+
+- Explicit provider extensions are trusted code; the read boundary is not an OS sandbox. Do not expose ambient skills, prompts, context files, or unrestricted tools.
 
 - Process failures are not content failures. Timeouts/nonzero exits should produce `status: "process_failed"`, `grade.status: "not_graded"`, and `passed: null`.
 
@@ -48,7 +56,11 @@ and explicit about whether results are synthetic or real.
 
 - `runner.py`: suite execution, harness dispatch, trace bundle writing.
 
-- `grading.py`: generic deterministic checks and custom-grader loading.
+- `grading.py`: generic deterministic response checks and custom-grader loading.
+
+- `trigger.py`: trigger contract validation, frozen inputs, Pi observation parsing, and selection grading.
+
+- `harness/pi/extensions/skill-eval-observer/`: CLI-only catalog observer and read boundary (canonical source at repo root).
 
 - `reporting.py`: benchmark JSON and Markdown report rendering.
 
@@ -65,7 +77,8 @@ and explicit about whether results are synthetic or real.
 Run after changes:
 
 ```bash
-PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
+PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_skill_eval tools.skill_eval.tests.test_trigger -v
+node --test harness/pi/extensions/skill-eval-observer/tests/observer.test.mjs
 ```
 
 For live behavioral validation, only when explicitly requested or approved:

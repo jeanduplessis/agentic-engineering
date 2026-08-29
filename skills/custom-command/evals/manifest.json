@@ -22,7 +22,6 @@
       "fixture": {
         "type": "empty"
       },
-      "unsupported_reason": "Trigger execution is represented but not implemented in the current runner.",
       "cases": [
         {
           "id": "trigger-positive-create-command",

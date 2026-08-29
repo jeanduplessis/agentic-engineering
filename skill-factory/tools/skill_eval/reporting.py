@@ -31,6 +31,11 @@ def build_benchmark(*, skill_name: str, suite: EvalSuite, runs: list[dict[str, A
         config_name = run["configuration"]
         config = configurations.setdefault(config_name, _empty_config_summary())
         config["total"] += 1
+        if suite.type == "trigger":
+            outcomes = config.setdefault("trigger", {key: 0 for key in (
+                "true_positive", "false_negative", "true_negative", "false_positive", "invalid", "load_error"
+            )})
+            outcomes[run.get("trigger_outcome", "invalid")] += 1
         run_status = str(run.get("status") or "unknown")
         config["status_counts"][run_status] = config["status_counts"].get(run_status, 0) + 1
         if run.get("passed") is True:
@@ -43,8 +48,8 @@ def build_benchmark(*, skill_name: str, suite: EvalSuite, runs: list[dict[str, A
         config["harness_mode"] = run.get("harness_mode") or config.get("harness_mode")
         config["synthetic"] = bool(run.get("synthetic")) or config.get("synthetic", False)
         config["metric_provenance"] = run.get("metric_provenance") or config.get("metric_provenance", {})
-        config["model"] = run.get("model") or config.get("model")
-        config["provider"] = run.get("provider") or config.get("provider")
+        config["model"] = run.get("observed_model") or run.get("model") or config.get("model")
+        config["provider"] = run.get("observed_provider") or run.get("provider") or config.get("provider")
         usage = run.get("usage") or {}
         config["usage"]["input_chars"] += usage.get("input_chars") or 0
         config["usage"]["output_chars"] += usage.get("output_chars") or 0
@@ -57,12 +62,20 @@ def build_benchmark(*, skill_name: str, suite: EvalSuite, runs: list[dict[str, A
             "usage": usage,
             "run_dir": run.get("run_dir"),
             "grade_summary": run.get("grade_summary"),
+            **({"trigger_outcome": run.get("trigger_outcome", "invalid")} if suite.type == "trigger" else {}),
         }
 
     for config in configurations.values():
         total = config["total"]
         config["pass_rate"] = config["passed"] / total if total else 0.0
         config["avg_elapsed_ms"] = config["elapsed_ms"] / total if total else 0.0
+        if suite.type == "trigger":
+            metrics = config["trigger"]
+            positives = metrics["true_positive"] + metrics["false_negative"]
+            negatives = metrics["true_negative"] + metrics["false_positive"]
+            metrics["activation_rate"] = metrics["true_positive"] / positives if positives else None
+            metrics["avoidance_rate"] = metrics["true_negative"] / negatives if negatives else None
+            metrics["invalid_rate"] = (metrics["invalid"] + metrics["load_error"]) / total if total else None
 
     comparison = _comparison(configurations)
     return {
@@ -80,6 +93,20 @@ def render_report(benchmark: dict[str, Any]) -> str:
         f"# Skill eval report: {benchmark['skill']} / {benchmark['suite']}",
         "",
     ]
+    if benchmark.get("suite_type") == "trigger":
+        lines.extend([
+            "## Natural discovery (Pi target-only, read-only profile)", "",
+            "Activation means a successful non-empty target-file read, not instruction adherence. Avoidance requires no target-read attempt and a complete valid trace.",
+            "Rates below exclude invalid runs and loading errors; inspect those counts rather than treating missing evidence as avoidance.", "",
+            "| Configuration | Activated | Missed | Avoided | False positives | Invalid | Load errors | Activation rate | Avoidance rate |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        ])
+        for name, config in benchmark["configurations"].items():
+            metrics = config["trigger"]
+            activation = "n/a" if metrics["activation_rate"] is None else f"{metrics['activation_rate']:.2f}"
+            avoidance = "n/a" if metrics["avoidance_rate"] is None else f"{metrics['avoidance_rate']:.2f}"
+            lines.append(f"| {name} | {metrics['true_positive']} | {metrics['false_negative']} | {metrics['true_negative']} | {metrics['false_positive']} | {metrics['invalid']} | {metrics['load_error']} | {activation} | {avoidance} |")
+        lines.append("")
     if any(config.get("synthetic") for config in benchmark["configurations"].values()):
         lines.extend([
             "> **Synthetic/static results warning:** at least one configuration used a static or replay harness. Treat pass rates, timings, and usage as smoke-test plumbing signals, not behavioral benchmark evidence.",

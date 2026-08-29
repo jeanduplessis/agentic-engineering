@@ -83,7 +83,9 @@
   eval tests behavior after loading. Avoid aliases: Prompt injection, forced skill loading.
 
 - **Real Trigger Mode**: A trigger execution mode where the harness exposes skills normally and the agent must
-  decide whether to select one. Avoid aliases: Natural invocation, real harness invocation.
+  decide whether to select one. Pi advertises metadata with `--skill`; this does not force a body read.
+  Activation is observed as a successful non-empty read; instruction adherence is a separate workflow outcome.
+  Avoid aliases: Natural invocation, real harness invocation.
 
 ## Trace and run capture
 
@@ -95,12 +97,11 @@
 - **Raw Harness Output**: The unmodified output emitted by the agent harness during an eval run. Avoid
   aliases: Raw trace, transcript, stdout.
 
-- **Normalized Trace**: A JSONL event stream using the framework's common event schema; currently it records
-  run start, harness finish, and run finish events. Avoid aliases: Trace, event log, JSONL trace.
+- **Normalized Trace**: A JSONL event stream using the framework's common event schema; it records
+  run start, harness finish, and run finish events, plus target-read attempts/completions for trigger runs. Avoid aliases: Trace, event log, JSONL trace.
 
-- **Trace Event**: One normalized observation from an eval run. Current events are process-level lifecycle
-  events; future harnesses may add tool calls, skill selection, file reads, command execution, errors, or
-  final answers. Avoid aliases: Event, tool event, process event.
+- **Trace Event**: One normalized observation from an eval run. Events cover process lifecycle and, for
+  trigger runs, target-read attempts and completions. The complete Pi event stream is stored separately. Avoid aliases: Event, tool event, process event.
 
 - **Workspace Diff**: The file-system changes produced by an eval run relative to its starting fixture. Avoid
   aliases: Diff, final patch, workspace changes.
@@ -159,7 +160,7 @@
 - A **Golden Prompt Set** is composed of selected **Eval Cases** from one or more **Eval Suites**.
 
 - A **Workflow Eval** usually runs in **Forced Workflow Mode**; a **Regression Suite** reuses the workflow
-  case runner; a future **Trigger Eval** runner will use **Real Trigger Mode**.
+  case runner; **Trigger Eval** execution uses Pi in **Real Trigger Mode**, with a frozen target-only, read-only profile.
 
 - A **Negative Control** is a kind of **Trigger Eval** where the correct result is non-selection of the **Skill**.
 
@@ -210,8 +211,8 @@
 
 - **Dev:** If a real prompt later causes the skill to miss invocation, what happens?
 
-  **Domain expert:** Capture it as a **Regression Case** before changing the description, then verify the fix
-  through the **Regression Suite**.
+  **Domain expert:** Retain the observed failure and add a **Trigger Eval** case before changing the description.
+  Trigger-to-workflow regression promotion is rejected because it would lose natural-selection semantics.
 
 ## Flagged ambiguities
 

@@ -36,6 +36,8 @@ artifact behavior, update tests and `tools/skill_valid/README.md` together.
 
 - Preserve live-run safety: no harness/model call before cheap gates pass or warn and harness-neutral live opt-in is present.
 
+- `--include-trigger` validates the natural trigger contract in the cheap manifest gate and, only with live opt-in, adds all suite-local discovery profiles to live evals. It requires Pi and must never silently enable live calls or reuse with/without controls. Check exact case/configuration coverage, rejecting duplicate or missing trigger runs.
+
 - Wrapper must remain deterministic by default and must not append a live opt-in unconditionally.
 
 - Pi and OpenCode-compatible Kilo are supported real harnesses; required eval manifests must pass structural validation before live work.

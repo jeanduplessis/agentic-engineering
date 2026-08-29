@@ -502,7 +502,7 @@ Install it at `harness/pi/commands/fix-tests.md`; root package manifest exposes 
             self.assertIn("attached skill instructions", invocation[-1])
             self.assertIn("--file", raw["command"])
 
-    def test_manifest_represents_suite_purposes_and_trigger_is_explicitly_not_run(self):
+    def test_manifest_represents_suite_purposes_and_capability_is_explicitly_not_run(self):
         manifest = load_manifest(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json")
         suites = {suite.name: suite for suite in manifest.suites}
 
@@ -511,10 +511,10 @@ Install it at `harness/pi/commands/fix-tests.md`; root package manifest exposes 
         self.assertFalse(suites["trigger"].cases[1].metadata["should_trigger"])
 
         with tempfile.TemporaryDirectory() as tmp:
-            summary = run_suite(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json", "trigger", Path(tmp) / "results")
+            summary = run_suite(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json", "capability", Path(tmp) / "results")
             saved = json.loads((Path(tmp) / "results" / "summary.json").read_text())
 
-            self.assertEqual(summary["suite_type"], "trigger")
+            self.assertEqual(summary["suite_type"], "capability")
             self.assertEqual(summary["status"], "unsupported")
             self.assertEqual(summary["runs"], [])
             self.assertIn("not implemented", summary["unsupported_reason"])
@@ -815,7 +815,8 @@ Install it at `harness/pi/commands/fix-tests.md`; root package manifest exposes 
             self.assertEqual(metadata["harness"]["mode"], "real")
             self.assertEqual(metadata["harness"]["model"], "fake-model")
             self.assertEqual(metadata["harness"]["provider"], "fake-provider")
-            self.assertTrue(metadata["skill_paths_loaded"])
+            self.assertEqual(metadata["skill_paths_loaded"], [])
+            self.assertTrue(metadata["skill_paths_advertised"])
             self.assertEqual(events[-1]["event"], "run_finished")
             self.assertEqual(events[1]["status"], "passed")
 
@@ -898,7 +899,8 @@ Install it at `harness/pi/commands/fix-tests.md`; root package manifest exposes 
             self.assertFalse(with_metadata["harness"]["synthetic"])
             self.assertEqual(with_metadata["harness"]["model"], "fake-model")
             self.assertEqual(with_metadata["harness"]["provider"], "fake-provider")
-            self.assertEqual(len(with_metadata["skill_paths_loaded"]), 1)
+            self.assertEqual(with_metadata["skill_paths_loaded"], [])
+            self.assertEqual(len(with_metadata["skill_paths_advertised"]), 1)
             self.assertEqual(without_metadata["skill_paths_loaded"], [])
             self.assertTrue(any("Say hello" in arg for invocation in invocations_data for arg in invocation["argv"]))
 

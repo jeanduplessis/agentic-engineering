@@ -155,24 +155,24 @@
       "name": "trigger",
       "type": "trigger",
       "mode": "natural",
-      "fixture": {"type": "empty"},
-      "unsupported_reason": "Automatic skill activation is not implemented by the current runner; these cases record the discovery contract only.",
+      "fixture": {"type": "copy", "path": "fixtures/trigger"},
+      "configurations": {"discovery": {"harness": "pi"}},
       "cases": [
         {
           "id": "positive-human-documentation",
-          "prompt": "Write a README section explaining how operators rotate API keys.",
+          "prompt": "Write a README section explaining API key rotation from these facts: Operators select Rotate key in Settings. The old key remains valid for 15 minutes. Return only the section.",
           "should_trigger": true,
           "expected_skill": "human-writing"
         },
         {
           "id": "positive-email-delivered-in-chat",
-          "prompt": "Draft an email I can send to customers about tomorrow's maintenance window.",
+          "prompt": "Draft an email I can send to customers: Desk will be unavailable for maintenance on 2026-09-10 from 01:00 to 02:00 UTC. Sign off with The Desk team.",
           "should_trigger": true,
           "expected_skill": "human-writing"
         },
         {
           "id": "positive-pr-description-revision",
-          "prompt": "Rewrite this PR description for the engineers who will review it.",
+          "prompt": "Rewrite this PR description for the engineers who will review it: It is important to note that this change caps ResponseCache at 200 entries and evicts the least recently used entry when full. Tests cover the limit and eviction order.",
           "should_trigger": true,
           "expected_skill": "human-writing"
         },
@@ -184,7 +184,7 @@
         },
         {
           "id": "negative-progress-update",
-          "prompt": "How is the implementation going? Give me a quick progress update.",
+          "prompt": "The implementation is complete and the tests pass; documentation is still outstanding. Give me a quick conversational progress update, not a report.",
           "should_trigger": false,
           "expected_skill": null
         },
@@ -196,25 +196,25 @@
         },
         {
           "id": "negative-prompt-rewrite",
-          "prompt": "Tighten this system prompt so the model follows its tool restrictions reliably.",
+          "prompt": "Tighten this system prompt so the model follows its tool restrictions reliably: You may read local files. You must not write files or run shell commands. If the task requires either, ask the user for permission.",
           "should_trigger": false,
           "expected_skill": null
         },
         {
           "id": "negative-code-change",
-          "prompt": "Fix the cache eviction bug in cache.py without changing the documentation.",
+          "prompt": "Read cache.py and return a patch for its eviction bug: it should remove the oldest entry, at index zero. Do not change or draft documentation.",
           "should_trigger": false,
           "expected_skill": null
         },
         {
           "id": "negative-data-transformation",
-          "prompt": "Convert this JSON configuration into YAML without changing any values.",
+          "prompt": "Convert this JSON configuration into YAML without changing any values: {\"retries\": 2, \"enabled\": true, \"regions\": [\"eu\", \"us\"]}",
           "should_trigger": false,
           "expected_skill": null
         },
         {
           "id": "negative-read-only-document-discussion",
-          "prompt": "Read this design document and tell me in chat whether it mentions retry limits. Do not change it or draft a report.",
+          "prompt": "Read design.md and tell me in chat whether it mentions retry limits. Do not change it or draft a report.",
           "should_trigger": false,
           "expected_skill": null
         }

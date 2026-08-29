@@ -18,7 +18,8 @@
 
 Deterministic eval plumbing lives in `evals/`:
 
-- `evals/manifest.json` defines workflow cases and represented trigger/capability cases.
+- `evals/manifest.json` defines workflow cases, Pi-only natural trigger cases, and represented capability cases.
+  Before live trigger evaluation, supply the ideas, launch plan, and approved spec referenced by the prompts.
 - `evals/grader.py` checks for key response contracts such as skeptical posture, one-question challenge turns, decision-record fields, and no premature build planning.
 
 Run repo-level deterministic checks from the repo root when changing this skill:

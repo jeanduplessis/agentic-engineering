@@ -23,6 +23,8 @@ def promote_failures_to_regression_cases(
     manifest = json.loads(manifest_path.read_text())
     loaded_manifest = load_manifest(manifest_path)
     summary = json.loads((result_root / "summary.json").read_text())
+    if summary.get("suite_type") == "trigger":
+        raise ValueError("Trigger failures cannot be promoted to workflow regressions. Retain the trace and add a natural trigger case instead.")
     suites_by_name = {suite.name: suite for suite in loaded_manifest.suites}
     cases_by_suite = {
         suite.name: {case.id: case for case in suite.cases}

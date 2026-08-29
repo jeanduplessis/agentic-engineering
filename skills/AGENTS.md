@@ -110,12 +110,12 @@ Current runner support:
 
 - `workflow`: executable; tests behavior when the skill is intentionally available.
 - `regression`: executable; known-fixed real failures that should stay passing.
-- `trigger`: representable; not executed by the current runner.
+- `trigger`: executable through Pi only, with `mode: "natural"`, boolean `should_trigger` cases, and a target-only read-only discovery profile. Suite-local configurations default to `discovery` and must omit `force_skill`.
 - `capability`: representable; not executed by the current runner.
 
 For workflow suites, compare:
 
-- `with_skill`: selected real harness force-loads or attaches the target `SKILL.md`.
+- `with_skill`: Pi advertises the target `SKILL.md` for discovery; the legacy `force_skill` flag does not prove a body read. Kilo attaches the instructions.
 - `without_skill`: selected real harness omits the target skill.
 
 Real configurations may select `harness: "pi"` or OpenCode-compatible `harness: "kilo"`; evaluator choice must not change skill behavior expectations.
@@ -194,6 +194,8 @@ PYTHONPATH=skill-factory python3 -m tools.skill_eval promote-regressions \
   --output skills/<skill-name>/evals/manifest.json \
   --source-bead <bead-id>
 ```
+
+Trigger failure promotion is rejected because workflow regressions would lose natural-selection semantics. Preserve the trace and add a trigger case instead.
 
 Promote only failed, non-skipped, real runs that represent actual skill behavior problems. Do not promote synthetic smoke failures, skipped runs, process timeouts, or grader false positives as canonical regressions.
 
