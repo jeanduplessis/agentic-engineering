@@ -255,7 +255,8 @@ test("native compact integration preserves split summaries, budgets, auth, usage
 		assert.equal(r.options.signal, h.event.signal);
 		assert.equal(r.options.reasoning, "low");
 		assert.equal(r.options.cacheRetention, "none");
-		assert.equal(r.options.toolChoice, "none");
+		// Pi versions differ in toolChoice; the contract is that summaries expose no tools.
+		assert.equal(r.context.tools?.length ?? 0, 0, "summary requests must not offer tools");
 		assert.ok(r.options.sessionId);
 	}
 	assert.match(first.summary, /Summary 1/);

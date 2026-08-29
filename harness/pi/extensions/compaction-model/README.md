@@ -60,7 +60,7 @@ A trusted project's `.pi/settings.json` can override individual fields. Project 
 - Pi currently resolves the active conversation model's authentication before this hook, so that model also needs valid authentication.
 - Avoid multiple compaction extensions handling the same reason. This extension does not control their ordering.
 
-Verified against `@earendil-works/pi-coding-agent` 0.84.3. The native compaction API is the compatibility boundary; check it when upgrading Pi.
+Verified against `@earendil-works/pi-coding-agent` 0.84.4. The native compaction API is the compatibility boundary; check it when upgrading Pi.
 
 ## Verification
 

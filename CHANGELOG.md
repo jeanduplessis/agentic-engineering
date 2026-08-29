@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed the `compaction-model` compatibility test for Pi 0.84.4: verify that summary requests expose no tools instead of requiring `toolChoice: "none"`. Native compaction behavior is unchanged.
 - Fixed `pi-ui-customization` text jumping during streamed tool calls by retaining one trailing padding row in collapsed text blocks, while preserving image-height rows and expanded spacing. Added offline renderer regression tests.
 - Added a compaction-aware `◈` loaded-skills row to `custom-footer`, including symlinked paths, extension-contributed skills on resume/reload, and valid `SKILL.md` reads outside the advertised catalog. The marker uses the footer's shared symbol color, with full-width dividers above the skills and model sections while the model table stays compact. Added offline detection and footer lifecycle tests.
 - Added the repository-owned `compaction-model` Pi extension: route native compaction through a dedicated model with trusted project overrides, reason filters, active-model fallback, cancellation handling, and offline tests. Installation remains opt-in through `setup.sh`.
