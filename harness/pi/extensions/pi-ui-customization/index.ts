@@ -4,6 +4,7 @@ import {
 	ToolExecutionComponent,
 } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
+import { installLinkHover } from "./link-hover.ts";
 import { isSkillReadPath, replaceBackgroundAnsi } from "./skill-read.ts";
 import { isTerminalImageLine, mapNonImageLines } from "./terminal-image-lines.ts";
 import { decideToolCollapse } from "./tool-collapse.ts";
@@ -49,9 +50,14 @@ type ToolUi = ExtensionContext["ui"];
 
 type PatchedPrototype = Record<PropertyKey, unknown>;
 
+type UrlHandlerState = {
+	originalOpenUrl?: (url: string) => void;
+	controller?: PiUiCustomizationController;
+};
+
 const ORIGINAL_RENDER = Symbol.for("pi.pi-ui-customization.original-render");
 const CONTROLLER = Symbol.for("pi.pi-ui-customization.controller");
-const ORIGINAL_OPEN_URL = Symbol.for("pi.pi-ui-customization.original-open-url");
+const URL_HANDLER_STATE = Symbol.for("pi.pi-ui-customization.url-handler-state");
 const INTERNAL_URL_PREFIX = "pi://tool-output-expand/";
 const EXPAND_HINT = "to expand";
 const CLICK_HINT = "or click";
@@ -137,15 +143,18 @@ class PiUiCustomizationController {
 	private targetsByComponent = new WeakMap<object, ToolTarget>();
 	private tui?: TuiLike;
 	private uiContext?: ToolUi;
-	private fallbackOpenUrl?: (url: string) => void;
+	private urlHandlerState?: UrlHandlerState;
 	private nextTargetId = 0;
 
 	reset(ui?: ToolUi): void {
+		if (this.urlHandlerState?.controller === this) {
+			this.urlHandlerState.controller = undefined;
+		}
+		this.urlHandlerState = undefined;
 		this.targets = new Map();
 		this.targetsByComponent = new WeakMap();
 		this.tui = undefined;
 		this.uiContext = ui;
-		this.fallbackOpenUrl = undefined;
 		this.nextTargetId = 0;
 	}
 
@@ -156,22 +165,35 @@ class PiUiCustomizationController {
 		this.tui = tui;
 		if (tui.mode !== "fullscreen") return;
 
-		const currentOpenUrl = tui.openUrl;
-		if (currentOpenUrl !== this.handleOpenUrl) {
-			const originalOpenUrl = tui[ORIGINAL_OPEN_URL];
-			this.fallbackOpenUrl =
-				typeof originalOpenUrl === "function"
-					? (originalOpenUrl as (url: string) => void)
-					: typeof currentOpenUrl === "function"
-						? currentOpenUrl
-						: undefined;
-			tui[ORIGINAL_OPEN_URL] = this.fallbackOpenUrl;
+		// Pi's stable TUI proxy wraps function properties on every read. Keep the
+		// native callback inside an object so redraws and reloads cannot nest it.
+		let state = tui[URL_HANDLER_STATE] as UrlHandlerState | undefined;
+		if (!state) {
+			const originalOpenUrl = tui.openUrl;
+			const binding: UrlHandlerState = {
+				originalOpenUrl: typeof originalOpenUrl === "function" ? originalOpenUrl : undefined,
+			};
 			try {
-				tui.openUrl = this.handleOpenUrl;
+				tui.openUrl = (url: string): void => {
+					if (binding.controller?.handleInternalUrl(url)) return;
+					try {
+						binding.originalOpenUrl?.call(tui, url);
+					} catch {
+						// Opening external terminal links is best-effort.
+					}
+				};
+				tui[URL_HANDLER_STATE] = binding;
 			} catch {
 				// A future TUI implementation may expose a read-only URL handler.
+				return;
 			}
+			state = binding;
 		}
+		if (this.urlHandlerState !== state && this.urlHandlerState?.controller === this) {
+			this.urlHandlerState.controller = undefined;
+		}
+		state.controller = this;
+		this.urlHandlerState = state;
 	}
 
 	decorateExpandable(component: ExpandableComponent, lines: string[]): string[] {
@@ -562,20 +584,13 @@ class PiUiCustomizationController {
 		return "\x1b]8;;\x07";
 	}
 
-	private handleOpenUrl = (url: string): void => {
+	private handleInternalUrl(url: string): boolean {
 		const target = this.targets.get(url);
-		if (target) {
-			target.component.setExpanded(!target.component.expanded);
-			this.tui?.requestRender?.();
-			return;
-		}
-
-		try {
-			this.fallbackOpenUrl?.call(this.tui, url);
-		} catch {
-			// Opening external terminal links is best-effort.
-		}
-	};
+		if (!target) return false;
+		target.component.setExpanded(!target.component.expanded);
+		this.tui?.requestRender?.();
+		return true;
+	}
 }
 
 function installRenderPatch(controller: PiUiCustomizationController): void {
@@ -624,6 +639,15 @@ export default function piUiCustomization(pi: ExtensionAPI): void {
 	installRenderPatch(controller);
 	installCompactionRenderPatch(controller);
 
-	pi.on("session_start", (_event, ctx) => controller.reset(ctx.ui));
-	pi.on("session_shutdown", () => controller.reset());
+	let disposeLinkHover: (() => void) | undefined;
+	pi.on("session_start", (_event, ctx) => {
+		controller.reset(ctx.ui);
+		disposeLinkHover?.();
+		disposeLinkHover = ctx.mode === "tui" ? installLinkHover() : undefined;
+	});
+	pi.on("session_shutdown", () => {
+		disposeLinkHover?.();
+		disposeLinkHover = undefined;
+		controller.reset();
+	});
 }

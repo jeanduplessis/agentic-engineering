@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Updated `kilo-pi-provider` to expose `xhigh` and `max` as separate Pi thinking levels, preserving gateway effort values instead of mapping `max` to `xhigh`. Added offline coverage for advertised variants and the DeepSeek fallback.
+
+- Added hand-pointer hover feedback for clickable links and tool rows in `pi-ui-customization` on Ghostty, Kitty, and Foot. Hover follows the visible fullscreen frame and resets during selection, focus loss, reload, and terminal stop. Other terminals and multiplexers are unchanged; offline tests cover input, redraws, and cleanup.
+
+- Fixed `pi-ui-customization` silently failing to open links after repeated tool redraws by keeping the native URL callback outside Pi's proxy-wrapped function properties. Preserved link forwarding across session resets and extension reloads, added offline proxy regression tests, and documented the restart needed to clear an already-wrapped callback chain.
+
 - Excluded local Pi subagent runtime and mission records from version control. Fixed the command-discovery test to check the current non-empty template inventory instead of a stale hardcoded count, and made empty Tools/Skills selections safe under Bash 3.2. Aligned graph benchmark fixtures with the setup refactor while preserving historical measurements, and included the upstream patch-context license notice.
 
 - Made Pi the only supported live harness. Removed standalone Kilo harness setup targets and live Kilo eval/validation adapters; retained the Kilo AI gateway provider for Pi and its footer balance integration, global skills, synthetic/replay checks, explicit opt-in, and Pi setup safeguards. Migrated active guidance, command-authoring evals, and skill manifests to Pi, and added legacy-input rejection coverage. PR-review analysis now discovers and confirms automated review authors. Code-quality schema identifiers migrated from `https://local.kilo.dev/code-quality/{review-packet,quality-result}.schema.json` to `urn:agentic-engineering:code-quality:review-packet` and `urn:agentic-engineering:code-quality:quality-result`; schema bodies are unchanged. Existing installed links/settings and historical provider evidence are not modified.

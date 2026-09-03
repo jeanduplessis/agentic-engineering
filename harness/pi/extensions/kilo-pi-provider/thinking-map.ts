@@ -1,4 +1,4 @@
-export type PiThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+export type PiThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
 export type KiloThinkingLevelMap = Partial<Record<PiThinkingLevel, string | null>>;
 
@@ -39,16 +39,9 @@ export function thinkingLevelMapFromVariants(
   // models such as kilo-internal/galaxy reject.
   map.off = off === undefined ? null : off;
 
-  for (const level of ["minimal", "low", "medium", "high", "xhigh"] as const) {
+  for (const level of ["minimal", "low", "medium", "high", "xhigh", "max"] as const) {
     const effort = mapVariantEffort(variants, level);
     map[level] = effort === undefined ? null : effort;
-  }
-
-  // Pi has no separate "max" thinking level. Expose a Kilo/OpenCode max
-  // variant as Pi's xhigh when xhigh is absent.
-  if (map.xhigh === null) {
-    const max = mapVariantEffort(variants, "max");
-    if (max !== undefined) map.xhigh = max;
   }
 
   return map;
@@ -64,7 +57,8 @@ export function getKiloThinkingLevelMap(model: KiloThinkingModel): KiloThinkingL
       low: null,
       medium: null,
       high: "high",
-      xhigh: "max",
+      xhigh: null,
+      max: "max",
     };
   }
 

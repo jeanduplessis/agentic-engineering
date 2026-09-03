@@ -13,6 +13,8 @@ login behavior from Kilo while leaving footer rendering to the local
   prefix.
 - Marks a missing off/none thinking variant as unsupported so Pi does not send
   `reasoning_effort: none` to models such as `kilo-internal/galaxy`.
+- Exposes `xhigh` and `max` as separate thinking levels when the gateway advertises
+  them, preserving each variant's provider effort value.
 
 ## Installation
 

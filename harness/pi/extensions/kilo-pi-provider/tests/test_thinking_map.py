@@ -52,6 +52,7 @@ class ThinkingMapTests(unittest.TestCase):
                     "medium": "medium",
                     "high": "high",
                     "xhigh": None,
+                    "max": None,
                 },
                 "wouldSendNone": False,
             },
@@ -62,8 +63,8 @@ class ThinkingMapTests(unittest.TestCase):
             f"""
             import {{ getKiloThinkingLevelMap }} from {json.dumps(HELPER.as_uri())};
             console.log(JSON.stringify({{
-                sol: getKiloThinkingLevelMap({{
-                    id: "openai/gpt-5.6-sol",
+                nova: getKiloThinkingLevelMap({{
+                    id: "kilo-internal/nova",
                     opencode: {{
                         variants: {{
                             none: {{ reasoning: {{ enabled: false, effort: "none" }} }},
@@ -103,13 +104,14 @@ class ThinkingMapTests(unittest.TestCase):
         self.assertEqual(
             self.run_node(script),
             {
-                "sol": {
+                "nova": {
                     "off": "none",
                     "minimal": None,
                     "low": "low",
                     "medium": "medium",
                     "high": "high",
                     "xhigh": "xhigh",
+                    "max": "max",
                 },
                 "kimi": {
                     "off": "none",
@@ -117,7 +119,8 @@ class ThinkingMapTests(unittest.TestCase):
                     "low": None,
                     "medium": None,
                     "high": "high",
-                    "xhigh": "max",
+                    "xhigh": None,
+                    "max": "max",
                 },
                 "instant": {
                     "off": "none",
@@ -126,6 +129,7 @@ class ThinkingMapTests(unittest.TestCase):
                     "medium": None,
                     "high": None,
                     "xhigh": None,
+                    "max": None,
                 },
                 "empty": None,
                 "deepseek": {
@@ -133,7 +137,38 @@ class ThinkingMapTests(unittest.TestCase):
                     "low": None,
                     "medium": None,
                     "high": "high",
-                    "xhigh": "max",
+                    "xhigh": None,
+                    "max": "max",
                 },
+            },
+        )
+
+    def test_extended_variants_preserve_provider_efforts(self):
+        script = textwrap.dedent(
+            f"""
+            import {{ getKiloThinkingLevelMap }} from {json.dumps(HELPER.as_uri())};
+            const variants = {{
+                xhigh: {{ reasoning: {{ effort: "provider-xhigh" }} }},
+                max: {{ reasoning: {{ effort: "provider-max" }} }},
+            }};
+            const both = getKiloThinkingLevelMap({{
+                id: "example/mapped-efforts", opencode: {{ variants }},
+            }});
+            delete variants.max;
+            const withoutMax = getKiloThinkingLevelMap({{
+                id: "example/mapped-efforts", opencode: {{ variants }},
+            }});
+            console.log(JSON.stringify({{
+                both: {{ xhigh: both.xhigh, max: both.max }},
+                withoutMax: {{ xhigh: withoutMax.xhigh, max: withoutMax.max }},
+            }}));
+            """
+        )
+
+        self.assertEqual(
+            self.run_node(script),
+            {
+                "both": {"xhigh": "provider-xhigh", "max": "provider-max"},
+                "withoutMax": {"xhigh": "provider-xhigh", "max": None},
             },
         )

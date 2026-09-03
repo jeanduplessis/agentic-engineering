@@ -19,6 +19,12 @@ Extensions that resolve paths through `getAgentDir()` write into the installed s
 
 An extension with npm dependencies declares them in its own `package.json` and needs `npm install` run in its directory here. Do not vendor `node_modules/` into git.
 
+## Pi UI customization
+
+- `pi-ui-customization` patches private Pi renderer methods. Keep patches idempotent across reloads and preserve native input and URL forwarding.
+- Link hover uses the visible fullscreen frame and OSC 22 only on known compatible terminals outside multiplexers. Reset pointer state on focus loss, shutdown, and terminal stop.
+- Run its offline Node SDK tests when changing these patches or upgrading Pi; terminal appearance still needs manual verification.
+
 ## Change guidelines
 
 When changing an extension's entry point, discovery shape, config paths, or dependencies, update that extension's `README.md` and `AGENTS.md`, the root `README.md` if the install contract changes, `setup.sh` discovery if the entry shape changes, and the root `CHANGELOG.md`.
