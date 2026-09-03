@@ -15,7 +15,7 @@ Runs deterministic skill validation by default:
 
 Environment overrides:
   SKILL_VALID_ALLOW_LIVE=1  Explicitly enable live harness/model gates
-  SKILL_VALID_HARNESS=<pi|kilo>
+  SKILL_VALID_HARNESS=pi
   SKILL_VALID_PROVIDER=<provider>
   SKILL_VALID_MODEL=<model>
   SKILL_VALID_THINKING=<off|minimal|low|medium|high|xhigh>

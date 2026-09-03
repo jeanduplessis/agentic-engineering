@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Maintains harness-neutral `/epic-orchestrate` orchestration: parent-controlled ait epic implementation through formal gates, durable state, strict lifecycle ownership, and recovery behavior. Pi and OpenCode/Kilo must work; no specific harness may be required.
+Maintains Pi `/epic-orchestrate` orchestration: parent-controlled ait epic implementation through formal gates, durable state, strict lifecycle ownership, and recovery behavior. Preserve sequential current-session fallback when optional runners are unavailable.
 
 ## How the skill works
 
@@ -30,8 +30,8 @@ The `tools.skill_eval` run may skip when its configured live harness is unavaila
 - Preserve gate executor no-stage/no-commit/no-close/no-update rules.
 - Preserve ait CLI-only mutation; never direct-edit `.ait/` files.
 - Keep native subagent/current harness runner support optional and preserve complete sequential current-session fallback.
-- Never require Pi; Pi self-invocation may remain optional acceleration.
-- Resolve this repository's `harness/pi/commands/<name>.md` first; keep arbitrary harness prompt locations optional.
+- Keep Pi self-invocation optional; preserve current-session execution.
+- Resolve this repository's `harness/pi/commands/<name>.md` first; keep Pi project/global prompt locations optional.
 - Preserve append-only resume state.
 - Preserve generated-script preflight (`bash -n` plus compatibility checks).
 - Preserve invariant validation coverage for invalidating mutation paths.

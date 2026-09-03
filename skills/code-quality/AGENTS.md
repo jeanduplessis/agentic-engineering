@@ -26,6 +26,7 @@ Live evals require explicit approval.
 ## Change guidelines
 
 - Keep packet/result schemas backward-compatible or increment `schema_version`.
+- Preserve the project-owned schema identifiers: `urn:agentic-engineering:code-quality:review-packet` and `urn:agentic-engineering:code-quality:quality-result`.
 - Keep severity action-oriented and category orthogonal.
 - Require changed-cause anchors; use supporting locations for omission evidence.
 - Only Style emits `Nit` by default.

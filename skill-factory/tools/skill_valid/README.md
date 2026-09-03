@@ -2,7 +2,7 @@
 
 `skill_valid` validates one repo-local skill through deterministic compatibility/resource gates, maintenance-doc
 gates, and a deterministic LLM optimization-readiness gate. Optional live validation adds a validate-skills
-qualitative review and behavior evals through Pi or OpenCode-compatible Kilo.
+qualitative review and behavior evals through Pi.
 
 ## Usage
 
@@ -28,7 +28,7 @@ Optional live execution overrides are applied to both live gates:
 ```sh
 PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/<skill-name> \
   --allow-live \
-  --harness kilo \
+  --harness pi \
   --provider openrouter \
   --model gpt-5 \
   --thinking low
@@ -112,8 +112,8 @@ Exit code is `0` only when `valid` is `true`. Gate statuses are `passed`, `warn`
 
 2. `skill_spec` — parses `SKILL.md` without external dependencies.
 
-   - Runs deterministic shared Pi/OpenCode skill compatibility, resource-reference, and repo-contract checks.
-   - Shared loadability and repo-contract violations fail.
+   - Runs deterministic Pi skill compatibility, resource-reference, and repo-contract checks.
+   - Pi loadability and repo-contract violations fail.
    - Deterministic best-practice concerns warn without blocking validity, such as weak trigger wording or
       list-form `allowed-tools`.
    - Safely ignored harness capability fields such as `disable-model-invocation` and `user-invocable` are allowed only when baseline behavior does not depend on them.
@@ -135,10 +135,10 @@ Exit code is `0` only when `valid` is `true`. Gate statuses are `passed`, `warn`
    - Details embed a compact report with status, score, useful metrics, and all findings, excluding bulky
      preview/body fields.
 
-6. `live_opt_in` — records whether live validation was explicitly enabled. Without opt-in, deterministic
+6. `live_opt_in` — rejects unsupported harness overrides, then records whether live validation was explicitly enabled. Without opt-in, deterministic
    validity is decided here and live gates remain `not_run`.
 
-7. `validate_skills` — when enabled, runs the selected Pi or Kilo harness with the validate-skills instructions.
+7. `validate_skills` — when enabled, runs the Pi harness with the validate-skills instructions.
    The wrapper prompt in `WRAPPER_PROMPT.md` requires a final `SKILL_VALID_RESULT=<json>` sentinel.
 
 8. `live_eval` — when enabled, runs `tools.skill_eval.runner.run_suite` in-process for

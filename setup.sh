@@ -12,7 +12,6 @@ HARNESS_DIR="$REPO_ROOT/harness"
 
 : "${HOME:?HOME must be set}"
 PI_AGENT_DIR="${PI_AGENT_DIR:-$HOME/.pi/agent}"
-KILO_CONFIG_DIR="${KILO_CONFIG_DIR:-$HOME/.config/kilo}"
 GLOBAL_SKILLS_DIR="${GLOBAL_SKILLS_DIR:-$HOME/.agents/skills}"
 
 TOOL_DIRS=()
@@ -24,10 +23,7 @@ SELECTED_DIRS=()
 DO_TOOLS=0
 DO_SKILLS=0
 DO_HARNESS=0
-HARNESS_PI=0
-HARNESS_KILO=0
 SKILL_PI=0
-SKILL_KILO=0
 SKILL_GLOBAL=0
 SETUP_STATUS=0
 
@@ -37,17 +33,16 @@ Usage: ./setup.sh
 
 Interactively choose which Agentic Engineering resources to install:
   tools      Install Rust tools from $TOOLS_DIR with cargo.
-  skills     Link selected skills from $SKILLS_DIR into Pi, Kilo, and/or the
+  skills     Link selected skills from $SKILLS_DIR into Pi and/or the
              shared global skills directory.
-  harness    Link harness-specific resources from $HARNESS_DIR, including an
-             explicit selection of Pi extensions.
+  harness    Link harness-specific resources from $HARNESS_DIR. Pi components
+             and their commands, extensions, and skills are selected explicitly.
 
 Targets:
   Pi:      $PI_AGENT_DIR
-  Kilo:    $KILO_CONFIG_DIR
   Global:  $GLOBAL_SKILLS_DIR
 
-The optional PI_AGENT_DIR, KILO_CONFIG_DIR, and GLOBAL_SKILLS_DIR environment
+The optional PI_AGENT_DIR and GLOBAL_SKILLS_DIR environment
 variables override those target paths, which is useful for testing or alternate
 installations.
 EOF
@@ -129,11 +124,14 @@ add_selected_directory() {
   local candidate="$1"
   local existing
 
-  for existing in "${SELECTED_DIRS[@]}"; do
-    if [ "$existing" = "$candidate" ]; then
-      return 0
-    fi
-  done
+  # Bash 3.2 treats an empty array expansion as unset under set -u.
+  if [ "${#SELECTED_DIRS[@]}" -gt 0 ]; then
+    for existing in "${SELECTED_DIRS[@]}"; do
+      if [ "$existing" = "$candidate" ]; then
+        return 0
+      fi
+    done
+  fi
   SELECTED_DIRS+=("$candidate")
 }
 
@@ -226,7 +224,7 @@ choose_categories() {
     printf 'What would you like to set up?\n'
     printf '  1) Tools   — install command-line tools from tools/\n'
     printf '  2) Skills  — link reusable skills from skills/\n'
-    printf '  3) Harness — link Pi/Kilo-specific resources from harness/\n'
+    printf '  3) Harness — link Pi-specific resources from harness/\n'
     printf '  4) All of the above\n'
     printf '  q) Quit\n'
     printf 'Select one or more options (for example: 1 2): '
@@ -282,10 +280,9 @@ choose_skill_targets() {
   while :; do
     printf '\nWhere should skills be installed?\n'
     printf '  1) Pi only      (%s/skills)\n' "$PI_AGENT_DIR"
-    printf '  2) Kilo only    (%s/skills)\n' "$KILO_CONFIG_DIR"
+    # Keep existing numbers: retired destinations must not select a different target.
     printf '  3) Global       (%s)\n' "$GLOBAL_SKILLS_DIR"
-    printf '  4) Pi and Kilo\n'
-    printf '  5) All three\n'
+    printf '  all) Pi and Global\n'
     printf '  q) Cancel skill installation\n'
     printf 'Select one or more skill targets: '
 
@@ -306,21 +303,14 @@ choose_skill_targets() {
     esac
 
     SKILL_PI=0
-    SKILL_KILO=0
     SKILL_GLOBAL=0
     invalid=0
     for choice in $selection; do
       case "$choice" in
         1|pi|PI) SKILL_PI=1 ;;
-        2|kilo|KILO) SKILL_KILO=1 ;;
         3|global|GLOBAL|agents|AGENTS) SKILL_GLOBAL=1 ;;
-        4|pi-kilo|PI-KILO)
+        a|A|all|ALL)
           SKILL_PI=1
-          SKILL_KILO=1
-          ;;
-        5|a|A|all|ALL)
-          SKILL_PI=1
-          SKILL_KILO=1
           SKILL_GLOBAL=1
           ;;
         *)
@@ -330,54 +320,10 @@ choose_skill_targets() {
       esac
     done
 
-    if [ "$invalid" -eq 0 ] && { [ "$SKILL_PI" -eq 1 ] || [ "$SKILL_KILO" -eq 1 ] || [ "$SKILL_GLOBAL" -eq 1 ]; }; then
+    if [ "$invalid" -eq 0 ] && { [ "$SKILL_PI" -eq 1 ] || [ "$SKILL_GLOBAL" -eq 1 ]; }; then
       return 0
     fi
     printf 'Please try again.\n'
-  done
-}
-
-choose_harnesses() {
-  local selection
-
-  while :; do
-    printf '\nWhich harness artifacts should be installed?\n'
-    printf '  1) Pi only   (%s)\n' "$PI_AGENT_DIR"
-    printf '  2) Kilo only (%s)\n' "$KILO_CONFIG_DIR"
-    printf '  3) Both\n'
-    printf '  q) Cancel harness installation\n'
-    printf 'Select harness target: '
-
-    if ! read_answer; then
-      return 1
-    fi
-    selection="${ANSWER//,/ }"
-    case "$selection" in
-      1|pi|PI)
-        HARNESS_PI=1
-        HARNESS_KILO=0
-        return 0
-        ;;
-      2|kilo|KILO)
-        HARNESS_PI=0
-        HARNESS_KILO=1
-        return 0
-        ;;
-      3|both|BOTH)
-        HARNESS_PI=1
-        HARNESS_KILO=1
-        return 0
-        ;;
-      q|Q|quit|QUIT)
-        printf 'Harness installation cancelled.\n'
-        HARNESS_PI=0
-        HARNESS_KILO=0
-        return 1
-        ;;
-      *)
-        printf 'Unknown harness choice: %s\n' "$selection"
-        ;;
-    esac
   done
 }
 
@@ -457,7 +403,10 @@ link_resource() {
 install_tools() {
   local directory failures=0
 
-  CANDIDATE_DIRS=("${TOOL_DIRS[@]}")
+  CANDIDATE_DIRS=()
+  if [ "${#TOOL_DIRS[@]}" -gt 0 ]; then
+    CANDIDATE_DIRS=("${TOOL_DIRS[@]}")
+  fi
   if ! choose_items "tools"; then
     return 0
   fi
@@ -495,14 +444,16 @@ print_selected_skills() {
     printf '  - %s\n' "${directory##*/}"
   done
   [ "$SKILL_PI" -eq 1 ] && printf '  Pi target:     %s/skills\n' "$PI_AGENT_DIR"
-  [ "$SKILL_KILO" -eq 1 ] && printf '  Kilo target:   %s/skills\n' "$KILO_CONFIG_DIR"
   [ "$SKILL_GLOBAL" -eq 1 ] && printf '  Global target: %s\n' "$GLOBAL_SKILLS_DIR"
 }
 
 install_skills() {
   local directory target failures=0
 
-  CANDIDATE_DIRS=("${SKILL_DIRS[@]}")
+  CANDIDATE_DIRS=()
+  if [ "${#SKILL_DIRS[@]}" -gt 0 ]; then
+    CANDIDATE_DIRS=("${SKILL_DIRS[@]}")
+  fi
   if ! choose_items "skills"; then
     return 0
   fi
@@ -514,19 +465,6 @@ install_skills() {
 
   if [ "$SKILL_PI" -eq 1 ]; then
     target="$PI_AGENT_DIR/skills"
-    if ensure_directory "$target"; then
-      for directory in "${SELECTED_DIRS[@]}"; do
-        if ! link_resource "$directory" "$target/${directory##*/}"; then
-          failures=1
-        fi
-      done
-    else
-      failures=1
-    fi
-  fi
-
-  if [ "$SKILL_KILO" -eq 1 ]; then
-    target="$KILO_CONFIG_DIR/skills"
     if ensure_directory "$target"; then
       for directory in "${SELECTED_DIRS[@]}"; do
         if ! link_resource "$directory" "$target/${directory##*/}"; then
@@ -553,154 +491,92 @@ install_skills() {
   return "$failures"
 }
 
-link_children() {
-  local source_directory="$1"
-  local destination_directory="$2"
-  local item failures=0
-
-  [ -d "$source_directory" ] || return 0
-  if ! ensure_directory "$destination_directory"; then
-    return 1
-  fi
-
-  for item in "$source_directory"/*; do
-    [ -e "$item" ] || [ -L "$item" ] || continue
-    if ! link_resource "$item" "$destination_directory/${item##*/}"; then
-      failures=1
-    fi
-  done
-  return "$failures"
-}
-
-# Pi extensions are opt-in: nothing is linked unless the user selects it. The
-# repository checkout stays the source of truth; only the activation link lives
-# in the Pi agent directory.
-install_pi_extensions() {
-  local target="$PI_AGENT_DIR/extensions"
-  local directory failures=0
-
-  if [ "${#PI_EXTENSION_DIRS[@]}" -eq 0 ]; then
-    printf 'No Pi extensions are available in this checkout.\n'
-    return 0
-  fi
-
-  CANDIDATE_DIRS=("${PI_EXTENSION_DIRS[@]}")
-  if ! choose_items "Pi extensions"; then
-    return 0
-  fi
-
-  printf '\nSelected Pi extensions:\n'
-  for directory in "${SELECTED_DIRS[@]}"; do
-    printf '  - %s\n' "${directory##*/}"
-  done
-  printf '  Target: %s\n' "$target"
-  if ! confirm 'Link the selected Pi extensions?'; then
-    printf 'Pi extension installation cancelled.\n'
-    return 0
-  fi
-
-  if ! ensure_directory "$target"; then
-    return 1
-  fi
-  for directory in "${SELECTED_DIRS[@]}"; do
-    if ! link_resource "$directory" "$target/${directory##*/}"; then
-      failures=1
-    fi
-  done
-
-  printf '\nLinked extensions are discovered from %s.\n' "$target"
-  printf 'Extensions listed in settings.json "extensions" stay enabled as configured.\n'
-  return "$failures"
-}
-
+# Collect the complete Pi plan before linking anything. A cancelled picker
+# cancels this plan, not just its current component.
 install_pi_harness() {
   local source="$HARNESS_DIR/pi"
-  local item failures=0
+  local component name item target index failures=0 has_extensions=0
+  local selected_components=() selected_sources=() selected_targets=()
 
   if [ ! -d "$source" ]; then
     printf 'No Pi-specific resources found at %s.\n' "$source"
     return 0
   fi
 
-  printf '\nInstalling Pi resources from %s\n' "$source"
-  if ! ensure_directory "$PI_AGENT_DIR"; then
-    return 1
-  fi
-
-  # Pi calls prompt templates "prompts", while this repository keeps its
-  # canonical sources under harness/pi/commands.
-  if [ -d "$source/commands" ] && ! link_children "$source/commands" "$PI_AGENT_DIR/prompts"; then
-    failures=1
-  fi
-  if ! install_pi_extensions; then
-    failures=1
-  fi
-  if [ -d "$source/skills" ] && ! link_children "$source/skills" "$PI_AGENT_DIR/skills"; then
-    failures=1
-  fi
-
-  # Future Pi-specific files/directories mirror into the Pi agent directory.
+  CANDIDATE_DIRS=()
   for item in "$source"/*; do
     [ -e "$item" ] || [ -L "$item" ] || continue
-    case "${item##*/}" in
-      commands|extensions|skills) continue ;;
+    CANDIDATE_DIRS+=("$item")
+  done
+  printf '\nChoose Pi components, then individual commands, extensions, or skills.\n'
+  printf 'Other files and directories are selected as whole resources.\n'
+  printf 'Cancelling any Pi picker cancels the entire Pi plan without linking anything.\n'
+  if ! choose_items "Pi components"; then
+    return 0
+  fi
+  # choose_items overwrites SELECTED_DIRS, so keep the outer selection separate.
+  selected_components=("${SELECTED_DIRS[@]}")
+
+  for component in "${selected_components[@]}"; do
+    name="${component##*/}"
+    case "$name" in
+      commands|extensions|skills)
+        target="$PI_AGENT_DIR/$name"
+        # Pi calls the repository's command templates "prompts".
+        [ "$name" = commands ] && target="$PI_AGENT_DIR/prompts"
+        CANDIDATE_DIRS=()
+        if [ "$name" = extensions ]; then
+          if [ "${#PI_EXTENSION_DIRS[@]}" -gt 0 ]; then
+            CANDIDATE_DIRS=("${PI_EXTENSION_DIRS[@]}")
+          fi
+        else
+          for item in "$component"/*; do
+            [ -e "$item" ] || [ -L "$item" ] || continue
+            CANDIDATE_DIRS+=("$item")
+          done
+        fi
+        if [ "${#CANDIDATE_DIRS[@]}" -eq 0 ]; then
+          printf 'No Pi %s are available in this checkout; skipping this component.\n' "$name"
+          continue
+        fi
+        if ! choose_items "Pi $name"; then
+          printf 'Pi installation cancelled; no Pi resources linked.\n'
+          return 0
+        fi
+        for item in "${SELECTED_DIRS[@]}"; do
+          selected_sources+=("$item")
+          selected_targets+=("$target/${item##*/}")
+        done
+        [ "$name" = extensions ] && has_extensions=1
+        ;;
+      *)
+        selected_sources+=("$component")
+        selected_targets+=("$PI_AGENT_DIR/$name")
+        ;;
     esac
-    if ! link_resource "$item" "$PI_AGENT_DIR/${item##*/}"; then
+  done
+
+  if [ "${#selected_sources[@]}" -eq 0 ]; then
+    printf 'No Pi resources selected; nothing to link.\n'
+    return 0
+  fi
+  printf '\nSelected Pi resources (source -> destination):\n'
+  for ((index = 0; index < ${#selected_sources[@]}; index++)); do
+    printf '  - %s -> %s\n' "${selected_sources[$index]}" "${selected_targets[$index]}"
+  done
+  if ! confirm 'Link only these selected Pi resources?'; then
+    printf 'Pi installation cancelled.\n'
+    return 0
+  fi
+
+  for ((index = 0; index < ${#selected_sources[@]}; index++)); do
+    if ! link_resource "${selected_sources[$index]}" "${selected_targets[$index]}"; then
       failures=1
     fi
   done
-  return "$failures"
-}
-
-install_kilo_harness() {
-  local source="$HARNESS_DIR/kilo"
-  local item failures=0
-
-  if [ ! -d "$source" ]; then
-    printf 'No Kilo-specific resources are present at %s; skipping Kilo harness artifacts.\n' "$source"
-    return 0
-  fi
-
-  printf '\nInstalling Kilo resources from %s\n' "$source"
-  if ! ensure_directory "$KILO_CONFIG_DIR"; then
-    return 1
-  fi
-  for item in "$source"/*; do
-    [ -e "$item" ] || [ -L "$item" ] || continue
-    if ! link_resource "$item" "$KILO_CONFIG_DIR/${item##*/}"; then
-      failures=1
-    fi
-  done
-  return "$failures"
-}
-
-install_harness() {
-  local source_count=0
-  local failures=0
-
-  if [ "$HARNESS_PI" -eq 1 ]; then
-    source_count=$((source_count + 1))
-  fi
-  if [ "$HARNESS_KILO" -eq 1 ]; then
-    source_count=$((source_count + 1))
-  fi
-  if [ "$source_count" -eq 0 ]; then
-    return 0
-  fi
-
-  printf '\nHarness installation plan:\n'
-  [ "$HARNESS_PI" -eq 1 ] && printf '  - Pi:   %s -> %s (extensions are selected individually)\n' "$HARNESS_DIR/pi" "$PI_AGENT_DIR"
-  [ "$HARNESS_KILO" -eq 1 ] && printf '  - Kilo: %s -> %s\n' "$HARNESS_DIR/kilo" "$KILO_CONFIG_DIR"
-  if ! confirm 'Install the selected harness resources?'; then
-    printf 'Harness installation cancelled.\n'
-    return 0
-  fi
-
-  if [ "$HARNESS_PI" -eq 1 ] && ! install_pi_harness; then
-    failures=1
-  fi
-  if [ "$HARNESS_KILO" -eq 1 ] && ! install_kilo_harness; then
-    failures=1
+  if [ "$has_extensions" -eq 1 ]; then
+    printf '\nLinked extensions are discovered from %s/extensions.\n' "$PI_AGENT_DIR"
+    printf 'Extensions listed in settings.json "extensions" stay enabled as configured.\n'
   fi
   return "$failures"
 }
@@ -709,9 +585,8 @@ main() {
   print_header
   discover_resources
 
-  printf 'Found %d installable tool(s), %d skill(s), %d Pi extension(s), and %s harness source tree(s).\n' \
-    "${#TOOL_DIRS[@]}" "${#SKILL_DIRS[@]}" "${#PI_EXTENSION_DIRS[@]}" \
-    "$(find "$HARNESS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
+  printf 'Found %d installable tool(s), %d skill(s), and %d Pi extension(s).\n' \
+    "${#TOOL_DIRS[@]}" "${#SKILL_DIRS[@]}" "${#PI_EXTENSION_DIRS[@]}"
 
   if ! choose_categories; then
     exit 0
@@ -722,19 +597,13 @@ main() {
       DO_SKILLS=0
     fi
   fi
-  if [ "$DO_HARNESS" -eq 1 ]; then
-    if ! choose_harnesses; then
-      DO_HARNESS=0
-    fi
-  fi
-
   if [ "$DO_TOOLS" -eq 1 ] && ! install_tools; then
     SETUP_STATUS=1
   fi
   if [ "$DO_SKILLS" -eq 1 ] && ! install_skills; then
     SETUP_STATUS=1
   fi
-  if [ "$DO_HARNESS" -eq 1 ] && ! install_harness; then
+  if [ "$DO_HARNESS" -eq 1 ] && ! install_pi_harness; then
     SETUP_STATUS=1
   fi
 

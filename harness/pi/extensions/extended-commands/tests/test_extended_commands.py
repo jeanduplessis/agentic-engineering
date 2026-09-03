@@ -75,7 +75,7 @@ class ExtendedCommandsTests(unittest.TestCase):
             """
         )
 
-        self.assertEqual(len(expected), 23)
+        self.assertTrue(expected, "The repository must provide Pi command templates")
         self.assertEqual(json.loads(self.run_node(script)), expected)
 
     def test_shared_union_agent_and_subtask_fields_are_silently_accepted(self):

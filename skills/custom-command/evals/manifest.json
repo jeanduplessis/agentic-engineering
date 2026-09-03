@@ -25,7 +25,7 @@
       "cases": [
         {
           "id": "trigger-positive-create-command",
-          "prompt": "Create one shared Pi/OpenCode slash command for fixing tests.",
+          "prompt": "Create one Pi slash command for fixing tests.",
           "should_trigger": true,
           "expected_skill": "custom-command"
         },
@@ -48,8 +48,8 @@
       "cases": [
         {
           "id": "capability-port-command",
-          "prompt": "Port a legacy command to one shared Pi/OpenCode command source.",
-          "capability": "shared-command-authoring"
+          "prompt": "Port a legacy command to one Pi-owned repository command source.",
+          "capability": "pi-command-authoring"
         }
       ]
     }

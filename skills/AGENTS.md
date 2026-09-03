@@ -1,6 +1,6 @@
 # AGENTS.md — skills directory context
 
-This directory contains canonical agent skills shared by Pi and OpenCode. Each skill should be self-contained, easy for agents to discover, behaviorally complete without harness-specific acceleration, and optionally measurable via the repo-level `skill-factory/tools/skill_eval` framework.
+This directory contains canonical agent skills for Pi. Each skill should be self-contained, easy for agents to discover, behaviorally complete without harness-specific acceleration, and optionally measurable via the repo-level `skill-factory/tools/skill_eval` framework.
 
 ## Skill structure
 
@@ -115,10 +115,10 @@ Current runner support:
 
 For workflow suites, compare:
 
-- `with_skill`: Pi advertises the target `SKILL.md` for discovery; the legacy `force_skill` flag does not prove a body read. Kilo attaches the instructions.
-- `without_skill`: selected real harness omits the target skill.
+- `with_skill`: Pi advertises the target `SKILL.md` for discovery; the legacy `force_skill` flag does not prove a body read.
+- `without_skill`: Pi omits the target skill.
 
-Real configurations may select `harness: "pi"` or OpenCode-compatible `harness: "kilo"`; evaluator choice must not change skill behavior expectations.
+Pi (`harness: "pi"`) is the only supported live harness. Static and replay modes remain available for synthetic checks.
 
 ## Checks and graders
 
@@ -209,5 +209,5 @@ When adding or substantially changing a skill:
 4. Run unit tests for `skill-factory/tools/skill_eval` after changing framework-facing eval files.
 5. Run no-live `--require-real` validation to ensure the manifest uses real configs and skips honestly without live harness execution.
 6. Run live harness eval only with explicit approval.
-7. Preserve equivalent Pi and OpenCode behavior; harness-specific metadata or acceleration must have a complete shared fallback.
+7. Preserve Pi behavior; optional metadata or acceleration must have a complete fallback.
 8. Treat static/replay results as synthetic plumbing checks, not skill-quality evidence.

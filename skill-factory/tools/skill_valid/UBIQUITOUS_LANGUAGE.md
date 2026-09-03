@@ -21,7 +21,7 @@
   check, online check.
 
 - **Skill Spec Gate**: The deterministic **Cheap Gate** keyed `skill_spec` that parses `SKILL.md` and checks
-  shared Pi/OpenCode skill compatibility, resource references, and repo-contract rules before live review. Avoid aliases: Static
+  Pi skill compatibility, resource references, and repo-contract rules before live review. Avoid aliases: Static
   skill lint, spec validator.
 
 - **Prerequisite Accumulation**: The validation policy of checking all deterministic prerequisite gates before
@@ -70,7 +70,7 @@
   Avoid aliases: Ignored suite, metadata suite.
 
 - **With-Skill Configuration**: The eval configuration that runs a supported live harness with the **Target Skill**
-  available. Pi advertises its metadata; Kilo attaches its instructions. Avoid aliases: Candidate config, enabled config.
+  available. Pi advertises its metadata; this does not prove a body read. Avoid aliases: Candidate config, enabled config.
 
 - **Live Eval Gate**: The **Live Gate** that runs workflow/regression suites through `tools.skill_eval` using
   the **With-Skill Configuration**, plus Pi discovery profiles when `--include-trigger` is selected. Avoid aliases: Behavior gate, eval gate.
@@ -117,7 +117,7 @@
 
 - **Prerequisite Accumulation** reports deterministic missing requirements together before any live harness/model call.
 
-- The **Skill Spec Gate** owns deterministic shared Pi/OpenCode SKILL.md compatibility/resource validation; the **Validate-Skills Gate** owns qualitative judgment after live opt-in.
+- The **Skill Spec Gate** owns deterministic Pi SKILL.md compatibility/resource validation; the **Validate-Skills Gate** owns qualitative judgment after live opt-in.
 
 - The **LLM Optimal Check Gate** analyzes only `SKILL.md` in v1; `warn` is non-blocking, while `fail` and tool errors block live gates.
 

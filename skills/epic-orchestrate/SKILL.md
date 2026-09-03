@@ -1,6 +1,6 @@
 ---
 name: epic-orchestrate
-description: "Use when asked to run, recover, or improve /epic-orchestrate; implement an existing ait epic; coordinate multi-issue formal gates in Pi, OpenCode/Kilo, or another capable harness; harden ait epic workflow; or resume a failed/interrupted epic orchestration. Orchestrates reconnaissance, per-issue implementation, validation, review, commits, final validation/review, closure, and recovery."
+description: "Use when asked to run, recover, or improve /epic-orchestrate; implement an existing ait epic; coordinate multi-issue formal gates in Pi; harden ait epic workflow; or resume a failed/interrupted epic orchestration. Orchestrates reconnaissance, per-issue implementation, validation, review, commits, final validation/review, closure, and recovery."
 license: MIT
 compatibility: Requires ait and git in PATH plus an existing .ait project in the target repo. Native subagents or a harness runner are optional; sequential current-session execution is the required fallback.
 allowed-tools: Bash(ait:*) Bash(git:*) Bash(mktemp:*) Read Write

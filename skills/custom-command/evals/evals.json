@@ -11,49 +11,49 @@
         "The canonical source is harness/pi/commands/fix-tests.md.",
         "The command uses valid YAML frontmatter with description.",
         "The command uses $ARGUMENTS for optional input and does not use $@ or slicing.",
-        "The response recommends root package discovery for Pi and does not claim OpenCode/Kilo activation."
+        "The response recommends root package discovery for Pi and names the Pi-owned source."
       ],
       "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     },
     {
       "id": 2,
-      "prompt": "Audit and rewrite this as one shared Pi/OpenCode command source. Preserve coverage analysis, accept an optional coverage command or focus area, and keep skills metadata only if safe. Explain migration and activation.\n\n```md\n---\ndescription: Analyze coverage\nagent: build\nmodel: legacy-provider/legacy-model\nskills:\n  - coverage-review\n---\n\nHere are current results:\n!`npm test -- --coverage`\n\nAnalyze @coverage/lcov.info and use ${@:2} for extra focus.\n```\n\nToday we build separate Pi and OpenCode copies from this file.\n\nEval contract: You may either return complete Markdown command contents or write canonical command file in sandbox. If writing a file, summarize path and activation guidance.",
-      "expected_output": "A migration audit and shared command that removes behavior routing, pre-expansion, implicit inclusion, slicing, and generated variants; retained skills metadata has explicit body skill loading.",
+      "prompt": "Audit and rewrite this as one Pi-owned repository command named analyze-coverage. Preserve coverage analysis, accept an optional coverage command or focus area, and keep skills metadata only if safe. Explain migration and activation.\n\n```md\n---\ndescription: Analyze coverage\nagent: build\nmodel: legacy-provider/legacy-model\nskills:\n  - coverage-review\n---\n\nHere are current results:\n!`npm test -- --coverage`\n\nAnalyze @coverage/lcov.info and use ${@:2} for extra focus.\n```\n\nToday we generate separate command copies from this file.\n\nEval contract: You may either return complete Markdown command contents or write canonical command file in sandbox. If writing a file, summarize path and activation guidance.",
+      "expected_output": "A migration audit and Pi repository command that removes behavior routing, pre-expansion, implicit inclusion, slicing, and generated variants; retained skills metadata has explicit body skill loading.",
       "files": [],
       "expectations": [
-        "The audit rejects agent and model behavior metadata for shared source.",
+        "The audit rejects agent and model behavior metadata when no extension routing is requested.",
         "The rewrite replaces shell interpolation and implicit @file inclusion with explicit body instructions.",
         "The rewrite replaces slicing with $ARGUMENTS or simple positional arguments.",
         "If skills metadata remains, body explicitly instructs agent to load and follow coverage-review skill.",
-        "The response identifies an arbitrary downstream canonical source and does not claim this repository activates OpenCode/Kilo commands."
+        "The response identifies harness/pi/commands/analyze-coverage.md and root package activation."
       ],
       "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     },
     {
       "id": 3,
-      "prompt": "Make shared repo command pr-review for Pi and OpenCode. Usage is `/pr-review <PR-URL> [extra instructions]`. Keep PR URL as fixed first argument while preserving optional freeform instructions using only shared placeholders. If ambiguous, ask brief clarification. Explain canonical source and activation.\n\nEval contract: You may either return complete Markdown command contents or write canonical command file in sandbox. If writing a file, summarize path and activation guidance.",
-      "expected_output": "A shared pr-review command using $1 and $ARGUMENTS without $@ or slicing, plus canonical source and symlink/package activation guidance.",
+      "prompt": "Make Pi-owned repo command pr-review. Usage is `/pr-review <PR-URL> [extra instructions]`. Keep PR URL as fixed first argument while preserving optional freeform instructions using only repository placeholders. If ambiguous, ask brief clarification. Explain canonical source and activation.\n\nEval contract: You may either return complete Markdown command contents or write canonical command file in sandbox. If writing a file, summarize path and activation guidance.",
+      "expected_output": "A Pi repository pr-review command using $1 and $ARGUMENTS without $@ or slicing, plus canonical source and symlink/package activation guidance.",
       "files": [],
       "expectations": [
         "The command uses $1 for PR URL and $ARGUMENTS to interpret raw input or optional tail.",
-        "The shared source does not use $@ or slicing such as ${@:2}.",
+        "The repository source does not use $@ or slicing such as ${@:2}.",
         "The prompt includes concise clarification behavior.",
-        "The canonical source is identified as a downstream repository choice, not this repository's Pi directory.",
-        "The response recommends target-harness activation rather than generated variants."
+        "The canonical source is harness/pi/commands/pr-review.md.",
+        "The response recommends Pi package activation rather than generated variants."
       ],
       "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     },
     {
       "id": 4,
-      "prompt": "Create a personal OpenCode-only command named inspect-session. It intentionally relies on an OpenCode-only feature and should not enter this repo shared command library. Accept optional user focus. Explain where it belongs and why it is not a shared repo command.\n\nEval contract: Return complete Markdown contents and install path, or write the harness-local command in sandbox and summarize it.",
-      "expected_output": "A clearly labeled OpenCode harness-local one-off installed in an OpenCode-native command directory, not harness/pi/commands/.",
+      "prompt": "Create a personal Pi-only command named inspect-session in the global Pi prompts directory, not this repository. Accept optional user focus using native Pi argument syntax. Explain where it belongs and why it is a one-off.\n\nEval contract: Return complete Markdown contents and install path, or write the Pi-local command in sandbox and summarize it.",
+      "expected_output": "A clearly labeled Pi global one-off installed at ~/.pi/agent/prompts/inspect-session.md, not harness/pi/commands/.",
       "files": [],
       "expectations": [
-        "The response classifies command as an OpenCode harness-local one-off.",
+        "The response classifies command as a Pi global one-off.",
         "The command is not assigned canonical ownership under this repo's harness/pi/commands/.",
-        "The response names an OpenCode-native command location.",
+        "The response names the global Pi prompt location.",
         "The command body remains explicit about requested task.",
-        "The response does not recommend generated Pi/OpenCode variants."
+        "The response does not recommend generated command variants."
       ],
       "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     },
@@ -67,7 +67,20 @@
         "The body explicitly instructs agent to load and follow code-review-workflow skill.",
         "The body preserves explicit review behavior if skills metadata is ignored.",
         "The command uses $ARGUMENTS or simple positional arguments.",
-        "The response recommends root package activation and does not claim OpenCode/Kilo activation."
+        "The response recommends root package activation and names the Pi-owned source."
+      ],
+      "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
+    },
+    {
+      "id": 6,
+      "prompt": "Create a project-local Pi command named inspect-project in .pi/prompts/. Usage is `/inspect-project <path> [focus]`. Use $1 for the path and native Pi slicing for the optional focus. Keep it outside this repository's command library. Explain project trust and activation.\n\nEval contract: Return complete Markdown contents and install path, or write the Pi-local command in the sandbox and summarize it.",
+      "expected_output": "A Pi project one-off at .pi/prompts/inspect-project.md with native arguments and project-trust-aware discovery guidance.",
+      "files": [],
+      "expectations": [
+        "The canonical path is .pi/prompts/inspect-project.md, not harness/pi/commands/.",
+        "The body uses $1 and ${@:2} and states what happens when the path is missing.",
+        "The response explains that Pi discovers project prompts after project trust is granted.",
+        "The body uses explicit tool instructions, not shell pre-expansion or implicit file inclusion."
       ],
       "checks": [{"id": "response.non_empty", "type": "non_empty_response"}]
     }

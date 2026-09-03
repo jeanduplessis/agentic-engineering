@@ -364,6 +364,7 @@ class CanonicalCommandInventoryTests(unittest.TestCase):
             "spec-reverse-gen",
             "to-epic",
             "to-issues",
+            "wat",
         }
     )
 

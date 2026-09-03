@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This directory contains repo-level Python tools used by agents to validate shared commands and evaluate, validate, and optimize skills.
+This directory contains repo-level Python tools used by agents to validate Pi commands and evaluate, validate, and optimize skills.
 Prefer these shared tools over command- or skill-local scripts when adding automation. Read the tool-specific `AGENTS.md`
 before changing a tool's internals.
 
@@ -22,7 +22,7 @@ before changing a tool's internals.
   bundles, supports static/replay/real harness modes, and labels synthetic results honestly..
 
 - `tools.skill_valid`: Purpose: End-to-end validity gate for one repo-local skill.. Primary CLI/API: `python3
-  -m tools.skill_valid skills/<skill-name> [--allow-live --harness <pi|kilo>]`; `validate_skill(...)`;
+  -m tools.skill_valid skills/<skill-name> [--allow-live --harness pi]`; `validate_skill(...)`;
   `./skill-factory/tools/skill_valid/skill_validate.sh skills/<skill-name>`. Notes: Orchestrates target, manifest,
   AGENTS.md, `llm_optimal_check`, live opt-in, validate-skills, and live eval gates. Stdout is compact JSON.
   The shell wrapper renders a friendly human summary..

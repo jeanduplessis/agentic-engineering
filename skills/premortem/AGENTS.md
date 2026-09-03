@@ -29,4 +29,4 @@ The manifest has no copy fixtures, custom grader, or legacy eval assets.
 - Keep recommendations concrete and mapped to failure modes.
 - Update `evals/manifest.json` when required report sections or output defaults change.
 - Prefer deterministic manifest checks. Add a skill-local grader only if generic checks cannot express the contract.
-- Preserve equivalent Pi/OpenCode behavior; keep harness-specific capability optional with a shared fallback.
+- Preserve Pi behavior; keep optional capabilities backed by a complete fallback.

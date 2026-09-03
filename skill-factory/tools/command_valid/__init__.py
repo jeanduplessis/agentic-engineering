@@ -153,9 +153,9 @@ def _validate_markdown_contract(text: str, command_name: str, repo_root: Path) -
             )
         )
     if re.search(r"!`[^`]*`", body):
-        errors.append(_error("unsupported_body_syntax", "Unsupported OpenCode shell interpolation is not valid in shared commands."))
+        errors.append(_error("unsupported_body_syntax", "Unsupported OpenCode shell interpolation is not valid in Pi prompt templates."))
     if re.search(r"(?<![\\\w])@[A-Za-z0-9_./~-]+", body):
-        errors.append(_error("unsupported_body_syntax", "Unsupported OpenCode file interpolation is not valid in shared commands."))
+        errors.append(_error("unsupported_body_syntax", "Unsupported OpenCode file interpolation is not valid in Pi prompt templates."))
     if re.search(r"\$@|\$\{@:[^}]*\}", body):
         errors.append(_error("unsupported_placeholder", "Unsupported argument placeholder; use $ARGUMENTS or simple positional placeholders such as $1."))
     return errors
@@ -273,7 +273,7 @@ def main(
     stderr: TextIO | None = None,
 ) -> int:
     output = stdout if stdout is not None else sys.stdout
-    parser = argparse.ArgumentParser(description="Validate one shared Pi/OpenCode command name.", add_help=True)
+    parser = argparse.ArgumentParser(description="Validate one Pi-owned command name.", add_help=True)
     parser.add_argument("command_name", nargs="?", help="Command name without leading slash or .md suffix")
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help="Repository root; defaults to current directory")
     parser.add_argument("--commands-dir", type=Path, help="Command library directory; defaults to <repo-root>/commands")

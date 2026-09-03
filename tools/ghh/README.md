@@ -33,13 +33,13 @@ command -v ghh
 Approve one or more pull requests in a repository:
 
 ```sh
-ghh stamp --org kilo-org --repo cloud --pr 1234,4567
+ghh stamp --org example-org --repo cloud --pr 1234,4567
 ```
 
 A single pull request uses the same option:
 
 ```sh
-ghh stamp --org kilo-org --repo cloud --pr 1234
+ghh stamp --org example-org --repo cloud --pr 1234
 ```
 
 For every PR, `ghh` executes the equivalent of:

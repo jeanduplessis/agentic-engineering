@@ -1,38 +1,25 @@
 ---
 name: custom-command
-description: Create, port, audit, and edit Pi-owned Markdown commands in this repository or harness-local prompt templates. Use when working with slash commands, command files, prompt-template files, .pi/prompts, .opencode/commands, package prompt entries, command migration, or prompt-template syntax audits. Covers repository ownership, native harness locations, metadata, skill loading, and argument placeholders.
+description: Create, port, audit, and edit Pi-owned Markdown commands in this repository or Pi-local prompt templates. Use when working with slash commands, command files, prompt-template files, .pi/prompts, package prompt entries, command migration, or prompt-template syntax audits. Covers repository ownership, Pi project/global locations, metadata, skill loading, and argument placeholders.
 ---
 
 # Custom command
 
-Author Markdown commands, including Pi prompt templates, for Pi, OpenCode, or both. Filename stem becomes the command name. This repository owns Pi templates only; it is not a shared Pi/OpenCode command source.
+Author Markdown commands as Pi prompt templates. The filename stem becomes the command name.
 
 ## Decide scope first
 
 - **This repository's Pi command:** store it at `harness/pi/commands/<name>.md`.
-- **Harness-local one-off:** store it in the target harness's native command directory.
-- **Downstream shared command:** a target repository may choose one source for Pi and OpenCode. This repository does not supply or activate that source.
+- **Pi project one-off:** store it at `.pi/prompts/<name>.md` in the target project.
+- **Pi global one-off:** store it at `~/.pi/agent/prompts/<name>.md`.
 
-If a harness-local installation target is ambiguous, ask one concise clarification. Otherwise default command work in this repository to `harness/pi/commands/`.
+If a one-off installation target is ambiguous, ask one concise clarification. Otherwise default command work in this repository to `harness/pi/commands/`.
 
-## This repository's Pi commands
+## Activation
 
-1. Edit `harness/pi/commands/<name>.md`.
-2. Root `package.json` exposes these files through `pi.prompts`.
-3. Do not claim that this file activates OpenCode or Kilo commands.
+Root `package.json` exposes this repository's commands through `pi.prompts`. Setup can link selected commands into Pi's global prompts directory after confirmation. Edit the repository source, not an installed link.
 
-Pi extensions are separate resources under `harness/pi/extensions/`. Do not create copied or generated command variants.
-
-## Harness-local and downstream commands
-
-For arbitrary harness-local commands, use the target harness's documented native location:
-
-- Pi project: `.pi/prompts/<name>.md`
-- Pi global: `~/.pi/agent/prompts/<name>.md`
-- OpenCode project: `.opencode/commands/<name>.md`
-- OpenCode global: `~/.config/opencode/commands/<name>.md`
-
-For a downstream command shared by Pi and OpenCode, choose and document its canonical source in that downstream repository. Verify each target's discovery and metadata behavior before recommending symlinks. Do not infer a shared contract from one harness accepting syntax.
+Pi discovers project one-offs after project trust is granted and global one-offs from its prompts directory. Discovery is flat; use explicit package/settings entries for nested files. Pi extensions are separate resources under `harness/pi/extensions/`. Do not create copied or generated command variants.
 
 ## Command shape
 
@@ -48,10 +35,10 @@ Perform the requested task.
 Raw user input: $ARGUMENTS
 ```
 
-- Use valid scalar YAML.
-- Keep routing metadata compatible with the intended harness. Do not describe Pi-only metadata as portable.
+- Use valid YAML with a non-empty scalar `description`.
 - Keep core behavior in the body, including required skill loading.
-- For a downstream shared command, keep nonessential metadata safely ignorable by every target.
+- Native Pi templates use `description` and optional `argument-hint`. This repository's `extended-commands` extension supports additional routing/skill metadata; do not assume bare Pi applies it.
+- Add extension metadata only when requested and supported by the target. Keep optional metadata safely ignorable without losing the body workflow.
 
 ## Skills metadata
 
@@ -64,56 +51,56 @@ skills:
   - code-review-workflow
 ---
 
-Load and follow the `code-review-workflow` skill before reviewing changes.
+## Required skills
+
+- `code-review-workflow`
+
+Load and follow the `code-review-workflow` skill before continuing. If it is unavailable, stop and report it.
 Review scope: $ARGUMENTS
 ```
 
-The body instruction remains necessary when metadata is ignored.
+The body instruction remains necessary when metadata is ignored. For repository commands, keep the ordered `Required skills` list identical to the declared skills and resolve each skill locally.
 
 ## Arguments
 
-For this repository's Pi templates, use `$ARGUMENTS` or simple positional placeholders. For a downstream shared command, limit its source to placeholders supported by every target:
+For this repository's templates, use only:
 
 - `$ARGUMENTS` for complete raw/freeform input.
 - `$1`, `$2`, and other simple positional arguments with fixed meanings.
 
-Do not use `$@`, `${@:N}`, or `${@:N:L}` in a downstream shared source. Use `$ARGUMENTS` for a freeform tail and state what happens when required input is missing or ambiguous.
+Do not use `$@`, `${@:N}`, or `${@:N:L}` in repository commands; `command_valid` enforces this narrower contract. Use `$ARGUMENTS` for a freeform tail and state what happens when required input is missing or ambiguous.
 
-Harness-local commands may use native syntax when lock-in is explicit.
+Pi-local one-offs may use native Pi syntax: `$@` for all arguments, `${@:N}` or `${@:N:L}` for slicing, and `${1:-default}` or `${ARGUMENTS:-default}` for defaults. Label the one-off scope explicitly; do not assume the repository extension implements every native form.
 
 ## Migration and audit rules
 
-For a downstream Pi/OpenCode shared command:
-
-- choose the downstream repository's canonical source; do not use this repository's Pi directory unless the command is Pi-only;
-- Remove unsupported frontmatter such as `agent`, `subtask`, and legacy model-routing fields when they affect the downstream shared behavior.
-- remove metadata that changes behavior in only one target;
-- replace shell pre-expansion and implicit file inclusion with body instructions;
-- replace `$@` and slicing with `$ARGUMENTS` or fixed positional arguments;
-- avoid copied or generated variants.
+- Choose the Pi source path from the scope above.
+- Remove unsupported frontmatter such as `agent`, `subtask`, and legacy model-routing fields when the target is bare Pi; for repository commands, verify any requested extension metadata against `extended-commands` and `command_valid`.
+- Replace shell pre-expansion and implicit file inclusion with explicit body instructions to run commands and read files.
+- Replace `$@`, slicing, and defaults with `$ARGUMENTS` or fixed positional arguments when migrating into the repository command library.
+- Preserve required skill loading and the original task behavior. Avoid copied or generated variants.
 
 ## Output when creating a command
 
 Unless writing was requested, return:
 
-1. Scope classification: this repository's Pi command, downstream shared command, or named harness-local one-off.
+1. Scope classification: repository command, Pi project one-off, or Pi global one-off.
 2. Canonical path and complete Markdown contents.
-3. Activation guidance for the actual target harness.
+3. Pi activation guidance.
 4. A validation note covering metadata, skill loading, and argument placeholders.
 
 For returned Markdown containing nested fences, use a four-backtick outer fence.
 
 ## Checklist
 
-- [ ] Scope is explicitly Pi-owned, downstream shared, or harness-local.
-- [ ] This repository's Pi source is `harness/pi/commands/<name>.md`.
+- [ ] Scope and canonical path are explicit.
 - [ ] Filename is flat lowercase kebab-case and ends with `.md`.
 - [ ] Frontmatter is valid YAML and body retains core behavior.
-- [ ] Skills metadata has matching explicit body skill-loading instruction.
-- [ ] Downstream shared placeholders are `$ARGUMENTS` and/or simple positional arguments; no `$@` or slicing.
-- [ ] Activation guidance does not claim this repository activates OpenCode/Kilo commands.
+- [ ] Skills metadata has a matching explicit body skill-loading instruction.
+- [ ] Repository placeholders are `$ARGUMENTS` and/or simple positional arguments; no `$@`, slicing, or defaults.
+- [ ] Activation guidance matches the selected Pi scope and preserves existing installs.
 
-## This repository's Pi example
+## Repository example
 
 Canonical path: `harness/pi/commands/pr-review.md`
 
@@ -129,4 +116,4 @@ Interpret remaining text from raw input as optional extra instructions: $ARGUMEN
 If pull request URL is missing or ambiguous, ask one concise clarification and stop.
 ```
 
-Pi discovers this template through this repository's package manifest. An OpenCode-only or downstream shared command belongs in the relevant target repository or OpenCode-native command directory.
+Pi discovers this template through this repository's package manifest.

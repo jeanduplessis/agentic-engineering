@@ -12,8 +12,9 @@ _EXPECTED_FILENAMES = {
     "3": "pr-review.md",
     "4": "inspect-session.md",
     "5": "code-review.md",
+    "6": "inspect-project.md",
 }
-_SHARED_CASES = {"1", "2", "3", "5"}
+_REPOSITORY_CASES = {"1", "2", "3", "5"}
 _CANONICAL_PATHS = {
     "1": "harness/pi/commands/fix-tests.md",
     "2": "harness/pi/commands/analyze-coverage.md",
@@ -77,31 +78,31 @@ def grade(*, response: str, case: Any | None = None, context: dict[str, Any] | N
         {"unsupported": behavior_metadata},
     ))
 
-    shared = case_id in _SHARED_CASES
-    shared_argument = re.search(r"\$ARGUMENTS|\$\d+", markdown)
-    any_argument = re.search(r"\$ARGUMENTS|\$@|\$\d+|\$\{@:\d+(?::\d+)?\}", markdown)
-    argument = shared_argument if shared else any_argument
+    repository = case_id in _REPOSITORY_CASES
+    repository_argument = re.search(r"\$ARGUMENTS|\$\d+", markdown)
+    any_argument = re.search(r"\$ARGUMENTS|\$@|\$\d+|\$\{@:\d+(?::\d+)?\}|\$\{(?:\d+|@|ARGUMENTS):-[^}]*\}", markdown)
+    argument = repository_argument if repository else any_argument
     checks.append(_check(
         "custom-command.arguments",
         "custom_arguments",
         argument is not None,
-        f"Uses {'shared' if shared else 'harness'} argument placeholder {argument.group(0)}" if argument else "Does not use accepted argument placeholder",
+        f"Uses {'repository' if repository else 'Pi'} argument placeholder {argument.group(0)}" if argument else "Does not use accepted argument placeholder",
     ))
 
-    if shared:
-        nonportable = re.findall(r"\$@|\$\{@:\d+(?::\d+)?\}", markdown)
+    if repository:
+        unsupported = re.findall(r"\$@|\$\{@:\d+(?::\d+)?\}", markdown)
         checks.append(_check(
-            "custom-command.shared_placeholders",
+            "custom-command.repository_placeholders",
             "custom_arguments",
-            not nonportable,
-            "Shared source uses no $@ or slicing" if not nonportable else f"Nonportable shared placeholders: {', '.join(nonportable)}",
-            {"nonportable": nonportable},
+            not unsupported,
+            "Repository source uses no $@ or slicing" if not unsupported else f"Unsupported repository placeholders: {', '.join(unsupported)}",
+            {"unsupported": unsupported},
         ))
 
     shell_interpolation = re.search(r"!`[^`]+`", markdown)
     checks.append(_check(
         "custom-command.no_required_shell_interpolation",
-        "custom_shared_command",
+        "custom_pi_command",
         shell_interpolation is None,
         "Does not require legacy shell interpolation" if shell_interpolation is None else "Requires legacy !`...` shell interpolation",
     ))
@@ -109,7 +110,7 @@ def grade(*, response: str, case: Any | None = None, context: dict[str, Any] | N
     required_at_file = re.search(r"(?<![\w$])@[\w./-]+", markdown)
     checks.append(_check(
         "custom-command.no_required_at_file",
-        "custom_shared_command",
+        "custom_pi_command",
         required_at_file is None,
         "Does not require implicit @file inclusion" if required_at_file is None else f"Requires implicit @file inclusion: {required_at_file.group(0)}",
     ))
@@ -135,39 +136,39 @@ def grade(*, response: str, case: Any | None = None, context: dict[str, Any] | N
         ))
 
     source_path = str(source.get("path") or "")
-    shared_contract = shared and bool(re.search(r"shared|canonical|Pi/OpenCode|commands/", response, re.IGNORECASE) or source_path.startswith("commands/"))
-    if shared_contract:
+    if repository:
         canonical = _CANONICAL_PATHS[case_id]
         canonical_ok = canonical in response or source_path == canonical
         checks.append(_check(
-            "custom-command.canonical_shared_source",
-            "custom_shared_ownership",
+            "custom-command.canonical_source",
+            "custom_repository_ownership",
             canonical_ok,
-            f"Names canonical shared source {canonical}" if canonical_ok else f"Missing canonical shared source {canonical}",
+            f"Names canonical Pi source {canonical}" if canonical_ok else f"Missing canonical Pi source {canonical}",
             {"canonical": canonical, "artifact_path": source_path},
         ))
-        activation_ok = bool(re.search(r"\bsymlinks?\b|\bpi\.prompts\b|package (?:discovery|manifest)|\.pi/prompts|\.opencode/commands", response, re.IGNORECASE))
-        generated_variant = bool(re.search(r"(?:build|generate|copy|sync)[^\n]*(?:Pi|OpenCode)[^\n]*(?:variant|command|cop)", response, re.IGNORECASE))
+        activation_ok = bool(re.search(r"\bsymlinks?\b|\bpi\.prompts\b|package (?:discovery|manifest)|\.pi/prompts", response, re.IGNORECASE))
+        generated_variant = bool(re.search(r"(?:build|generate|copy|sync)[^\n]*Pi[^\n]*(?:variant|command|cop)", response, re.IGNORECASE))
         checks.append(_check(
-            "custom-command.shared_activation",
-            "custom_shared_activation",
+            "custom-command.pi_activation",
+            "custom_pi_activation",
             activation_ok and not generated_variant,
-            "Uses package/native-path or symlink activation without generated variants" if activation_ok and not generated_variant else "Missing safe shared activation guidance or recommends generated variants",
+            "Uses package/native-path or symlink activation without generated variants" if activation_ok and not generated_variant else "Missing Pi activation guidance or recommends generated variants",
         ))
         checks.append(_check(
             "custom-command.install_paths",
             "custom_install_paths",
             activation_ok,
-            "Includes harness activation path or package discovery" if activation_ok else "Missing harness activation path or package discovery",
+            "Includes Pi activation path or package discovery" if activation_ok else "Missing Pi activation path or package discovery",
         ))
-    elif case_id == "4":
-        local_ok = bool(re.search(r"OpenCode[- ](?:only|local)|harness-local|\.opencode/commands|\.config/opencode/commands", response, re.IGNORECASE))
-        not_shared = "commands/inspect-session.md" not in response
+    elif case_id in {"4", "6"}:
+        local_path = "~/.pi/agent/prompts/inspect-session.md" if case_id == "4" else ".pi/prompts/inspect-project.md"
+        local_ok = local_path in response
+        not_repository = f"harness/pi/commands/{expected_filename}" not in response and not source_path.startswith("harness/pi/commands/")
         checks.append(_check(
-            "custom-command.harness_local_scope",
-            "custom_harness_local_scope",
-            local_ok and not_shared,
-            "Classifies OpenCode harness-local one-off outside shared commands/" if local_ok and not_shared else "Does not clearly keep one-off outside shared commands/",
+            "custom-command.pi_local_scope",
+            "custom_pi_local_scope",
+            local_ok and not_repository,
+            "Classifies Pi-local one-off outside repository commands" if local_ok and not_repository else "Does not clearly keep one-off in the requested Pi prompts directory",
         ))
 
     return checks
@@ -278,14 +279,14 @@ def _extract_filename(response: str, expected_filename: str | None = None) -> st
 
 def _filename_candidates(response: str) -> list[str]:
     candidates: list[str] = []
-    patterns = [r"(?:canonical\s+)?(?:recommended\s+)?filename\s*:\s*`?([a-zA-Z0-9_./-]+\.md)`?", r"(?:canonical\s+)?(?:recommended\s+)?(?:file|path)\s*:\s*`?([a-zA-Z0-9_./-]+\.md)`?"]
+    patterns = [r"(?:canonical\s+)?(?:recommended\s+)?filename\s*:\s*`?([a-zA-Z0-9_./~-]+\.md)`?", r"(?:canonical\s+)?(?:recommended\s+)?(?:file|path)\s*:\s*`?([a-zA-Z0-9_./~-]+\.md)`?"]
     for pattern in patterns:
         candidates.extend(match.group(1) for match in re.finditer(pattern, response, re.IGNORECASE))
     for block in _fenced_blocks(response):
         text = block["content"].strip()
-        if re.fullmatch(r"[a-zA-Z0-9_./-]+\.md", text):
+        if re.fullmatch(r"[a-zA-Z0-9_./~-]+\.md", text):
             candidates.append(text)
-    candidates.extend(match.group(1) for match in re.finditer(r"`([a-zA-Z0-9_./-]+\.md)`", response))
+    candidates.extend(match.group(1) for match in re.finditer(r"`([a-zA-Z0-9_./~-]+\.md)`", response))
     return list(dict.fromkeys(Path(candidate).name for candidate in candidates))
 
 

@@ -34,9 +34,9 @@ class SpecCheck:
 
 
 def run_skill_spec_checks(skill_dir: Path) -> list[SpecCheck]:
-    """Run deterministic shared Pi/OpenCode skill compatibility checks.
+    """Run deterministic Pi skill compatibility checks.
 
-    Checks marked ``failed`` are shared loadability or repo contract violations.
+    Checks marked ``failed`` are Pi loadability or repo contract violations.
     Checks marked ``warn`` are deterministic best-practice concerns that may
     reduce skill reliability but should not block live behavioral gates by
     themselves.
@@ -216,7 +216,7 @@ def _check_frontmatter_fields(metadata: dict[str, Any]) -> list[SpecCheck]:
     if extra:
         checks.append(SpecCheck("frontmatter.allowed-fields", "failed", f"Unexpected frontmatter field(s): {', '.join(extra)}."))
     else:
-        checks.append(SpecCheck("frontmatter.allowed-fields", "passed", "Frontmatter uses only shared fields or safely ignored Pi capability fields."))
+        checks.append(SpecCheck("frontmatter.allowed-fields", "passed", "Frontmatter uses only standard fields or Pi capability fields."))
     for required in ("name", "description"):
         if required in metadata:
             checks.append(SpecCheck(f"frontmatter.{required}.present", "passed", f"Required field {required!r} is present."))

@@ -29,7 +29,7 @@ PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/custom-command/evals
   --allow-live
 ```
 
-`SKILL_EVAL_ALLOW_LIVE=1` provides equivalent harness-neutral opt-in. `--allow-live-pi` and
+`SKILL_EVAL_ALLOW_LIVE=1` provides equivalent live opt-in. `--allow-live-pi` and
 `SKILL_EVAL_ALLOW_LIVE_PI=1` remain compatibility aliases.
 
 Run unit tests for the framework:
@@ -54,7 +54,7 @@ PYTHONPATH=skill-factory python3 -m tools.skill_eval promote-regressions \
   types are `workflow`, `regression`, and Pi-only `trigger`. `capability` suites remain unsupported.
 
 - **harness modes**: `static` emits configured text for plumbing smoke tests; `replay` reuses prior captured
-  output; `real` invokes an agent harness such as Pi or OpenCode-compatible Kilo. Static/replay outputs are synthetic.
+  output; `real` invokes Pi. Static/replay outputs are synthetic.
 
 - **configurations**: named execution variants such as `with_skill` and `without_skill`. For Pi, the legacy
   `force_skill: true` flag advertises the target with `--skill`; it does not guarantee a body read.
@@ -122,11 +122,7 @@ Live execution is gated. Enable it with config `allow_live: true`, CLI `--allow-
 `SKILL_EVAL_ALLOW_LIVE=1`. Legacy Pi-specific opt-ins remain aliases. If credentials, provider config, or the
 executable are unavailable, runs are skipped or marked as process failures rather than faking outputs.
 
-### Real Kilo
-
-The `kilo` harness uses OpenCode-compatible `kilo run --pure --format default`. Forced skills are attached with
-`--file <SKILL.md>` and an explicit force-load instruction because Kilo/OpenCode exposes no Pi-style `--skill`
-run flag. Provider and model become `--model provider/model`; thinking maps to `--variant`.
+Pi is the only supported live harness. Unsupported harness names are rejected before any process or result artifacts are created.
 
 Use `--require-real` for benchmark-quality runs. It rejects static/replay configurations before execution.
 
@@ -166,7 +162,7 @@ PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/human-writing/evals/
 `--configuration NAME` is repeatable. Trigger profiles accept exact `provider`, `model`, and `thinking`
 values, `executable`, `timeout_seconds` (default 120), `allow_live`, `env`, and optional `extensions`: local
 provider-extension entry points resolved relative to the manifest. Explicit extensions are trusted code;
-no extension discovery or package installation is enabled. Native Kilo CLI trigger execution is not supported.
+no extension discovery or package installation is enabled.
 
 The `pi-target-only-read-v1` profile:
 

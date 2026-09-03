@@ -7,7 +7,7 @@ Pi extension for command templates in `harness/pi/commands`.
 - `harness/pi/commands/*.md` is this repository's Pi-owned source. Edit source files only; do not generate or copy adapter-specific command artifacts.
 - Root `package.json` exposes the templates through `pi.prompts`. This extension adds routing and skill behavior when activated.
 - Activate the extension from Pi's extension discovery configuration. Keep activation links local, untracked, and pointed at `harness/pi/extensions/extended-commands`.
-- This repository does not provide or activate OpenCode/Kilo commands. Use each downstream harness's native command locations for harness-local commands.
+- Pi is the only supported harness. Use Pi's native project/global prompt locations for one-off templates outside this repository.
 
 ## Pi adapter behavior
 

@@ -16,7 +16,7 @@ from .sandbox import create_sandbox
 
 
 EXECUTABLE_SUITE_TYPES = {"workflow", "regression", "trigger"}
-REAL_HARNESSES = {"pi", "kilo"}
+REAL_HARNESSES = {"pi"}
 LIVE_OPT_IN_ENV = "SKILL_EVAL_ALLOW_LIVE"
 LEGACY_PI_LIVE_OPT_IN_ENV = "SKILL_EVAL_ALLOW_LIVE_PI"
 
@@ -37,6 +37,8 @@ def run_suite(
     if suite.type == "trigger":
         from .trigger import validate_trigger_suite
         validate_trigger_suite(manifest, suite, configs)
+    for config in configs.values():
+        _harness_contract(config)  # Reject unsupported harnesses before creating artifacts or processes.
     if require_real:
         synthetic_configs = [name for name, config in configs.items() if _harness_contract(config)["synthetic"]]
         if synthetic_configs:
@@ -287,7 +289,7 @@ def _harness_contract(config: dict[str, Any]) -> dict[str, Any]:
             "timing": "replayed_or_runner_wall_clock",
             "usage": "replayed_or_unknown",
         }
-    else:
+    elif harness in REAL_HARNESSES:
         mode = "real"
         synthetic = False
         provenance = {
@@ -295,6 +297,8 @@ def _harness_contract(config: dict[str, Any]) -> dict[str, Any]:
             "timing": "real_process_wall_clock",
             "usage": "provider_or_harness_reported_when_available",
         }
+    else:
+        raise ValueError(f"Unsupported harness: {harness}")
     return {
         "name": harness,
         "mode": mode,
@@ -389,8 +393,6 @@ def _execute_harness(
     if harness == "pi":
         return _execute_pi_harness(case, config, sandbox_path=sandbox_path, skill_path=skill_path,
                                    trigger_plan=trigger_plan, config_name=config_name, run_dir=run_dir)
-    if harness == "kilo":
-        return _execute_kilo_harness(case, config, sandbox_path=sandbox_path, skill_path=skill_path)
     raise ValueError(f"Unsupported harness: {harness}")
 
 
@@ -529,60 +531,6 @@ def _execute_pi_harness(
     )
     result["skill_paths_advertised"] = advertised
     return result
-
-
-def _execute_kilo_harness(
-    case: EvalCase,
-    config: dict[str, Any],
-    *,
-    sandbox_path: Path,
-    skill_path: Path | None,
-) -> dict[str, Any]:
-    if not _live_execution_allowed(config):
-        return _skipped_harness_result(
-            f"live harness execution is disabled; set allow_live or {LIVE_OPT_IN_ENV}=1"
-        )
-
-    executable = str(config.get("executable") or "kilo")
-    resolved_executable = _resolve_executable(config, "kilo")
-    if not resolved_executable:
-        return _skipped_harness_result(f"Kilo executable not found: {executable}")
-
-    if config.get("force_skill") and skill_path is None:
-        return _skipped_harness_result("force_skill requested but manifest skill.path is missing")
-
-    command = [resolved_executable, "run", "--pure", "--format", "default"]
-    if config.get("model"):
-        model = str(config["model"])
-        if config.get("provider") and "/" not in model:
-            model = f"{config['provider']}/{model}"
-        command.extend(["--model", model])
-    if config.get("thinking"):
-        command.extend(["--variant", str(config["thinking"])])
-    if config.get("agent"):
-        command.extend(["--agent", str(config["agent"])])
-
-    skill_paths_loaded: list[str] = []
-    prompt = case.prompt
-    if config.get("force_skill"):
-        assert skill_path is not None
-        command.extend(["--file", str(skill_path)])
-        skill_paths_loaded.append(str(skill_path))
-        prompt = (
-            "Use the attached skill instructions for this task. Treat them as the force-loaded target skill.\n\n"
-            + case.prompt
-        )
-    command.append(prompt)
-
-    env = os.environ.copy()
-    env.update({str(key): str(value) for key, value in dict(config.get("env", {})).items()})
-    return _process_harness_result(
-        command,
-        sandbox_path=sandbox_path,
-        env=env,
-        timeout_seconds=float(config.get("timeout_seconds", 120)),
-        skill_paths_loaded=skill_paths_loaded,
-    )
 
 
 def _skipped_harness_result(reason: str) -> dict[str, Any]:

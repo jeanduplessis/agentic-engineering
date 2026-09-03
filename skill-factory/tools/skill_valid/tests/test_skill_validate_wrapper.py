@@ -61,14 +61,24 @@ class SkillValidateWrapperTests(unittest.TestCase):
         payload = {"valid": False, "target": "skills/demo", "gates": {}}
 
         default_run = self.run_wrapper_with_fake_skill_valid(payload, exit_code=1)
-        live_run = self.run_wrapper_with_fake_skill_valid(payload, exit_code=1, wrapper_args=("--allow-live", "--harness", "kilo"))
+        live_run = self.run_wrapper_with_fake_skill_valid(payload, exit_code=1, wrapper_args=("--allow-live", "--harness", "pi"))
         env_live_run = self.run_wrapper_with_fake_skill_valid(payload, exit_code=1, extra_env={"SKILL_VALID_ALLOW_LIVE": "1"})
 
         self.assertNotIn("--allow-live", default_run.skill_valid_args)
         self.assertIn("Deterministic validation only", default_run.stderr)
         self.assertIn("--allow-live", live_run.skill_valid_args)
-        self.assertIn("--harness kilo", live_run.skill_valid_args)
+        self.assertIn("--harness pi", live_run.skill_valid_args)
         self.assertIn("--allow-live", env_live_run.skill_valid_args)
+
+    def test_wrapper_rejects_legacy_harness_from_cli_and_environment(self):
+        for args, overrides in ((("--harness", "kilo"), {}), ((), {"SKILL_VALID_HARNESS": "kilo"})):
+            env = {key: value for key, value in os.environ.items()
+                   if not key.startswith(("SKILL_VALID_", "SKILL_EVAL_"))}
+            env.update(overrides)
+            result = subprocess.run([str(WRAPPER), "skills/custom-command", *args],
+                                    cwd=ROOT, env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("invalid choice", result.stderr)
 
     def test_wrapper_runs_from_monorepo_root_with_skill_factory_python_path(self):
         payload = {"valid": True, "target": "skills/demo", "gates": {}}

@@ -626,36 +626,33 @@ class SkillValidTests(unittest.TestCase):
             self.assertEqual(result["gates"]["validate_skills"]["status"], "not_run")
             self.assertEqual(result["gates"]["live_eval"]["status"], "not_run")
 
-    def test_kilo_harness_builds_open_code_compatible_live_commands(self):
-        with self.make_repo() as (tmp, root):
+    def test_unsupported_harness_override_fails_even_without_live_review(self):
+        for harness in ("kilo", "opencode", "unknown"):
+            for allow_live in (False, True):
+                with self.subTest(harness=harness, allow_live=allow_live), self.make_repo() as (_, root):
+                    target = self.write_valid_skill(root)
+                    deps, calls = self.passing_deps()
+                    code, result = validate_skill(
+                        ValidationOptions(target, repo_root=root, harness=harness,
+                                          allow_live=allow_live, env={}), deps=deps)
+                    self.assertEqual(code, 1)
+                    self.assertFalse(result["valid"])
+                    self.assertEqual(result["gates"]["live_opt_in"]["status"], "failed")
+                    self.assertEqual(result["gates"]["validate_skills"]["status"], "not_run")
+                    self.assertEqual(calls["pi"], [])
+                    self.assertEqual(calls["eval"], [])
+
+    def test_kilo_manifest_fails_before_live_gates(self):
+        with self.make_repo() as (_, root):
             target = self.write_valid_skill(root)
+            manifest = target / "evals/manifest.json"
+            manifest.write_text(manifest.read_text().replace('"harness": "pi"', '"harness": "kilo"'))
             deps, calls = self.passing_deps()
-
-            code, result = validate_skill(
-                ValidationOptions(
-                    target,
-                    repo_root=root,
-                    allow_live=True,
-                    harness="kilo",
-                    harness_executable="kilo-test",
-                    provider="openrouter",
-                    model="gpt-test",
-                    thinking="low",
-                ),
-                deps=deps,
-            )
-
-            self.assertEqual(code, 0)
-            command = calls["pi"][0]["command"]
-            self.assertEqual(command[:4], ["kilo-test", "run", "--pure", "--format"])
-            self.assertIn("--file", command)
-            self.assertIn("openrouter/gpt-test", command)
-            self.assertIn("--variant", command)
-            for call in calls["eval"]:
-                config = call["configurations"]["with_skill"]
-                self.assertEqual(config["harness"], "kilo")
-                self.assertEqual(config["executable"], "kilo-test")
-                self.assertTrue(config["allow_live"])
+            code, result = validate_skill(ValidationOptions(target, repo_root=root, allow_live=True, env={}), deps=deps)
+            self.assertEqual(code, 1)
+            self.assertEqual(result["gates"]["eval_manifest"]["status"], "failed")
+            self.assertEqual(calls["pi"], [])
+            self.assertEqual(calls["eval"], [])
 
     def test_validate_skills_pi_command_uses_wrapper_prompt_read_only_tools_and_overrides(self):
         with self.make_repo() as (tmp, root):

@@ -18,12 +18,12 @@
   ],
   "configurations": {
     "with_skill": {
-      "harness": "kilo",
+      "harness": "pi",
       "force_skill": true,
       "timeout_seconds": 180
     },
     "without_skill": {
-      "harness": "kilo",
+      "harness": "pi",
       "force_skill": false,
       "timeout_seconds": 180
     }

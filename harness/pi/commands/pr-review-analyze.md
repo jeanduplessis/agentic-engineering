@@ -14,7 +14,7 @@ Current harness must load and follow every skill listed above before continuing.
 ## Context
 
 - GitHub PR argument: $ARGUMENTS
-- Code reviewer: `kilo-code-bot`
+- Review scope: selected automated review authors only.
 
 If no PR URL is supplied, run this command to resolve the current branch's PR URL:
 
@@ -26,7 +26,7 @@ If the PR URL is absent or ambiguous after resolution, ask one concise clarifica
 
 ## Task
 
-Address code-reviewer PR comments. Execute steps in order.
+Address PR comments from the selected automated review authors. Execute steps in order. Never expand the action scope to all reviewers or human comments implicitly.
 
 ### Step 1: Gather prior-run context
 
@@ -36,19 +36,23 @@ Before reading review comments, inspect recent git history for prior changes and
 
 Read commit messages carefully. MUST NOT undo or contradict prior commits unless a new review comment explicitly requests it.
 
-### Step 2: Read full comment history (context pass)
+### Step 2: Select reviewers and read full history (context pass)
 
-Fetch ALL comments (resolved and unresolved) to absorb the full conversation, including prior replies explaining fixes and rationale:
+Discover review authors with a read-only `gh pr-review view <pr-url>` call. Identify the automated review accounts relevant to this task from author identities and review context; do not assume every author is a bot. Use authors explicitly selected by the user, or present the candidate logins and ask the user to confirm before taking action. If no relevant automated author is found or identity is unclear, report that and stop.
 
-    gh pr-review view <pr-url> --reviewer kilo-code-bot
+Keep the confirmed login set fixed for this run. Run the following filtered commands once per selected login; unfiltered discovery is context only, not permission to act on human comments.
+
+Fetch ALL selected-reviewer comments (resolved and unresolved) to absorb the full conversation, including prior replies explaining fixes and rationale:
+
+    gh pr-review view <pr-url> --reviewer <selected-login>
 
 Read-only context. Do NOT act on resolved comments.
 
 ### Step 3: Fetch unresolved actionable comments (action pass)
 
-Fetch comments needing action:
+Fetch comments needing action from each selected author only:
 
-    gh pr-review view <pr-url> --reviewer kilo-code-bot --unresolved --not-outdated
+    gh pr-review view <pr-url> --reviewer <selected-login> --unresolved --not-outdated
 
 Analyze and fix only these comments. If none, skip to Step 7.
 

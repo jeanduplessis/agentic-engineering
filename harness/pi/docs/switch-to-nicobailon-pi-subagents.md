@@ -1,5 +1,9 @@
 # Switch Pi subagents to nicobailon
 
+> Historical cutover plan: the ownership table and Phase 0 instructions below describe the original migration. The root policy now lives in [`harness/pi/APPEND_SYSTEM.md`](../APPEND_SYSTEM.md), linked into Pi home by the existing `setup.sh` harness installer. Edit that repository source; the packaged `pi-subagents` skill remains the invocation reference. See the [unsubmitted upstream issue draft](pi-subagents-upstream-issue-draft.md) for the separate 0.47.1 documentation and lifecycle findings.
+
+> **CURRENT upgrade:** Follow the [0.47.1 → exact 0.62.0 runbook](pi-subagents-upgrade-0.62.0.md). It preserves the home-local loader and existing missions in place. The installation commands and `subagent_wait` references below are historical, not current instructions.
+
 Replace `@tintinweb/pi-subagents@0.14.3` with `pi-subagents@0.47.1` (`nicobailon/pi-subagents`). Adopt that extension’s roles, tools, and defaults. Customize only through its settings, agent overrides, and custom agent files.
 
 This is not a 1:1 port of the current Explore / General / Frontend runtime.

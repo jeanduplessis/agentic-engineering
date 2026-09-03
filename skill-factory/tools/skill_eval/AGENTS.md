@@ -26,7 +26,7 @@ and explicit about whether results are synthetic or real.
 
 - Suite-local configurations override manifest profiles. Trigger defaults are discovery-only; never infer avoidance from a without-skill control.
 
-- Real harness adapters are Pi (`harness: "pi"`) and OpenCode-compatible Kilo (`harness: "kilo"`). Live
+- Pi (`harness: "pi"`) is the only supported live harness. Reject other harness names before execution. Live
   execution must be gated by `allow_live: true`, `--allow-live`, or `SKILL_EVAL_ALLOW_LIVE=1`; Pi-specific
   opt-ins remain backwards-compatible aliases.
 

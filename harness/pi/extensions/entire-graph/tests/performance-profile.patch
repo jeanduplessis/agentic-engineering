@@ -1,0 +1,80 @@
+--- a/cmd/entire-graph/main.go
++++ b/cmd/entire-graph/main.go
+@@ -7,6 +7,7 @@
+ import (
+ 	"fmt"
+ 	"os"
++	"runtime/pprof"
+ 
+ 	"github.com/entireio/entire-graph/internal/cli"
+ 	"github.com/entireio/entire-graph/internal/termsafe"
+@@ -15,6 +16,16 @@
+ var version = "dev"
+ 
+ func main() {
++	if path := os.Getenv("GRAPH_SPIKE_CPU_PROFILE"); path != "" {
++		file, err := os.Create(path)
++		if err != nil {
++			panic(err)
++		}
++		if err := pprof.StartCPUProfile(file); err != nil {
++			panic(err)
++		}
++		defer func() { pprof.StopCPUProfile(); _ = file.Close() }()
++	}
+ 	if err := cli.Execute(version, os.Args[1:]); err != nil {
+ 		// Escape by VALUE, not by wrapping os.Stderr. Error text is not
+ 		// tool-authored - it carries pathnames from `git diff -z`, Git's own
+--- a/internal/sem/provider.go
++++ b/internal/sem/provider.go
+@@ -12713,6 +12713,7 @@
+ // spendSweepDirectory carries the argument for why that keeps the hiding place
+ // shut.
+ func (g *gitDirExcluder) descendObserving(queue []string, queued map[string]struct{}, observeOnce func(string)) {
++	defer spikeStage("gitdir-pointer-sweep")()
+ 	repoAbs, err := filepath.Abs(g.repo)
+ 	if err != nil {
+ 		g.hiddenEvidence++
+@@ -14842,6 +14843,7 @@
+ }
+ 
+ func gitMetadataSafeForSubprocessContext(ctx context.Context, repo string) bool {
++	defer spikeStage("metadata-safety")()
+ 	absRepo, err := filepath.Abs(repo)
+ 	if err != nil {
+ 		return false
+@@ -14898,6 +14900,7 @@
+ // followed. Windows reparses are declined because Git for Windows can traverse
+ // directory junctions even though the Go lstat view reports them as redirects.
+ func gitWorktreeSafeBeforeListing(ctx context.Context, repo string) error {
++	defer spikeStage("worktree-preflight")()
+ 	repoAbs, err := filepath.Abs(repo)
+ 	if err != nil {
+ 		return fmt.Errorf("%w: %w: resolve selected root: %v", errGitWorktreePreflight, errGitWorktreeFallbackUnsafe, err)
+@@ -15221,6 +15224,7 @@
+ 	hasIncludeFiles bool,
+ 	listWorktreeFiles worktreeFilesLister,
+ ) ([]string, []ProviderWarning, error) {
++	defer spikeStage("worktree-source-listing")()
+ 	if !gitMetadataSafeForSubprocessContext(ctx, repo) {
+ 		err := fmt.Errorf("refuse Git subprocesses for unsafe or unreadable repository metadata under %q", repo)
+ 		// No Git process is started. The fallback treats every ambiguous vendored
+--- /dev/null
++++ b/internal/sem/spike_timing.go
+@@ -0,0 +1,16 @@
++package sem
++
++import (
++	"fmt"
++	"os"
++	"time"
++)
++
++// Temporary diagnostic instrumentation, not an optimization.
++func spikeStage(name string) func() {
++	if os.Getenv("GRAPH_SPIKE_TIMING") == "" {
++		return func() {}
++	}
++	start := time.Now()
++	return func() { fmt.Fprintf(os.Stderr, "GRAPH_SPIKE_STAGE %s %d\n", name, time.Since(start).Milliseconds()) }
++}

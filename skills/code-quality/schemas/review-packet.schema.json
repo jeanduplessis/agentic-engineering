@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://local.kilo.dev/code-quality/review-packet.schema.json",
+  "$id": "urn:agentic-engineering:code-quality:review-packet",
   "title": "Code Quality Review Packet",
   "type": "object",
   "additionalProperties": false,

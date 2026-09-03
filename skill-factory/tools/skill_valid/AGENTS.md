@@ -9,7 +9,7 @@ alias, and keep the friendly wrapper
 
 ## How the tool works
 
-The module implements Validation Gate functions in `tools/skill_valid/__init__.py`; deterministic shared Pi/OpenCode
+The module implements Validation Gate functions in `tools/skill_valid/__init__.py`; deterministic Pi
 SKILL.md compatibility/resource checks live in `tools/skill_valid/spec_checks.py`. The target gate runs first because later
 gates need a real skill directory. Deterministic prerequisite gates then accumulate results for `skill_spec`,
 `evals/manifest.json`, skill-local `AGENTS.md`, `llm_optimal_check`, and live opt-in so users see multiple
@@ -34,15 +34,15 @@ artifact behavior, update tests and `tools/skill_valid/README.md` together.
 
 ## Change guidelines
 
-- Preserve live-run safety: no harness/model call before cheap gates pass or warn and harness-neutral live opt-in is present.
+- Preserve live-run safety: no harness/model call before cheap gates pass or warn and explicit live opt-in is present.
 
 - `--include-trigger` validates the natural trigger contract in the cheap manifest gate and, only with live opt-in, adds all suite-local discovery profiles to live evals. It requires Pi and must never silently enable live calls or reuse with/without controls. Check exact case/configuration coverage, rejecting duplicate or missing trigger runs.
 
 - Wrapper must remain deterministic by default and must not append a live opt-in unconditionally.
 
-- Pi and OpenCode-compatible Kilo are supported real harnesses; required eval manifests must pass structural validation before live work.
+- Pi is the only supported live harness; reject unsupported manifests and programmatic harness overrides before live work, even without live opt-in.
 
-- Keep deterministic shared compatibility/resource rules in `spec_checks.py`; keep the validate-skills skill focused on qualitative, judgment-based review.
+- Keep deterministic Pi compatibility/resource rules in `spec_checks.py`; keep the validate-skills skill focused on qualitative, judgment-based review.
 
 - Keep stdout machine-readable and compact; write diagnostics only to stderr.
 

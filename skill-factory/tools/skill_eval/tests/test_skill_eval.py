@@ -44,7 +44,7 @@ class SkillEvalSmokeTests(unittest.TestCase):
         self.assertIn("static smoke", doc)
         self.assertIn("--require-real", doc)
         self.assertIn("SKILL_EVAL_ALLOW_LIVE=1", doc)
-        self.assertIn("OpenCode-compatible Kilo", doc)
+        self.assertIn("Pi is the only supported live harness", doc)
         self.assertIn("grade.json", doc)
         self.assertIn("artifact_manifest.json", doc)
         self.assertIn("process failures are not graded", doc.lower())
@@ -60,7 +60,7 @@ class SkillEvalSmokeTests(unittest.TestCase):
         self.assertEqual(manifest.skill["name"], "custom-command")
         self.assertEqual(suite.type, "workflow")
         self.assertEqual(suite.fixture["type"], "empty")
-        self.assertEqual(len(suite.cases), 5)
+        self.assertEqual(len(suite.cases), 6)
         self.assertEqual(suite.cases[0].id, "1")
         self.assertIn("fix-tests", suite.cases[0].prompt)
         self.assertIn("complete Pi Markdown prompt template", suite.cases[0].expected_output)
@@ -269,6 +269,8 @@ Run tests from: $ARGUMENTS
 analyze-coverage.md
 ```
 
+Canonical path: `harness/pi/commands/analyze-coverage.md`. Activate through the root package manifest.
+
 Compatible Markdown contents:
 
 ````markdown
@@ -340,6 +342,42 @@ Install it at `harness/pi/commands/fix-tests.md`; root package manifest exposes 
         self.assertFalse(bad_grade["passed"])
         self.assertIn("custom-command.no_behavior_frontmatter", {check["id"] for check in bad_grade["checks"] if check["status"] == "failed"})
 
+    def test_custom_command_grader_keeps_pi_scope_syntax_and_skill_loading(self):
+        suite = load_manifest(SKILLS_ROOT / "custom-command/evals/manifest.json").suite("workflow")
+        grader = str(SKILLS_ROOT / "custom-command/evals/grader.py")
+        local = """Pi global one-off. Path: `~/.pi/agent/prompts/inspect-session.md`
+```markdown
+---
+description: Inspect session
+---
+Inspect the session with focus: $@
+```
+"""
+        self.assertTrue(grade_response(local, [], custom_grader=grader, case=suite.cases[3])["passed"])
+        project = local.replace("Pi global", "Pi project").replace("~/.pi/agent/prompts/inspect-session.md", ".pi/prompts/inspect-project.md").replace("$@", "$1 ${@:2}")
+        self.assertTrue(grade_response(project, [], custom_grader=grader, case=suite.cases[5])["passed"])
+        for wrong_path in (".opencode/commands/inspect-session.md", "harness/pi/commands/inspect-session.md"):
+            self.assertFalse(grade_response(local.replace("~/.pi/agent/prompts/inspect-session.md", wrong_path), [],
+                                           custom_grader=grader, case=suite.cases[3])["passed"])
+        repository = """Pi source: `harness/pi/commands/code-review.md`. Activate via root package manifest.
+```markdown
+---
+description: Review changes
+skills: [code-review-workflow]
+---
+Load and follow the code-review-workflow skill. Review for bugs and missing tests.
+Scope: $ARGUMENTS
+```
+"""
+        case = suite.cases[4]
+        self.assertTrue(grade_response(repository, [], custom_grader=grader, case=case)["passed"])
+        for old, new in (("$ARGUMENTS", "$@"), ("$ARGUMENTS", "${@:2}"),
+                         ("Scope: $ARGUMENTS", "Scope: $ARGUMENTS !`git diff`"),
+                         ("Scope: $ARGUMENTS", "Scope: $ARGUMENTS @src/file.ts"),
+                         ("Load and follow the code-review-workflow skill. ", "")):
+            with self.subTest(new=new):
+                self.assertFalse(grade_response(repository.replace(old, new), [], custom_grader=grader, case=case)["passed"])
+
     def test_custom_command_static_smoke_can_still_run_with_explicit_static_configurations(self):
         with tempfile.TemporaryDirectory() as tmp:
             summary = run_suite(
@@ -352,7 +390,7 @@ Install it at `harness/pi/commands/fix-tests.md`; root package manifest exposes 
                 },
             )
 
-            self.assertEqual(len(summary["runs"]), 10)
+            self.assertEqual(len(summary["runs"]), 12)
             configurations = {run["configuration"] for run in summary["runs"]}
             self.assertEqual(configurations, {"with_skill", "without_skill"})
 
@@ -388,7 +426,7 @@ Install it at `harness/pi/commands/fix-tests.md`; root package manifest exposes 
             result_root = Path(tmp) / "results"
             summary = run_suite(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json", "workflow", result_root, require_real=True)
 
-            self.assertEqual(len(summary["runs"]), 10)
+            self.assertEqual(len(summary["runs"]), 12)
             self.assertEqual(summary["harness_modes"], {"with_skill": "real", "without_skill": "real"})
             self.assertFalse(summary["synthetic"])
             self.assertTrue(all(run["status"] == "skipped" for run in summary["runs"]))
@@ -452,7 +490,7 @@ Install it at `harness/pi/commands/fix-tests.md`; root package manifest exposes 
                 require_real=True,
             )
 
-            self.assertEqual(len(summary["runs"]), 10)
+            self.assertEqual(len(summary["runs"]), 12)
             self.assertTrue(all(run["harness_mode"] == "real" for run in summary["runs"]))
             self.assertTrue(all(not run["synthetic"] for run in summary["runs"]))
             first_with_response = (result_root / "custom-command" / "workflow" / "1" / "with_skill" / "response.md").read_text()
@@ -462,45 +500,22 @@ Install it at `harness/pi/commands/fix-tests.md`; root package manifest exposes 
             self.assertNotIn("complete Pi Markdown prompt template", first_with_response)
             self.assertNotEqual(first_without_response, load_manifest(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json").suite("workflow").cases[0].prompt)
 
-    def test_real_kilo_harness_adapter_runs_fake_open_code_compatible_kilo(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            skill_dir = root / "skill"
-            skill_dir.mkdir()
-            (skill_dir / "SKILL.md").write_text("---\nname: demo\ndescription: demo skill\n---\n")
-            fake_kilo = root / "fake-kilo.py"
-            fake_kilo.write_text(
-                "#!/usr/bin/env python3\n"
-                "import json, os, sys\n"
-                "with open(os.environ['INVOCATIONS'], 'a') as f: f.write(json.dumps(sys.argv[1:]) + '\\n')\n"
-                "print('generated by fake kilo')\n"
-            )
-            fake_kilo.chmod(fake_kilo.stat().st_mode | 0o111)
-            invocations = root / "invocations.jsonl"
-            manifest_path = root / "manifest.json"
-            manifest_path.write_text(json.dumps({
-                "skill": {"name": "demo", "path": "skill/SKILL.md"},
-                "suites": [{"name": "workflow", "type": "workflow", "fixture": {"type": "empty"}, "cases": [{"id": "hello", "prompt": "Say hello", "checks": [{"type": "required_content", "value": "generated"}]}]}],
-            }))
-
-            summary = run_suite(
-                manifest_path,
-                "workflow",
-                root / "results",
-                configurations={"with_skill": {"harness": "kilo", "executable": str(fake_kilo), "allow_live": True, "force_skill": True, "env": {"INVOCATIONS": str(invocations)}, "provider": "openrouter", "model": "test", "thinking": "low"}},
-                require_real=True,
-            )
-
-            run_dir = root / "results" / "demo" / "workflow" / "hello" / "with_skill"
-            raw = json.loads((run_dir / "raw_output.json").read_text())
-            invocation = json.loads(invocations.read_text().splitlines()[0])
-            self.assertTrue(summary["runs"][0]["passed"])
-            self.assertEqual(invocation[:4], ["run", "--pure", "--format", "default"])
-            self.assertIn("--file", invocation)
-            self.assertIn("openrouter/test", invocation)
-            self.assertIn("--variant", invocation)
-            self.assertIn("attached skill instructions", invocation[-1])
-            self.assertIn("--file", raw["command"])
+    def test_unsupported_harnesses_fail_before_execution_or_artifacts(self):
+        for harness in ("kilo", "opencode", "unknown"):
+            for require_real in (False, True):
+                with self.subTest(harness=harness, require_real=require_real), tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    manifest_path = root / "manifest.json"
+                    manifest_path.write_text(json.dumps({
+                        "skill": {"name": "demo"},
+                        "suites": [{"name": "workflow", "type": "workflow", "cases": [{"id": "hello", "prompt": "Say hello"}]}],
+                    }))
+                    # Even a usable executable and explicit opt-in cannot activate a removed adapter.
+                    with self.assertRaisesRegex(ValueError, "Unsupported harness"):
+                        run_suite(manifest_path, "workflow", root / "results",
+                                  configurations={"with_skill": {"harness": harness, "allow_live": True, "executable": "/bin/echo"}},
+                                  require_real=require_real)
+                    self.assertFalse((root / "results").exists())
 
     def test_manifest_represents_suite_purposes_and_capability_is_explicitly_not_run(self):
         manifest = load_manifest(SKILLS_ROOT / "custom-command" / "evals" / "manifest.json")

@@ -25,7 +25,7 @@ PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/context
 Run live harness validation only with explicit approval:
 
 ```sh
-PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/context --allow-live --harness kilo
+PYTHONPATH=skill-factory python3 -m tools.skill_valid skills/context --allow-live --harness pi
 ```
 
 ## Change guidelines

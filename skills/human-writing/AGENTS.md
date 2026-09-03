@@ -14,8 +14,8 @@ editing hints. The primary task owns tools, delivery, and reporting; the skill a
 Copy-ready output contains only the artifact. Editorial commentary is allowed when requested, outside the artifact;
 unchanged text is returned verbatim rather than accompanied by a no-change explanation.
 
-`user-invocable: false` is an optional harness hint. The description and body carry the complete shared behavior when
-that field is ignored. Keep automatic model discovery enabled and preserve equivalent Pi/OpenCode behavior.
+`user-invocable: false` is an optional harness hint. The description and body carry the complete behavior when
+that field is ignored. Keep automatic model discovery enabled in Pi.
 
 ## Eval and validation
 

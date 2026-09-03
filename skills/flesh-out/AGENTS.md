@@ -10,7 +10,7 @@ Maintain `SKILL.md` as a compact interview workflow for turning vague ideas, pla
 
 Do not routinely print a recap of agreed decisions. Keep accepted decisions in a running log, surface only the context needed for the current dependency, and include accepted decisions in the final summary or requested documentation.
 
-After the recommendation, use an available `question` or `ask-user` tool with both an accept action and free-form feedback/custom input. If no such tool exists, use the text fallback in `SKILL.md`. Do not advance until the user accepts or provides feedback. Preserve equivalent Pi and OpenCode behavior through that fallback.
+After the recommendation, use an available `question` or `ask-user` tool with both an accept action and free-form feedback/custom input. If no such tool exists, use the text fallback in `SKILL.md`. Do not advance until the user accepts or provides feedback. Preserve the same Pi interview behavior through that fallback.
 
 ## Eval and validation
 

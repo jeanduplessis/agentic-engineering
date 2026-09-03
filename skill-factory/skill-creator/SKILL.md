@@ -1,21 +1,21 @@
 ---
 name: skill-creator
 description: >-
-  Create, edit, validate, evaluate, optimize, and package skills shared by Pi and OpenCode. Use when users want to create a
+  Create, edit, validate, evaluate, optimize, and package skills for Pi. Use when users want to create a
   skill from scratch, improve an existing skill, add deterministic evals, run repo-local skill validation, compare skill
   behavior, optimize a skill description, or prepare harness discovery and package metadata.
 ---
 
 # Skill Creator
 
-Create and improve canonical skills shared by Pi and OpenCode. Preserve equivalent baseline behavior. Allow harness-specific metadata or acceleration only when other harnesses ignore it safely and source instructions provide a complete shared fallback.
+Create and improve canonical skills for Pi. Keep behavior complete in source instructions. Optional metadata or acceleration must have a safe fallback when unavailable.
 
 ## Core loop
 
 ### Build
 
 1. Clarify purpose, triggers, outputs, required tools, and safety boundaries.
-2. Draft or edit `skills/<skill-name>/SKILL.md` with shared Pi/OpenCode frontmatter and concise executable instructions.
+2. Draft or edit `skills/<skill-name>/SKILL.md` with Pi-compatible frontmatter and concise executable instructions.
 3. Add or update `skills/<skill-name>/AGENTS.md` for non-trivial maintenance context.
 4. Add deterministic eval coverage under `skills/<skill-name>/evals/` when behavior can be checked.
 
@@ -26,7 +26,7 @@ Create and improve canonical skills shared by Pi and OpenCode. Preserve equivale
 3. Iterate until user acceptance criteria pass.
 4. Expose same canonical skill source through native discovery or local symlinks; never generate harness-specific variants.
 
-## Shared skill shape
+## Skill shape
 
 Use a directory containing `SKILL.md`:
 
@@ -56,8 +56,8 @@ disable-model-invocation: true
 ---
 ```
 
-Required shared fields: `name`, `description`. Portable optional fields include `license`, `compatibility`, and `metadata`.
-Pi-specific fields such as `allowed-tools` and `disable-model-invocation` are allowed only when OpenCode safely ignores them and skill behavior does not depend on them. Keep `allowed-tools` space-delimited unless Pi's validator contract changes.
+Required fields: `name`, `description`. Standard optional fields include `license`, `compatibility`, and `metadata`.
+Use Pi capability fields such as `allowed-tools` and `disable-model-invocation` deliberately; keep executable behavior in the body. Keep `allowed-tools` space-delimited unless Pi's validator contract changes.
 
 ## Create a new skill
 
@@ -107,7 +107,7 @@ PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_skill_e
 PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/<skill-name>/evals/manifest.json workflow --results /tmp/<skill-name>-eval --require-real
 ```
 
-Choose `harness: "pi"` or OpenCode-compatible `harness: "kilo"` for real eval execution; evaluator choice must not change expected skill behavior. `--require-real` with live execution disabled should skip honestly; do not present skipped/static results as behavior evidence.
+Use `harness: "pi"` for real eval execution; no other live harness is supported. `--require-real` with live execution disabled should skip honestly; do not present skipped/static results as behavior evidence.
 Run live behavior evals only with explicit approval:
 
 ```bash
@@ -134,14 +134,14 @@ Validate one skill deterministically through the repo-local wrapper:
 Run live gates only with explicit approval, selecting the intended supported harness:
 
 ```bash
-./skill-factory/tools/skill_valid/skill_validate.sh skills/<skill-name> --allow-live --harness <pi|kilo>
+./skill-factory/tools/skill_valid/skill_validate.sh skills/<skill-name> --allow-live --harness pi
 ```
 
-`tools.skill_valid` checks shared skill compatibility, eval manifests, skill-local `AGENTS.md`, LLM optimization readiness, optional live qualitative review, and optional live evals.
+`tools.skill_valid` checks Pi skill compatibility, eval manifests, skill-local `AGENTS.md`, LLM optimization readiness, optional live qualitative review, and optional live evals.
 
 ## Optimize descriptions
 
-Description quality affects whether either harness selects a skill. Optimize with deterministic evidence first:
+Description quality affects whether Pi selects a skill. Optimize with deterministic evidence first:
 
 1. Review failed trigger/eval cases from `tools.skill_eval` results.
 2. Rewrite the `description` to name concrete user intents and task keywords.
@@ -153,7 +153,7 @@ Legacy description-optimization scripts in this skill are disabled. Prefer repo-
 
 ## Activate and package
 
-Keep `skills/<skill-name>/SKILL.md` as canonical source in this repository. Install or link it using each target harness's documented discovery mechanism; the source checkout is not intrinsically `~/.agents`. Never generate or maintain copied harness variants.
+Keep `skills/<skill-name>/SKILL.md` as canonical source in this repository. Install or link it using Pi's documented discovery mechanism; the source checkout is not intrinsically `~/.agents`. Never generate or maintain copied harness variants.
 
 This repo is also a local Pi package. Root `package.json` exposes Pi resources through harmless `pi.skills` and `pi.prompts` metadata:
 

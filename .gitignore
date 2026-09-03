@@ -12,6 +12,9 @@ __pycache__/
 
 .skill-lock.json
 
+# Local Pi subagent runtime and mission records
+.pi/subagents/
+
 # Pi extension runtime state written through the installed symlink
 harness/pi/extensions/*/node_modules/
 harness/pi/extensions/openai-extended-support/config.json

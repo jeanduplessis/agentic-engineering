@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://local.kilo.dev/code-quality/quality-result.schema.json",
+  "$id": "urn:agentic-engineering:code-quality:quality-result",
   "title": "Code Quality Result",
   "type": "object",
   "additionalProperties": false,

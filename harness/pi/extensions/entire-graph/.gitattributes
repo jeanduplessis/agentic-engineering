@@ -1,0 +1,2 @@
+# Unified-diff context prefixes legitimately precede Go tabs and blank lines.
+tests/performance-profile.patch -whitespace

@@ -1,6 +1,6 @@
 ---
 name: epic-implement
-description: "Use when asked to run, recover, or improve /epic-implement; implement an existing beads epic; coordinate multi-task formal gates in Pi, OpenCode/Kilo, or another capable harness; harden epic workflow; or resume a failed/interrupted epic implementation. Orchestrates reconnaissance, per-task implementation, validation, review, commits, final validation/review, closure, and recovery."
+description: "Use when asked to run, recover, or improve /epic-implement; implement an existing beads epic; coordinate multi-task formal gates in Pi; harden epic workflow; or resume a failed/interrupted epic implementation. Orchestrates reconnaissance, per-task implementation, validation, review, commits, final validation/review, closure, and recovery."
 license: MIT
 compatibility: Requires br and git in PATH plus an existing beads database in the target repo. Native subagents or a harness runner are optional; sequential current-session execution is the required fallback.
 allowed-tools: Bash(br:*) Bash(git:*) Bash(mktemp:*) Read Write

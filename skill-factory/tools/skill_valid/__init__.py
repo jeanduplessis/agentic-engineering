@@ -358,8 +358,8 @@ def _gate_eval_manifest(ctx: ValidationContext) -> None:
     if with_skill is None:
         raise GateFailure("eval_manifest", "Manifest must declare a with_skill configuration.")
     harness = with_skill.get("harness")
-    if harness not in {"pi", "kilo"}:
-        raise GateFailure("eval_manifest", "with_skill configuration must use a supported real harness: pi or kilo.")
+    if harness != "pi":
+        raise GateFailure("eval_manifest", "with_skill configuration must use a supported real harness: pi.")
     if with_skill.get("force_skill") is not True:
         raise GateFailure("eval_manifest", "with_skill configuration must have force-skill enabled.")
 
@@ -524,6 +524,9 @@ def _live_execution_allowed(ctx: ValidationContext) -> bool:
 
 
 def _gate_live_opt_in(ctx: ValidationContext) -> None:
+    harness = _selected_harness(ctx)
+    if harness != "pi":
+        raise GateFailure("live_opt_in", f"Unsupported live harness: {harness}")
     if _live_execution_allowed(ctx):
         _pass_gate(ctx, "live_opt_in", "Live harness execution is explicitly allowed.")
         return
@@ -584,17 +587,6 @@ def build_validate_skills_command(ctx: ValidationContext) -> list[str]:
     prompt = render_wrapper_prompt(ctx.target_rel)
     harness = _selected_harness(ctx)
     executable = _harness_executable(ctx, harness)
-    if harness == "kilo":
-        command = [executable, "run", "--pure", "--format", "default", "--file", str(validate_skill_path)]
-        if ctx.options.model:
-            model = ctx.options.model
-            if ctx.options.provider and "/" not in model:
-                model = f"{ctx.options.provider}/{model}"
-            command.extend(["--model", model])
-        if ctx.options.thinking:
-            command.extend(["--variant", ctx.options.thinking])
-        command.append(prompt)
-        return command
     if harness != "pi":
         raise GateFailure("validate_skills", f"Unsupported live harness: {harness}")
 
@@ -791,10 +783,10 @@ def main(
     parser.add_argument("--allow-live", action="store_true", help="Explicitly allow live harness/model calls")
     parser.add_argument("--allow-live-pi", action="store_true", help="Deprecated alias for --allow-live")
     parser.add_argument("--include-trigger", action="store_true", help="Also validate and, with live opt-in, execute the Pi trigger suite")
-    parser.add_argument("--harness", choices=("pi", "kilo"), help="Real harness override; defaults to manifest with_skill harness")
+    parser.add_argument("--harness", choices=("pi",), help="Real harness override; defaults to manifest with_skill harness")
     parser.add_argument("--provider", help="Provider override for live harness gates")
     parser.add_argument("--model", help="Model override for live harness gates")
-    parser.add_argument("--thinking", help="Thinking/variant override for live harness gates")
+    parser.add_argument("--thinking", help="Thinking override for live harness gates")
     parser.add_argument("--artifact-base", type=Path, help="Directory for temporary child artifacts")
     parser.add_argument("--harness-executable", help="Executable override for selected live harness")
     parser.add_argument("--pi-executable", default="pi", help="Deprecated Pi executable override")
