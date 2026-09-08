@@ -35,7 +35,7 @@ This command does not force replacement of an existing binary. Alternatively, re
 ## Input
 
 ```text
-g [-q|--quiet] [--] <message words...>
+g [-q|--quiet] [--model <model>] [--thinking <level>] [--] <message words...>
 g --help | -h
 g --version | -V
 ```
@@ -51,17 +51,30 @@ g '@notes.md is a filename; find it'
 g '/review is text here, not a Pi command'
 ```
 
-Help/version, `--quiet`/`-q`, and `--` are recognized only before the first message word. `--quiet` hides activity only, not results or diagnostics. Other leading options are usage errors; use `--` to submit option-like text. After the first word, every argument is literal message text, so `g explain --help` submits `explain --help`. There is no Pi flag passthrough or model/backend configuration.
+Help/version, `--quiet`/`-q`, `--model`, `--thinking`, and `--` are recognized only before the first message word. `--quiet` hides activity only, not results or diagnostics. Other leading options are usage errors; use `--` to submit option-like text. After the first word, every argument is literal message text, so `g explain --help` submits `explain --help`. There is no generic Pi flag passthrough or backend configuration.
 
 Empty or whitespace-only requests are usage errors. Requests must be Unicode. Help, version, and usage errors never start Pi. Stdin is ignored and Pi receives EOF: piped content is not part of the request, and this command cannot answer interactive prompts.
+
+### Model and reasoning selection
+
+```sh
+g --model anthropic/claude-sonnet-4-6 --thinking high find the login form
+GENIE_MODEL=anthropic/claude-sonnet-4-6 GENIE_THINKING=low g inspect this directory
+```
+
+Each selection is independent: `GENIE_MODEL` overrides `--model`, and `GENIE_THINKING` overrides `--thinking`. Unset, empty, or whitespace-only environment values are absent. With no selection for a field, Genie omits that Pi option and keeps Pi's defaults; it has no hardcoded model or reasoning level.
+
+Model values are passed unchanged to Pi, including `provider/id`, model patterns, and `:thinking` suffixes. Pi owns model resolution and supported reasoning behavior. A separate thinking selection is passed as `--thinking` and takes precedence over a model suffix, including when set to `off` (checked against Pi 0.85.1 source, not a live model). Accepted levels are `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, and `max` (case-sensitive).
+
+Repeated options use the last value. Every supplied CLI value must be valid, even if a later option or environment value overrides it. Missing, blank, or leading-`-` CLI values are usage errors. Non-Unicode configuration and invalid thinking levels are usage errors too; diagnostics do not echo their values. Nonblank values are not trimmed. Help/version do not read selection environment variables and still work when those variables are invalid. After the message starts or `--`, selection-looking arguments are literal: `g explain --thinking high` submits `explain --thinking high`.
 
 ## Execution and output
 
 **Explicit requests execute immediately. There is no extra confirmation gate and no sandbox.** Pi can modify files or perform external actions using your existing tools and permissions. Use only requests that grant the authority you intend. Installed Pi policies, trust decisions, extensions, and other instructions remain in effect and can still block work.
 
-`g` supervises a direct `pi --mode json -- <one prompt>` child in the current directory with the existing environment. It adds short user-prompt guidance to execute the explicit request, preserve unrelated changes, stop on ambiguity or blockers, verify the result, and return a concise confirmation or file paths. The message follows the neutral label `User request:` and a newline, so leading `@file`, `/command`, and option-like text are natural-language input rather than Pi CLI syntax. This guidance is **not an enforced safeguard or an output guarantee**. No system-prompt override is used; Pi's normal instruction/context loading is preserved.
+`g` supervises a direct `pi --mode json [--model <model>] [--thinking <level>] -- <one prompt>` child in the current directory with the existing environment. It adds short user-prompt guidance to execute the explicit request, preserve unrelated changes, stop on ambiguity or blockers, verify the result, and return a concise confirmation or file paths. The message follows the neutral label `User request:` and a newline, so leading `@file`, `/command`, and option-like text are natural-language input rather than Pi CLI syntax. This guidance is **not an enforced safeguard or an output guarantee**. No system-prompt override is used; Pi's normal instruction/context loading is preserved.
 
-Each invocation starts a normal new Pi session. `g` does not continue, resume, suppress, or manage sessions. Pi owns session persistence and all configuration, authentication, model selection, context, extensions, and trust behavior. Nothing is automatically approved or disabled by the wrapper.
+Each invocation starts a normal new Pi session. `g` does not continue, resume, suppress, or manage sessions. Pi owns session persistence, configuration, authentication, model resolution, context, extensions, and trust behavior; Genie only supplies the model and thinking selections above when requested. Nothing is automatically approved or disabled by the wrapper.
 
 ### Activity and streams
 

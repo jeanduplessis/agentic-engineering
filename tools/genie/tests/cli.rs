@@ -96,13 +96,21 @@ impl Fixture {
     }
 
     fn assert_request(&self, message: &str) {
+        self.assert_selection(message, &[]);
+    }
+
+    fn assert_selection(&self, message: &str, options: &[&str]) {
         let args = self.pi_args();
-        // Exact argv shape excludes overrides, session flags, and flag passthrough.
-        assert_eq!(args.len(), 4);
-        assert_eq!(&args[..3], ["--mode", "json", "--"]);
-        let (guidance, request) = args[3].split_once("\n\nUser request:\n").unwrap();
+        // Exact argv excludes unrequested overrides, session flags, and passthrough.
+        let mut expected = vec!["--mode", "json"];
+        expected.extend_from_slice(options);
+        expected.push("--");
+        assert_eq!(args.len(), expected.len() + 1);
+        assert_eq!(&args[..expected.len()], expected);
+        let prompt = args.last().unwrap();
+        let (guidance, request) = prompt.split_once("\n\nUser request:\n").unwrap();
         assert!(!guidance.is_empty());
-        assert!(!args[3].starts_with(['@', '/', '-']));
+        assert!(!prompt.starts_with(['@', '/', '-']));
         assert_eq!(request, message);
     }
 
@@ -202,6 +210,10 @@ fn options_after_first_message_word_remain_literal() {
         "-V",
         "--",
         "--model=x",
+        "--model",
+        "provider/id",
+        "--thinking",
+        "not-a-level",
         "--quiet",
         "-q",
     ];
@@ -357,7 +369,13 @@ fn empty_or_whitespace_requests_are_usage_errors_without_pi() {
 fn leading_unknown_options_are_usage_errors_not_pi_flags() {
     let fixture = Fixture::new();
     fixture.install_fake_pi(0o700);
-    for flag in ["--model", "--continue", "--approve", "-x"] {
+    for flag in [
+        "--model=x",
+        "--thinking=high",
+        "--continue",
+        "--approve",
+        "-x",
+    ] {
         let output = fixture.run(&[flag, "value"]);
         assert_eq!(output.status.code(), Some(2));
         assert!(output.stdout.is_empty());
@@ -410,4 +428,247 @@ fn non_executable_pi_reports_permissions_error() {
     assert!(stderr.contains("'pi'"));
     assert!(stderr.contains("permissions"));
     fixture.assert_pi_not_started();
+}
+
+#[test]
+fn model_and_thinking_precedence_is_independent_and_defaults_are_omitted() {
+    for mask in 0..16 {
+        let fixture = Fixture::new();
+        fixture.install_fake_pi(0o700);
+        let mut command = fixture.command();
+        let mut expected = Vec::new();
+        if mask & 1 != 0 {
+            command.args(["--model", "cli/provider/model:high"]);
+        }
+        if mask & 2 != 0 {
+            command.args(["--thinking", "low"]);
+        }
+        if mask & 4 != 0 {
+            command.env("GENIE_MODEL", "env/provider/model:max");
+            expected.extend(["--model", "env/provider/model:max"]);
+        } else if mask & 1 != 0 {
+            expected.extend(["--model", "cli/provider/model:high"]);
+        }
+        if mask & 8 != 0 {
+            command.env("GENIE_THINKING", "off");
+            expected.extend(["--thinking", "off"]);
+        } else if mask & 2 != 0 {
+            expected.extend(["--thinking", "low"]);
+        }
+        let output = wait_for_output(command.args(["-q", "--", "@inspect"]).spawn().unwrap());
+        assert!(output.status.success(), "mask {mask}: {output:?}");
+        assert!(output.stdout.is_empty());
+        assert!(output.stderr.is_empty());
+        fixture.assert_selection("@inspect", &expected);
+    }
+}
+
+#[test]
+fn blank_environment_is_absent_without_trimming_model_values() {
+    for blank in ["", " \n\t\u{2003}"] {
+        for options in [
+            vec![],
+            vec!["--model", "  provider/id:custom  ", "--thinking", "max"],
+        ] {
+            let fixture = Fixture::new();
+            fixture.install_fake_pi(0o700);
+            let output = wait_for_output(
+                fixture
+                    .command()
+                    .env("GENIE_MODEL", blank)
+                    .env("GENIE_THINKING", blank)
+                    .args(&options)
+                    .arg("inspect")
+                    .spawn()
+                    .unwrap(),
+            );
+            assert!(output.status.success());
+            fixture.assert_selection("inspect", &options);
+        }
+    }
+    let fixture = Fixture::new();
+    fixture.install_fake_pi(0o700);
+    let model = "  provider/nested/id:custom 🧞 $(touch injected); *  ";
+    let output = wait_for_output(
+        fixture
+            .command()
+            .env("GENIE_MODEL", model)
+            .arg("inspect")
+            .spawn()
+            .unwrap(),
+    );
+    assert!(output.status.success());
+    fixture.assert_selection("inspect", &["--model", model]);
+    assert!(!fixture.root.join("working directory/injected").exists());
+}
+
+#[test]
+fn all_thinking_levels_and_last_repeated_options_are_forwarded() {
+    for level in ["off", "minimal", "low", "medium", "high", "xhigh", "max"] {
+        let fixture = Fixture::new();
+        fixture.install_fake_pi(0o700);
+        let output = fixture.run(&[
+            "--model",
+            "old",
+            "--thinking",
+            "high",
+            "--model",
+            "provider/id:low",
+            "--thinking",
+            level,
+            "inspect",
+        ]);
+        assert!(output.status.success());
+        fixture.assert_selection(
+            "inspect",
+            &["--model", "provider/id:low", "--thinking", level],
+        );
+    }
+}
+
+#[test]
+fn selection_options_after_double_dash_are_literal_even_if_invalid() {
+    let fixture = Fixture::new();
+    fixture.install_fake_pi(0o700);
+    assert!(
+        fixture
+            .run(&[
+                "--model",
+                "provider/id",
+                "--",
+                "--thinking",
+                "INVALID",
+                "--model",
+                ""
+            ])
+            .status
+            .success()
+    );
+    fixture.assert_selection("--thinking INVALID --model ", &["--model", "provider/id"]);
+}
+
+#[test]
+fn invalid_cli_configuration_never_launches_pi_even_with_environment_overrides() {
+    let fixture = Fixture::new();
+    fixture.install_fake_pi(0o700);
+    for args in [
+        vec!["--model"],
+        vec!["--thinking"],
+        vec!["--model", "", "inspect"],
+        vec!["--model", " \n\t\u{2003}", "inspect"],
+        vec!["--thinking", "", "inspect"],
+        vec!["--thinking", " \n\t", "inspect"],
+        vec!["--thinking", "PRIVATE\x1b[31m", "inspect"],
+        vec!["--thinking", "HIGH", "inspect"],
+        vec!["--thinking", " high ", "inspect"],
+        vec!["--thinking", "PRIVATE", "--thinking", "low", "inspect"],
+        vec!["--model", "--thinking", "high", "inspect"],
+        vec!["--thinking", "--model", "provider/id", "inspect"],
+        vec!["--model", "--", "inspect"],
+        vec!["--thinking", "-q", "inspect"],
+    ] {
+        let output = wait_for_output(
+            fixture
+                .command()
+                .env("GENIE_MODEL", "env/id")
+                .env("GENIE_THINKING", "max")
+                .args(&args)
+                .spawn()
+                .unwrap(),
+        );
+        assert_eq!(output.status.code(), Some(2), "{args:?}");
+        assert!(output.stdout.is_empty());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(stderr.contains("g:"));
+        assert!(!stderr.contains("PRIVATE"));
+        assert!(!stderr.contains('\x1b'));
+        fixture.assert_pi_not_started();
+    }
+}
+
+#[test]
+fn invalid_environment_thinking_never_launches_pi() {
+    let fixture = Fixture::new();
+    fixture.install_fake_pi(0o700);
+    for value in ["PRIVATE\x1b[31m", "HIGH", " high "] {
+        let output = wait_for_output(
+            fixture
+                .command()
+                .env("GENIE_THINKING", value)
+                .args(["--thinking", "low", "inspect"])
+                .spawn()
+                .unwrap(),
+        );
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(stderr.contains("thinking level must be"));
+        assert!(!stderr.contains(value));
+        fixture.assert_pi_not_started();
+    }
+}
+
+#[test]
+fn non_unicode_configuration_is_rejected_without_echoing_values() {
+    let fixture = Fixture::new();
+    fixture.install_fake_pi(0o700);
+    let invalid = OsString::from_vec(b"PRIVATE\xff".to_vec());
+    for flag in ["--model", "--thinking"] {
+        let output = wait_for_output(
+            fixture
+                .command()
+                .arg(flag)
+                .arg(&invalid)
+                .arg("inspect")
+                .env("GENIE_MODEL", "env/id")
+                .env("GENIE_THINKING", "low")
+                .spawn()
+                .unwrap(),
+        );
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(stderr.contains("Unicode"));
+        assert!(!stderr.contains("PRIVATE"));
+        fixture.assert_pi_not_started();
+    }
+    for name in ["GENIE_MODEL", "GENIE_THINKING"] {
+        let output = wait_for_output(
+            fixture
+                .command()
+                .env(name, &invalid)
+                .args(["--model", "cli/id", "--thinking", "low", "inspect"])
+                .spawn()
+                .unwrap(),
+        );
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(stderr.contains("Unicode"));
+        assert!(!stderr.contains("PRIVATE"));
+        fixture.assert_pi_not_started();
+    }
+}
+
+#[test]
+fn help_and_version_ignore_invalid_selection_environment() {
+    let fixture = Fixture::new();
+    fixture.install_fake_pi(0o700);
+    for value in [OsString::from("PRIVATE"), OsString::from_vec(vec![0xff])] {
+        for flag in ["--help", "-h", "--version", "-V"] {
+            let output = wait_for_output(
+                fixture
+                    .command()
+                    .env("GENIE_MODEL", &value)
+                    .env("GENIE_THINKING", &value)
+                    .args(["--model", "cli/id", flag, "--thinking", "INVALID"])
+                    .spawn()
+                    .unwrap(),
+            );
+            assert!(output.status.success());
+            assert!(!output.stdout.is_empty());
+            assert!(output.stderr.is_empty());
+            fixture.assert_pi_not_started();
+        }
+    }
 }

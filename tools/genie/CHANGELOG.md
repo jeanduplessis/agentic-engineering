@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added `--model <model>` and `--thinking <level>` before the message, with independent `GENIE_MODEL`/`GENIE_THINKING` environment precedence. Blank environment values are absent; omitted selections retain Pi defaults. Preserve Pi model strings and explicit thinking precedence over model suffixes. Reject invalid configuration before launch without echoing values; help/version ignore configuration environment. Repeated valid options use the last value, and post-message options stay literal. Added isolated fake-Pi coverage for selection, validation, and exact argv.
+
 - Added `genie` 0.1.0, providing the `g` command for one-shot natural-language requests through installed Pi on macOS and Linux.
 - Preserve normal Pi instructions, configuration, trust, and new-session persistence; use argv-only input and concise user-prompt guidance without an extra confirmation gate.
 - Added one TTY-only animated stderr line with elapsed seconds, actual sanitized tool names, and completed tool-call counts including failures. Added `--quiet`/`-q`; redirected stderr and `TERM=dumb` have no Genie animation.

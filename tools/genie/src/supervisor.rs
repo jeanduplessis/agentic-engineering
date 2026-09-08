@@ -111,7 +111,7 @@ fn nonblocking(pipe: &impl AsRawFd) -> io::Result<()> {
     Ok(())
 }
 
-pub fn run(prompt: &str, quiet: bool) -> u8 {
+pub fn run(prompt: &str, quiet: bool, selection: &crate::Selection) -> u8 {
     let signals = match Signals::new() {
         Ok(signals) => signals,
         Err(_) => {
@@ -119,9 +119,18 @@ pub fn run(prompt: &str, quiet: bool) -> u8 {
             return 1;
         }
     };
-    // No system/model/session/trust flags. JSON mode is Pi's one-shot mode.
-    let child = Command::new("pi")
-        .args(["--mode", "json", "--", prompt])
+    // No system/session/trust flags. Omitted selections retain Pi defaults.
+    let mut command = Command::new("pi");
+    command.args(["--mode", "json"]);
+    if let Some(model) = &selection.model {
+        command.args(["--model", model]);
+    }
+    if let Some(thinking) = &selection.thinking {
+        // Pi gives explicit --thinking precedence over a model :thinking suffix.
+        command.args(["--thinking", thinking]);
+    }
+    let child = command
+        .args(["--", prompt])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
