@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added the independent Rust `genie` package and `g` command for one-shot natural-language requests through installed Pi. Explicit requests execute without an extra confirmation gate; normal Pi instructions, configuration, trust, and sessions remain in effect. Added a TTY-only elapsed/tool-call activity line and `--quiet`, backed by bounded JSON-mode parsing and supervised Unix cleanup. Only final assistant text reaches stdout; diagnostics and nonzero Pi status are retained, while protocol/final-response failures are nonzero and cancellation uses conventional signal codes. Added serde_json/signal-hook/libc dependencies, offline process/PTY coverage, and explicit platform, semantic-success, and detached-cleanup limits. Added argv-only input handling, concise user-prompt guidance, installation/authority documentation, and isolated offline fake-Pi tests. No installer or harness changes are required.
+
 - Updated `kilo-pi-provider` to expose `xhigh` and `max` as separate Pi thinking levels, preserving gateway effort values instead of mapping `max` to `xhigh`. Added offline coverage for advertised variants and the DeepSeek fallback.
 
 - Added hand-pointer hover feedback for clickable links and tool rows in `pi-ui-customization` on Ghostty, Kitty, and Foot. Hover follows the visible fullscreen frame and resets during selection, focus loss, reload, and terminal stop. Other terminals and multiplexers are unchanged; offline tests cover input, redraws, and cleanup.

@@ -11,6 +11,10 @@ Under **Harness**, select components first. Root files such as `APPEND_SYSTEM.md
 
 Nothing is selected by default in either Pi picker. Enter names or numbers, or type `all` explicitly at each level. Review the selected source-to-destination plan and confirm before any Pi links are created. Cancelling any Pi picker cancels the entire Pi plan; empty components are skipped. Unselected existing installs stay untouched.
 
+## Tools
+
+[`genie`](tools/genie/README.md) installs `g`, a one-shot natural-language wrapper around installed, authenticated Pi. Select **Tools → genie** in setup, or run `cargo install --path tools/genie --locked` from the repository root. Check `type -a g` for command/alias collisions first. Explicit requests execute immediately with your existing Pi permissions; this is not a sandbox. TTY stderr shows live activity and completed tool calls; `--quiet` hides activity only. Genie requires Pi JSON mode and prints only final assistant text after the child exits, while preserving diagnostics and using bounded cancellation cleanup. See the package README for dependencies, quoting, ignored stdin, output/status semantics, and platform/cleanup limits; zero exit does not prove task success.
+
 ## Pi resources
 
 Pi's root-agent policy lives in [`harness/pi/APPEND_SYSTEM.md`](harness/pi/APPEND_SYSTEM.md). Edit this repository source, not the installed link. Selecting `APPEND_SYSTEM.md` under **Harness** in `./setup.sh` links it to `~/.pi/agent/APPEND_SYSTEM.md` (or `$PI_AGENT_DIR/APPEND_SYSTEM.md`) after approval of the plan; an existing file is backed up after confirmation, and replacing a conflicting symlink also requires confirmation. The policy owns orchestration decisions; the installed `pi-subagents` skill owns invocation details.
@@ -54,6 +58,6 @@ pi -e /absolute/path/to/this-repository
 - `skills/` contains Pi skills, installable into Pi or the global `~/.agents/skills` directory.
 - `prompts/` contains system-prompt resources. `prompts/COMPRESSED_OUTPUT_MODE.md` is the current repository-owned prompt resource.
 - `skill-factory/` contains skill authoring, validation, and evaluation resources.
-- `tools/ghh/`, `tools/gs/`, and `tools/gw/` are independent tool packages.
+- [`tools/genie/`](tools/genie/README.md) (binary `g`), `tools/ghh/`, `tools/gs/`, and `tools/gw/` are independent tool packages.
 
 Commands are flat. Recursive command directories, project-local command ownership, deterministic shell execution, loops, chains, parallel execution, worktrees, subagents, and agent-callable prompt execution remain outside the Pi extension's V1 scope.

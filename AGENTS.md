@@ -8,7 +8,7 @@ This repository is a local agent-resource package. Pi is the only supported live
 - `harness/pi/` — Pi-owned resources: `APPEND_SYSTEM.md` is the canonical root-agent policy, `commands/` contains Pi prompt templates, `docs/` contains Pi-owned plans and runbooks, and `extensions/` contains the canonical sources of this repository's Pi extensions. `./setup.sh` links the root policy into `~/.pi/agent/APPEND_SYSTEM.md` only when selected; edit the repository source. Read the closest `AGENTS.md` before changing an extension.
 - `prompts/` — system-prompt resources. `prompts/COMPRESSED_OUTPUT_MODE.md` is the current prompt resource, not a slash command.
 - `skill-factory/` — skill authoring, validation, and evaluation resources. Read its closest `AGENTS.md` before editing.
-- `tools/ghh/`, `tools/gs/`, and `tools/gw/` — independent tool packages. Read each package's `AGENTS.md` before editing.
+- `tools/genie/` (binary `g`), `tools/ghh/`, `tools/gs/`, and `tools/gw/` — independent tool packages. Read each package's `AGENTS.md` before editing.
 - `tests/` — offline `setup.sh` selection and installation tests.
 
 ## Working conventions

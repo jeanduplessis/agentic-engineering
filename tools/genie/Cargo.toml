@@ -1,0 +1,17 @@
+[package]
+name = "genie"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+description = "A one-shot natural-language CLI around installed Pi"
+license = "MIT"
+repository = "https://github.com/jeanduplessis/agentic-engineering"
+
+[dependencies]
+libc = "0.2"
+serde_json = "1"
+signal-hook = "0.3"
+
+[[bin]]
+name = "g"
+path = "src/main.rs"
