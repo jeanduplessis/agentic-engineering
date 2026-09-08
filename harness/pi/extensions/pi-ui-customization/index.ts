@@ -283,7 +283,14 @@ class PiUiCustomizationController {
 
 		const keep = new Set<number>();
 		for (let index = 0; index < lines.length; index++) {
-			if (isTerminalImageLine(lines[index]!)) keep.add(index);
+			if (!isTerminalImageLine(lines[index]!)) continue;
+			keep.add(index);
+			// Keep native box padding and image spacers, including iTerm2's
+			// leading height reservations before its cursor-up image sequence.
+			for (let before = index - 1; before >= 0; before--) {
+				if (isTerminalImageLine(lines[before]!) || this.plainText(lines[before]!).trim()) break;
+				keep.add(before);
+			}
 		}
 		for (let index = 0; index <= firstContentIndex; index++) {
 			keep.add(index);

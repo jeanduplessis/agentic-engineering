@@ -4,7 +4,7 @@ User messages sit on the right, with text left-aligned inside the bubble so mult
 
 This Pi UI customization also makes clickable tool-output behavior more compact and readable in the fullscreen TUI. Every tool row is clickable and collapsed by default: the block shows the command and the last visible output line with a darker left gutter and a separating space. Clicking it expands only that tool block; expanded output uses a lighter gutter, and clicking it collapses the block again. Compaction summaries are also clickable and toggle Pi's native summary expansion. Successful reads of `SKILL.md` use the theme's purple custom-message background instead of the green tool-success background. Terminal image lines (Kitty graphics and iTerm2 inline images) are left unmodified so `read` can still render photos. `Ctrl+O` continues to toggle all tool output.
 
-Trailing blank lines in streamed text collapse to one padding row, preventing repeated height changes as the next line arrives. Expanded output keeps its original spacing; image-height rows are preserved.
+Trailing blank lines in streamed text collapse to one padding row, preventing repeated height changes as the next line arrives. Expanded output keeps its original spacing. Image reads retain the colored bottom padding below the header, native image spacing, and image-height rows.
 
 `subagent` tool results are clickable across their rendered non-empty lines and use the same collapse/expand behavior as other clickable tool rows. There is no in-process conversation viewer; missing viewer integrations stay a no-op.
 

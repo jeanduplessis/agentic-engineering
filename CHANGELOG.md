@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed missing colored bottom padding below collapsed `read` headers before inline images in `pi-ui-customization`. Preserved native image spacing, protocol bytes, and height reservations, with offline real-read SDK regression checks for Kitty and iTerm2.
+
 - Added Genie `--model` and `--thinking` selection with independent `GENIE_MODEL`/`GENIE_THINKING` > CLI > Pi-default precedence. Blank environment values are absent; model strings retain Pi semantics and explicit thinking overrides model suffixes. Invalid configuration fails before Pi launch without echoing values, while help/version ignore configuration environment. Added offline fake-Pi precedence, validation, literal-boundary, and exact-argv tests; no new dependencies or other Pi behavior changes.
 
 - Right-aligned user-message bubbles in `pi-ui-customization`, sized to their rendered text up to a responsive wrapping limit, with left-aligned Markdown and balanced top/bottom padding. Narrow terminals retain full-width wrapping; other messages keep their layout. Preserved leading OSC 133 markers for native prompt navigation and fullscreen marker stripping. Added offline real-SDK checks for visible padding, content sizing, resizing, Unicode/ANSI widths, images, links, native input, and reload safety.

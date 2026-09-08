@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -124,21 +126,39 @@ test("non-fullscreen argument streaming retains native layout with category back
 });
 
 for (const protocol of ["kitty", "iterm2"]) {
-	test(`${protocol} image sequences and trailing image-height rows remain intact`, sdkRequired, (t) => {
-		const { tool } = harness(t, { images: protocol });
-		const component = tool("read", { path: "/tmp/fixture.png" });
-		component.updateResult({
-			content: [{ type: "image", mimeType: "image/png", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jF9sAAAAASUVORK5CYII=" }],
-			isError: false,
-		});
-		const native = nativeRender.call(component, 80);
-		const decorated = component.render(80);
-		const prefix = protocol === "kitty" ? "\x1b_G" : "\x1b]1337;File=";
-		const nativeImage = native.findIndex((line) => line.includes(prefix));
-		const decoratedImage = decorated.findIndex((line) => line.includes(prefix));
-		assert.ok(nativeImage >= 0 && decoratedImage >= 0);
-		assert.deepEqual(decorated.slice(decoratedImage), native.slice(nativeImage));
-		if (protocol === "kitty") assert.ok(native.length - nativeImage > 2, "fixture reserves multiple image rows");
+	test(`${protocol} native read keeps colored bottom padding and image reservation rows`, sdkRequired, async (t) => {
+		const { tool, click } = harness(t, { images: protocol });
+		const directory = await mkdtemp(join(tmpdir(), "pi-read-image-"));
+		t.after(() => rm(directory, { recursive: true, force: true }));
+		const args = { path: join(directory, "fixture.png") };
+		await writeFile(args.path, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==", "base64"));
+		const result = await builtins.read.execute("read-image-padding", args);
+		assert.ok(result.content.some((item) => item.type === "image"), "real read returns an image");
+		const component = tool("read", args);
+		component.setArgsComplete();
+		component.updateResult({ ...result, isError: false });
+		const width = Math.max(80, visibleWidth(args.path) + 8); // Keep the temporary path on one header row.
+		for (const expanded of [false, true, false]) {
+			assert.equal(component.expanded, expanded);
+			const native = nativeRender.call(component, width);
+			const decorated = component.render(width);
+			const prefix = protocol === "kitty" ? "\x1b_G" : "\x1b]1337;File=";
+			const nativeImage = native.findIndex((line) => line.includes(prefix));
+			const decoratedImage = decorated.findIndex((line) => line.includes(prefix));
+			assert.ok(nativeImage >= 0 && decoratedImage >= 0);
+			const header = plain(decorated).findIndex((line) => line.startsWith("read "));
+			assert.ok(header >= 0);
+			const padding = decorated[header + 1];
+			assert.equal(stripVTControlCharacters(padding).trim(), "", "blank row follows the read header");
+			assert.ok(padding.includes("\x1b[48;2;40;49;38m"), "bottom padding has the tool background");
+			assert.ok(padding.includes("\x1b[48;2;34;39;31m"), "bottom padding retains the gutter");
+			assert.equal(visibleWidth(padding), width);
+			assert.deepEqual(plain(decorated.slice(0, decoratedImage)), plain(native.slice(0, nativeImage)), "native padding, spacer and leading image-height rows stay in place");
+			assert.deepEqual(decorated.slice(decoratedImage), native.slice(nativeImage), "protocol bytes and trailing image-height rows stay unchanged");
+			if (protocol === "kitty") assert.ok(native.length - nativeImage > 2, "fixture reserves multiple trailing image rows");
+			else assert.match(native[nativeImage], /^\x1b\[[1-9]\d*A/, "fixture reserves leading rows for cursor-up image placement");
+			click(decorated);
+		}
 	});
 }
 
