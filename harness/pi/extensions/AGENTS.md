@@ -22,6 +22,7 @@ An extension with npm dependencies declares them in its own `package.json` and n
 ## Pi UI customization
 
 - `pi-ui-customization` patches private Pi renderer methods. Keep patches idempotent across reloads and preserve native input and URL forwarding.
+- User-message bubbles fit rendered text up to a responsive wrapping limit, align right, and retain native top/bottom padding and left-aligned Markdown. Keep OSC 133 prefixes at byte zero for fullscreen prompt navigation and stripping. Keep other message layouts unchanged and do not prefix terminal-image protocol lines.
 - Link hover uses the visible fullscreen frame and OSC 22 only on known compatible terminals outside multiplexers. Reset pointer state on focus loss, shutdown, and terminal stop.
 - Run its offline Node SDK tests when changing these patches or upgrading Pi; terminal appearance still needs manual verification.
 

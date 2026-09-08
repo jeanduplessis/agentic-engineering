@@ -17,12 +17,12 @@ try {
 	} catch { /* Report an explicit skip when Pi is unavailable. */ }
 }
 const sdkRequired = { skip: !sdkPath && "Pi SDK is not installed" };
-let TuiAltScreen, TuiMainScreen, ToolExecutionComponent, setCapabilities, loadExtensions, createInteractiveTuiReference;
+let TuiAltScreen, TuiMainScreen, ToolExecutionComponent, setCapabilities, loadExtensions, createInteractiveTuiReference, Text;
 if (sdkPath) {
 	const sdk = await import(pathToFileURL(sdkPath).href);
 	({ ToolExecutionComponent } = sdk);
 	sdk.initTheme("dark");
-	({ TuiAltScreen, TuiMainScreen, setCapabilities } = await import(pathToFileURL(createRequire(sdkPath).resolve("@earendil-works/pi-tui")).href));
+	({ TuiAltScreen, TuiMainScreen, setCapabilities, Text } = await import(pathToFileURL(createRequire(sdkPath).resolve("@earendil-works/pi-tui")).href));
 	({ loadExtensions } = await import(new URL("./core/extensions/loader.js", pathToFileURL(sdkPath)).href));
 	({ createInteractiveTuiReference } = await import(new URL("./modes/interactive/interactive-mode.js", pathToFileURL(sdkPath)).href));
 }
@@ -237,4 +237,44 @@ test("unsupported terminals and multiplexers keep their existing pointer behavio
 			assert.deepEqual(h.shapes(), []);
 		});
 	}
+});
+
+test("self-shell physical clicks expand once, collapse again, and preserve original links and input", sdkRequired, async (t) => {
+	environment(t);
+	await extension(t);
+	const h = terminalHarness(t);
+	h.terminal.columns = 80;
+	h.terminal.rows = 20;
+	h.tui.clear();
+	const ui = createInteractiveTuiReference(() => h.tui);
+	const definition = {
+		renderShell: "self",
+		renderCall() { return new Text("", 0, 0); },
+		renderResult(_result, { expanded }) {
+			return new Text(`Card summary\nSafety: reply required\n${link()}${expanded ? "\nComplete card detail" : ""}`, 0, 0);
+		},
+	};
+	const card = new ToolExecutionComponent("subagent", "self-mouse", {}, {}, definition, ui, process.cwd());
+	card.updateResult({ content: [{ type: "text", text: "Original response" }], isError: false });
+	h.tui.addChild(card);
+	h.tui.renderNow();
+	const collapsed = card.render(80);
+	// The first native self-shell line is its spacer; the header is at row 1.
+	h.input(mouse(3, 1));
+	assert.equal(h.shapes().at(-1), POINTER);
+	h.input(mouse(3, 1, 0));
+	h.input(mouse(3, 1, 0, true));
+	assert.equal(card.expanded, true, "OSC 8 click takes precedence over native MouseRegion, not a double toggle");
+	h.tui.renderNow();
+	assert.match(card.render(80).join("\n"), /Complete card detail/);
+	h.input(mouse(3, 3, 0));
+	h.input(mouse(3, 3, 0, true));
+	assert.deepEqual(h.opened, [EXAMPLE_URL]);
+	assert.equal(card.expanded, true, "original external URL does not toggle the card");
+	h.input(mouse(3, 1, 0));
+	h.input(mouse(3, 1, 0, true));
+	assert.equal(card.expanded, false);
+	assert.deepEqual(card.render(80), collapsed);
+	h.input("a");
+	assert.deepEqual(h.keys, ["a"], "native focused input is unchanged");
 });

@@ -1,5 +1,6 @@
 """Offline setup.sh workflows with disposable source and install directories."""
 
+import json
 import os
 from pathlib import Path
 import shutil
@@ -89,6 +90,10 @@ class SetupFixture:
         for name, content in PI_RESOURCES.items():
             self.write(self.repo / "harness/pi" / name, content)
 
+    def add_subagents(self):
+        shutil.copytree(SETUP_SCRIPT.parent / "harness/pi/subagents",
+                        self.repo / "harness/pi/subagents")
+
     def run(self, *answers, args=(), expected_status=0):
         source_before = tree(self.repo)
         result = subprocess.run(
@@ -146,6 +151,83 @@ class SetupTests(unittest.TestCase):
                 "link", str(fixture.repo / "harness/pi/extensions/alpha")
             )
             self.assertEqual(fixture.targets(), {**before, "pi": expected})
+
+    def test_subagents_is_atomic_and_preserves_other_settings_and_agents(self):
+        with SetupFixture() as fixture:
+            fixture.add_pi_resources()
+            fixture.add_subagents()
+            settings = {"extensions": ["custom"], "provider": "existing",
+                        "subagents": {"defaultModel": "existing-model", "timeoutMs": 900000,
+                                      "modelScope": {"allow": ["*"], "enforce": False}}}
+            original = json.dumps(settings) + "\n"
+            fixture.write(fixture.pi / "settings.json", original)
+            fixture.write(fixture.pi / "agents/custom.md", "User agent\n")
+            before = fixture.targets()
+            result = fixture.run("3", "subagents", "y")
+            scope = {"enforce": True, "strict": True, "allow": ["inherit"]}
+            settings["subagents"]["modelScope"] = scope
+            self.assertEqual(json.loads((fixture.pi / "settings.json").read_text()), settings)
+            backups = list(fixture.pi.glob("settings.json.backup.*"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_text(), original)
+            expected = before["pi"].copy()
+            expected[backups[0].name] = ("file", original.encode())
+            expected["settings.json"] = ("file", (fixture.pi / "settings.json").read_bytes())
+            expected["agents/reviewer.md"] = (
+                "link", str(fixture.repo / "harness/pi/subagents/reviewer.md"))
+            self.assertEqual(fixture.targets(), {**before, "pi": expected})
+            # Both effects must be disclosed before the one plan confirmation.
+            confirmation = result.stdout.index(" [y/N]")
+            self.assertLess(result.stdout.index("LINK "), confirmation)
+            self.assertLess(result.stdout.index("MERGE subagents.modelScope"), confirmation)
+            installed = fixture.targets()
+            fixture.run("3", "subagents", "y")
+            self.assertEqual(fixture.targets(), installed)
+
+    def test_subagent_selection_cancel_and_unselected_leave_conflicts_untouched(self):
+        workflows = (("3", "subagents", "n"), ("3", "subagents"),
+                     ("3", "subagents commands", "q"),
+                     ("3", "commands subagents", "q"))
+        for answers in workflows:
+            with self.subTest(answers=answers), SetupFixture() as fixture:
+                fixture.add_pi_resources()
+                fixture.add_subagents()
+                fixture.write(fixture.pi / "settings.json", '{"subagents": {}}\n')
+                fixture.write(fixture.pi / "agents/reviewer.md", "User reviewer\n")
+                before = fixture.targets()
+                fixture.run(*answers)
+                self.assertEqual(fixture.targets(), before)
+        with SetupFixture() as fixture:
+            fixture.add_pi_resources()
+            fixture.add_subagents()
+            fixture.write(fixture.pi / "settings.json", "malformed but unselected")
+            fixture.write(fixture.pi / "agents/reviewer.md", "User reviewer\n")
+            before = fixture.targets()
+            fixture.run("3", "docs", "y")
+            expected = {**before["pi"], "docs": ("link", str(fixture.repo / "harness/pi/docs"))}
+            self.assertEqual(fixture.targets(), {**before, "pi": expected})
+
+    def test_subagent_preflight_failure_cancels_even_other_selected_links(self):
+        with SetupFixture() as fixture:
+            fixture.add_pi_resources()
+            fixture.add_subagents()
+            fixture.write(fixture.pi / "settings.json", "malformed private settings")
+            before = fixture.targets()
+            result = fixture.run("3", "APPEND_SYSTEM.md subagents", "y", expected_status=1)
+            self.assertEqual(fixture.targets(), before)
+            self.assertNotIn("malformed private settings", result.stdout + result.stderr)
+
+    def test_subagents_with_explicit_all_keeps_other_component_item_pickers(self):
+        with SetupFixture() as fixture:
+            fixture.add_pi_resources()
+            fixture.add_subagents()
+            fixture.run("3", "all", "first.md", "alpha", "y")
+            self.assertTrue((fixture.pi / "agents/reviewer.md").is_symlink())
+            self.assertTrue((fixture.pi / "prompts/first.md").is_symlink())
+            self.assertTrue((fixture.pi / "extensions/alpha").is_symlink())
+            self.assertFalse((fixture.pi / "prompts/second.md").exists())
+            self.assertFalse((fixture.pi / "extensions/beta").exists())
+            self.assertFalse((fixture.pi / "subagents").exists())
 
     def test_policy_only_links_no_other_component(self):
         with SetupFixture() as fixture:

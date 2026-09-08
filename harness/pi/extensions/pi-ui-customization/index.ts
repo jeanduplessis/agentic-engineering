@@ -2,8 +2,9 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import {
 	CompactionSummaryMessageComponent,
 	ToolExecutionComponent,
+	UserMessageComponent,
 } from "@earendil-works/pi-coding-agent";
-import { visibleWidth } from "@earendil-works/pi-tui";
+import { stripTerminalSequences, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { installLinkHover } from "./link-hover.ts";
 import { isSkillReadPath, replaceBackgroundAnsi } from "./skill-read.ts";
 import { isTerminalImageLine, mapNonImageLines } from "./terminal-image-lines.ts";
@@ -35,6 +36,8 @@ type ExpandableComponent = {
 type ToolExecutionInternals = ExpandableComponent & {
 	toolName: string;
 	toolCallId: string;
+	toolDefinition?: { renderShell?: "default" | "self" };
+	resultRendererComponent?: { render(width: number): string[] };
 	args?: unknown;
 	ui: TuiLike;
 	isPartial: boolean;
@@ -61,8 +64,11 @@ const URL_HANDLER_STATE = Symbol.for("pi.pi-ui-customization.url-handler-state")
 const INTERNAL_URL_PREFIX = "pi://tool-output-expand/";
 const EXPAND_HINT = "to expand";
 const CLICK_HINT = "or click";
-// Half the previous darkening distance, applied symmetrically around the base.
-const BORDER_CONTRAST_STEP = 0.225;
+// Category colors do not encode execution state; native status text still does.
+const TOOL_BACKGROUND = "\x1b[48;2;40;49;38m"; // #283126
+const TOOL_GUTTER = "\x1b[48;2;34;39;31m"; // #22271f
+const SKILL_BACKGROUND = "\x1b[48;2;45;40;56m"; // #2d2838
+const SKILL_GUTTER = "\x1b[48;2;36;32;46m"; // #24202e
 const ANSI_SEQUENCE = /^(?:\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~])/;
 const ANSI_SEQUENCE_GLOBAL = /(?:\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~])/g;
 
@@ -111,23 +117,6 @@ function ansi256ToRgb(index: number): RgbColor {
 
 	const gray = 8 + (index - 232) * 10;
 	return { r: gray, g: gray, b: gray };
-}
-
-function rgbToAnsi256(color: RgbColor): number {
-	let closest = 0;
-	let closestDistance = Number.POSITIVE_INFINITY;
-	for (let index = 0; index < 256; index++) {
-		const candidate = ansi256ToRgb(index);
-		const distance =
-			(color.r - candidate.r) ** 2 * 0.299 +
-			(color.g - candidate.g) ** 2 * 0.587 +
-			(color.b - candidate.b) ** 2 * 0.114;
-		if (distance < closestDistance) {
-			closest = index;
-			closestDistance = distance;
-		}
-	}
-	return closest;
 }
 
 function asObject(value: unknown): Record<string, unknown> | undefined {
@@ -204,51 +193,85 @@ class PiUiCustomizationController {
 	}
 
 	decorate(component: ToolExecutionInternals, lines: string[], width: number): string[] {
-		const skillLines = this.recolorSkillRead(component, lines);
+		// Self-owned shells retain every safety/detail row and their own framing.
+		if (component.toolDefinition?.renderShell === "self") {
+			return this.decorateExpandable(component, lines);
+		}
+		const skillRead = this.isSkillRead(component);
+		const categoryLines = this.recolorToolBackground(lines, skillRead ? SKILL_BACKGROUND : TOOL_BACKGROUND);
 		const decision = decideToolCollapse({
 			expanded: component.expanded,
 		});
-		const displayLines = decision.compact ? this.compactCollapsedLines(skillLines) : skillLines;
+		const displayLines = decision.compact ? this.compactCollapsedLines(categoryLines) : categoryLines;
 		if (this.tui?.mode !== "fullscreen" || (!component.expanded && !decision.clickable)) {
-			return skillLines;
+			return categoryLines;
 		}
 
 		let target: ToolTarget | undefined;
-		return mapNonImageLines(displayLines, (line) => {
+		const decorated = mapNonImageLines(displayLines, (line) => {
 			target ??= this.getTarget(component);
 			const visibleLine = component.expanded ? line : this.stripExpansionHint(line);
 			const paddedLine = this.padLineToWidth(visibleLine, width);
-			const borderedLine = this.addLeftBorder(paddedLine, component.expanded, width);
+			const borderedLine = this.addLeftBorder(paddedLine, skillRead ? SKILL_GUTTER : TOOL_GUTTER, width);
 
 			// Keep existing file/URL links usable while making every other part of
 			// the block clickable to toggle its expanded state.
 			return this.wrapOutsideHyperlinks(borderedLine, target.url);
 		});
+		const preview = this.collapsedReadPreview(component, width);
+		if (preview) {
+			const background = skillRead ? SKILL_BACKGROUND : TOOL_BACKGROUND;
+			const row = this.addLeftBorder(
+				this.padLineToWidth(`${background} ${preview}\x1b[49m`, width),
+				skillRead ? SKILL_GUTTER : TOOL_GUTTER, width,
+			);
+			const lastContent = decorated.findLastIndex((line) => stripTerminalSequences(line).trim().length > 0);
+			// Insert after native content but before bottom padding. Do not run output
+			// through expansion-hint stripping: those words may be literal file text.
+			decorated.splice(lastContent + 1, 0, this.wrapOutsideHyperlinks(row, this.getTarget(component).url));
+		}
+		return decorated;
 	}
 
-	private recolorSkillRead(component: ToolExecutionInternals, lines: string[]): string[] {
-		if (!this.isSuccessfulSkillRead(component)) return lines;
+	private collapsedReadPreview(component: ToolExecutionInternals, width: number): string | undefined {
+		const result = component.result;
+		const theme = this.uiContext?.theme;
+		if (component.toolName !== "read" || component.expanded || component.isPartial || !result ||
+			result.isError || result.content.some((item) => item.type === "image") || !theme || width < 4) return;
 
+		// Native read currently returns an empty result slot while collapsed. Leave
+		// any existing renderer-owned body (and unknown/fallback slots) alone.
+		const slot = component.resultRendererComponent;
+		if (!slot || slot.render(Math.max(1, width - 2)).length > 0) return;
+		for (const item of result.content) {
+			if (item.type !== "text" || !item.text) continue;
+			const text = stripTerminalSequences(item.text).replace(/\t/g, " ")
+				.replace(/[\x00-\x09\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "");
+			const line = text.split("\n").find((line) => line.trim().length > 0);
+			if (line) return theme.fg("toolOutput", truncateToWidth(line.trim(), width - 3, "…"));
+		}
+		return;
+	}
+
+	private recolorToolBackground(lines: string[], toAnsi: string): string[] {
 		const theme = this.uiContext?.theme;
 		if (!theme) return lines;
 
-		let fromAnsi: string;
-		let toAnsi: string;
+		let backgrounds: string[];
 		try {
-			fromAnsi = theme.getBgAnsi("toolSuccessBg");
-			toAnsi = theme.getBgAnsi("customMessageBg");
+			backgrounds = (["toolPendingBg", "toolSuccessBg", "toolErrorBg"] as const).map(
+				(color) => theme.getBgAnsi(color),
+			);
 		} catch {
 			return lines;
 		}
-		if (!fromAnsi || fromAnsi === toAnsi) return lines;
-
-		return mapNonImageLines(lines, (line) => replaceBackgroundAnsi(line, fromAnsi, toAnsi));
+		return mapNonImageLines(lines, (line) =>
+			backgrounds.reduce((text, fromAnsi) => replaceBackgroundAnsi(text, fromAnsi, toAnsi), line),
+		);
 	}
 
-	private isSuccessfulSkillRead(component: ToolExecutionInternals): boolean {
-		if (component.toolName !== "read" || component.isPartial || component.result?.isError) {
-			return false;
-		}
+	private isSkillRead(component: ToolExecutionInternals): boolean {
+		if (component.toolName !== "read") return false;
 		const args = asObject(component.args);
 		const path = asString(args?.path) ?? asString(args?.file_path);
 		return !!path && isSkillReadPath(path);
@@ -348,11 +371,10 @@ class PiUiCustomizationController {
 		return result;
 	}
 
-	private addLeftBorder(line: string, expanded: boolean, width: number): string {
+	private addLeftBorder(line: string, borderBackground: string, width: number): string {
 		const lineWithGap = this.insertSpaceAfterFirstVisibleCharacter(line);
 		const boundedLine =
 			visibleWidth(lineWithGap) > width ? this.removeLastVisibleCell(lineWithGap) : lineWithGap;
-		const borderBackground = this.getBorderColor(boundedLine, expanded);
 		const background = this.getBackgroundColor(boundedLine);
 		const restoreBackground = background?.ansi ?? "\x1b[49m";
 		return this.replaceFirstVisibleCharacter(`${borderBackground} ${restoreBackground}`, boundedLine);
@@ -433,25 +455,6 @@ class PiUiCustomizationController {
 		}
 
 		return line;
-	}
-
-	private getBorderColor(line: string, expanded: boolean): string {
-		const background = this.getBackgroundColor(line);
-		if (!background) {
-			return `\x1b[48;5;${expanded ? 250 : 240}m`;
-		}
-
-		const factor = expanded ? 1 + BORDER_CONTRAST_STEP : 1 - BORDER_CONTRAST_STEP;
-		const color = {
-			r: Math.min(255, Math.round(background.color.r * factor)),
-			g: Math.min(255, Math.round(background.color.g * factor)),
-			b: Math.min(255, Math.round(background.color.b * factor)),
-		};
-
-		if (background.mode === "ansi256") {
-			return `\x1b[48;5;${rgbToAnsi256(color)}m`;
-		}
-		return `\x1b[48;2;${color.r};${color.g};${color.b}m`;
 	}
 
 	private getBackgroundColor(line: string): BackgroundColor | undefined {
@@ -634,10 +637,43 @@ function installCompactionRenderPatch(controller: PiUiCustomizationController): 
 	};
 }
 
+function installUserMessageRenderPatch(): void {
+	const prototype = UserMessageComponent.prototype as unknown as PatchedPrototype;
+	// Replace the wrapper on reload, always wrapping the saved native renderer.
+	const originalRender = (prototype[ORIGINAL_RENDER] ?? UserMessageComponent.prototype.render) as
+		typeof UserMessageComponent.prototype.render;
+	prototype[ORIGINAL_RENDER] = originalRender;
+
+	UserMessageComponent.prototype.render = function (width: number): string[] {
+		const maxWidth = Math.min(width, Math.max(40, Math.min(88, Math.floor(width * 0.8))));
+		let blockWidth = maxWidth;
+		let lines = originalRender.call(this, maxWidth);
+		if (!lines.some(isTerminalImageLine)) {
+			const padding = (this as unknown as { outputPad: number }).outputPad;
+			// Native rows include left padding; discard only the right-side fill when measuring.
+			const longestRowWidth = lines.reduce(
+				(longest, line) => Math.max(longest, visibleWidth(stripTerminalSequences(line).trimEnd())),
+				0,
+			);
+			blockWidth = Math.min(maxWidth, Math.max(padding * 2 + 1, longestRowWidth + padding));
+			// Reuse Pi's wrapping and background painting, including its one top and
+			// one bottom padding row. Do not crop ANSI, links, or code indentation.
+			if (blockWidth < maxWidth) lines = originalRender.call(this, blockWidth);
+		}
+		const inset = " ".repeat(width - blockWidth);
+		return mapNonImageLines(lines, (line) => {
+			// Fullscreen prompt navigation and marker stripping require byte zero.
+			const markers = /^(?:\x1b\]133;[ABC](?:\x07|\x1b\\))+/.exec(line)?.[0] ?? "";
+			return markers + inset + line.slice(markers.length);
+		});
+	};
+}
+
 export default function piUiCustomization(pi: ExtensionAPI): void {
 	const controller = new PiUiCustomizationController();
 	installRenderPatch(controller);
 	installCompactionRenderPatch(controller);
+	installUserMessageRenderPatch();
 
 	let disposeLinkHover: (() => void) | undefined;
 	pi.on("session_start", (_event, ctx) => {

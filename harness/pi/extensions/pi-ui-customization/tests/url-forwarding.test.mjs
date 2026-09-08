@@ -18,13 +18,13 @@ try {
 	} catch { /* Report an explicit skip when Pi is unavailable. */ }
 }
 const sdkRequired = { skip: !sdkPath && "Pi SDK is not installed" };
-let ToolExecutionComponent, CompactionSummaryMessageComponent, getOsc8LinkAtColumn, loadExtensions, createInteractiveTuiReference;
+let ToolExecutionComponent, CompactionSummaryMessageComponent, getOsc8LinkAtColumn, loadExtensions, createInteractiveTuiReference, Text;
 if (sdkPath) {
 	const sdk = await import(pathToFileURL(sdkPath).href);
 	({ ToolExecutionComponent, CompactionSummaryMessageComponent } = sdk);
 	sdk.initTheme("dark");
 	const tui = await import(pathToFileURL(createRequire(sdkPath).resolve("@earendil-works/pi-tui")).href);
-	({ getOsc8LinkAtColumn } = tui);
+	({ getOsc8LinkAtColumn, Text } = tui);
 	tui.setCapabilities({ images: null, trueColor: true, hyperlinks: true });
 	({ loadExtensions } = await import(new URL("./core/extensions/loader.js", pathToFileURL(sdkPath)).href));
 	({ createInteractiveTuiReference } = await import(new URL("./modes/interactive/interactive-mode.js", pathToFileURL(sdkPath)).href));
@@ -143,4 +143,46 @@ test("URL forwarding follows fullscreen renderer replacement without changing re
 		["regular", "https://example.com/regular"],
 		["second", "https://example.com/second"],
 	]);
+});
+
+test("self-shell registered URLs toggle only the selected card across repeated reloads", sdkRequired, async (t) => {
+	let emit = await loadExtension(t);
+	const opened = [];
+	let requests = 0;
+	const renderer = { mode: "fullscreen", openUrl: (url) => opened.push(url), requestRender() { requests++; } };
+	const ui = createInteractiveTuiReference(() => renderer);
+	const definition = {
+		renderShell: "self",
+		renderCall() { return new Text("", 0, 0); },
+		renderResult(_result, { expanded }) {
+			return new Text(`Card summary\nSafety: supervisor reply required\n\x1b]8;;https://example.com/original\x07Original URL\x1b]8;;\x07${expanded ? "\nSelected card detail" : ""}`, 0, 0);
+		},
+	};
+	const cards = ["first", "second"].map((id) => {
+		const card = new ToolExecutionComponent("subagent", id, {}, {}, definition, ui, process.cwd());
+		card.updateResult({ content: [{ type: "text", text: "original result" }], isError: false });
+		return card;
+	});
+	const stripLinks = (lines) => lines.map((line) => line.replace(/\x1b\]8;[^\x07\x1b]*(?:\x07|\x1b\\)/g, ""));
+	const baseline = stripLinks(cards[0].render(80));
+	for (let reload = 0; reload < 3; reload++) {
+		const previous = emit;
+		emit = await loadExtension(t);
+		for (const card of cards) card.render(80);
+		previous("session_shutdown"); // A late old teardown cannot detach the new owner.
+		const before = requests;
+		toggle(renderer, cards[0]);
+		assert.equal(requests, before + 1, "one click requests one render after reload");
+		assert.equal(cards[1].expanded, false);
+		assert.match(stripVTControlCharacters(cards[0].render(80).join("\n")), /Selected card detail/);
+		const linkLine = cards[0].render(80).find((line) => stripVTControlCharacters(line).includes("Original URL"));
+		const url = getOsc8LinkAtColumn(linkLine, stripVTControlCharacters(linkLine).indexOf("Original URL"));
+		assert.equal(url, "https://example.com/original");
+		renderer.openUrl(url);
+		assert.equal(cards[0].expanded, true);
+		assert.equal(opened.length, reload + 1, "external URL forwards exactly once");
+		assert.equal(opened.at(-1), url);
+		toggle(renderer, cards[0]);
+		assert.deepEqual(stripLinks(cards[0].render(80)), baseline, "reload neither stacks decoration nor changes collapsed lines");
+	}
 });

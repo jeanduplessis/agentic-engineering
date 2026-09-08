@@ -35,8 +35,9 @@ Interactively choose which Agentic Engineering resources to install:
   tools      Install Rust tools from $TOOLS_DIR with cargo.
   skills     Link selected skills from $SKILLS_DIR into Pi and/or the
              shared global skills directory.
-  harness    Link harness-specific resources from $HARNESS_DIR. Pi components
+  harness    Install harness-specific resources from $HARNESS_DIR. Pi components
              and their commands, extensions, and skills are selected explicitly.
+             The atomic subagents component links reviewer.md and merges model policy.
 
 Targets:
   Pi:      $PI_AGENT_DIR
@@ -491,11 +492,11 @@ install_skills() {
   return "$failures"
 }
 
-# Collect the complete Pi plan before linking anything. A cancelled picker
+# Collect the complete Pi plan before changing anything. A cancelled picker
 # cancels this plan, not just its current component.
 install_pi_harness() {
   local source="$HARNESS_DIR/pi"
-  local component name item target index failures=0 has_extensions=0
+  local component name item target index failures=0 has_extensions=0 has_subagents=0 check_status
   local selected_components=() selected_sources=() selected_targets=()
 
   if [ ! -d "$source" ]; then
@@ -509,8 +510,9 @@ install_pi_harness() {
     CANDIDATE_DIRS+=("$item")
   done
   printf '\nChoose Pi components, then individual commands, extensions, or skills.\n'
+  printf 'Subagents is one atomic reviewer-link and settings-merge choice.\n'
   printf 'Other files and directories are selected as whole resources.\n'
-  printf 'Cancelling any Pi picker cancels the entire Pi plan without linking anything.\n'
+  printf 'Cancelling any Pi picker cancels the entire Pi plan without changing anything.\n'
   if ! choose_items "Pi components"; then
     return 0
   fi
@@ -520,6 +522,9 @@ install_pi_harness() {
   for component in "${selected_components[@]}"; do
     name="${component##*/}"
     case "$name" in
+      subagents)
+        has_subagents=1
+        ;;
       commands|extensions|skills)
         target="$PI_AGENT_DIR/$name"
         # Pi calls the repository's command templates "prompts".
@@ -556,19 +561,37 @@ install_pi_harness() {
     esac
   done
 
-  if [ "${#selected_sources[@]}" -eq 0 ]; then
-    printf 'No Pi resources selected; nothing to link.\n'
+  if [ "${#selected_sources[@]}" -eq 0 ] && [ "$has_subagents" -eq 0 ]; then
+    printf 'No Pi resources selected; nothing to install.\n'
     return 0
   fi
   printf '\nSelected Pi resources (source -> destination):\n'
   for ((index = 0; index < ${#selected_sources[@]}; index++)); do
     printf '  - %s -> %s\n' "${selected_sources[$index]}" "${selected_targets[$index]}"
   done
-  if ! confirm 'Link only these selected Pi resources?'; then
+  if [ "$has_subagents" -eq 1 ]; then
+    if ! command -v python3 >/dev/null 2>&1; then
+      printf 'ERROR: python3 is required for the subagents component.\n' >&2
+      return 1
+    fi
+    python3 "$source/subagents/install.py" --agent-dir "$PI_AGENT_DIR" --check
+    check_status=$?
+    if [ "$check_status" -gt 1 ]; then
+      printf 'Pi installation cancelled; subagent policy preflight failed.\n' >&2
+      return 1
+    fi
+    printf 'Changed existing settings/reviewer will be backed up; other settings and agents stay intact.\n'
+  fi
+  if ! confirm 'Apply only this selected Pi plan?'; then
     printf 'Pi installation cancelled.\n'
     return 0
   fi
 
+  if [ "$has_subagents" -eq 1 ]; then
+    if ! python3 "$source/subagents/install.py" --agent-dir "$PI_AGENT_DIR" --apply; then
+      return 1
+    fi
+  fi
   for ((index = 0; index < ${#selected_sources[@]}; index++)); do
     if ! link_resource "${selected_sources[$index]}" "${selected_targets[$index]}"; then
       failures=1

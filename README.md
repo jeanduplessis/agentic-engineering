@@ -7,9 +7,9 @@
 
 Run `./setup.sh` to interactively install tools, link selected skills into Pi or the global `~/.agents/skills` directory, and install Pi harness artifacts. Skills and Pi resources require explicit selection and confirmation. Æ is the name of this setup, not a separate command.
 
-Under **Harness**, select components first. Root files such as `APPEND_SYSTEM.md` are independent choices. The `commands`, `extensions`, and optional harness `skills` components each open an item picker. Other resources, such as `docs`, are selected as whole files or directories; `docs` is linked as one directory, not file by file.
+Under **Harness**, select components first. Root files such as `APPEND_SYSTEM.md` are independent choices. The `commands`, `extensions`, and optional harness `skills` components each open an item picker. The atomic `subagents` component links only the owned reviewer and merges model policy into settings. Other resources, such as `docs`, are selected as whole files or directories; `docs` is linked as one directory, not file by file.
 
-Nothing is selected by default in either Pi picker. Enter names or numbers, or type `all` explicitly at each level. Review the selected source-to-destination plan and confirm before any Pi links are created. Cancelling any Pi picker cancels the entire Pi plan; empty components are skipped. Unselected existing installs stay untouched.
+Nothing is selected by default in either Pi picker. Enter names or numbers, or type `all` explicitly at each level. Review the complete selected link/merge plan and confirm before any Pi target changes. Cancelling any Pi picker cancels the entire Pi plan; empty components are skipped. Unselected existing installs stay untouched.
 
 ## Tools
 
@@ -18,6 +18,8 @@ Nothing is selected by default in either Pi picker. Enter names or numbers, or t
 ## Pi resources
 
 Pi's root-agent policy lives in [`harness/pi/APPEND_SYSTEM.md`](harness/pi/APPEND_SYSTEM.md). Edit this repository source, not the installed link. Selecting `APPEND_SYSTEM.md` under **Harness** in `./setup.sh` links it to `~/.pi/agent/APPEND_SYSTEM.md` (or `$PI_AGENT_DIR/APPEND_SYSTEM.md`) after approval of the plan; an existing file is backed up after confirmation, and replacing a conflicting symlink also requires confirmation. The policy owns orchestration decisions; the installed `pi-subagents` skill owns invocation details.
+
+The opt-in [`subagents` component](harness/pi/subagents/README.md) owns an execution-capable, no-source-edit reviewer and strict same-parent-model policy for native children. Setup links only `reviewer.md` into the existing `agents/` directory and merges `subagents.modelScope` into `settings.json`, with backups for changed existing targets. It preserves other settings and agents and refuses symlinked settings. The standalone `--check`/`--apply` helper requires an explicit agent directory and Python 3.8+. Project overrides and external runners need separate effective-policy checks; exceptions require user approval. No package or skill installation is included.
 
 Pi-owned prompt templates live in `harness/pi/commands/*.md`. In setup, choose **Harness → commands**, then select individual templates or explicitly select `all`; each selected template is linked into `~/.pi/agent/prompts/`. Root `package.json` exposes them through `pi.prompts`; edit those files directly. Pi is the only supported live harness.
 
@@ -55,6 +57,7 @@ pi -e /absolute/path/to/this-repository
 - `harness/pi/commands/` contains Pi-owned slash-command prompt templates.
 - `harness/pi/docs/` contains Pi-owned plans and runbooks. It is not a Pi package resource.
 - `harness/pi/extensions/` contains Pi extensions, each linked into Pi individually by `./setup.sh`.
+- `harness/pi/subagents/` contains the owned reviewer, minimal settings overlay, installer, and review evaluation fixture; setup selects it atomically without linking the whole directory.
 - `skills/` contains Pi skills, installable into Pi or the global `~/.agents/skills` directory.
 - `prompts/` contains system-prompt resources. `prompts/COMPRESSED_OUTPUT_MODE.md` is the current repository-owned prompt resource.
 - `skill-factory/` contains skill authoring, validation, and evaluation resources.
