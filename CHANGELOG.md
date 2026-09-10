@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Removed the diff preview from successful collapsed `pi-ui-customization` edit cards. Click and keyboard expansion still reveal the native diff; errors, partial results, and custom self-owned renderers are unchanged.
+
+- Removed the one-line file-content preview from collapsed `pi-ui-customization` read cards. Expanded output, errors, and images keep their existing behavior.
+
+- Fixed non-collapsing built-in `edit` cards in `pi-ui-customization` when Pi uses a self-owned edit shell. Restored compact gutters and click/keyboard expansion without changing custom self-shell safety rows; added offline SDK edit and reload regressions.
+
+- Fixed stray frontmatter delimiter lines in collapsed `pi-ui-customization` skill cards by omitting their file-content preview. Ordinary read previews and native expanded output are unchanged; added offline SDK regression coverage.
+
 - Fixed missing colored bottom padding below collapsed `read` headers before inline images in `pi-ui-customization`. Preserved native image spacing, protocol bytes, and height reservations, with offline real-read SDK regression checks for Kitty and iTerm2.
 
 - Added Genie `--model` and `--thinking` selection with independent `GENIE_MODEL`/`GENIE_THINKING` > CLI > Pi-default precedence. Blank environment values are absent; model strings retain Pi semantics and explicit thinking overrides model suffixes. Invalid configuration fails before Pi launch without echoing values, while help/version ignore configuration environment. Added offline fake-Pi precedence, validation, literal-boundary, and exact-argv tests; no new dependencies or other Pi behavior changes.

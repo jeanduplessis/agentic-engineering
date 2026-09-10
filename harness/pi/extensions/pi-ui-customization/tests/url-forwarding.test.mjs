@@ -18,10 +18,11 @@ try {
 	} catch { /* Report an explicit skip when Pi is unavailable. */ }
 }
 const sdkRequired = { skip: !sdkPath && "Pi SDK is not installed" };
-let ToolExecutionComponent, CompactionSummaryMessageComponent, getOsc8LinkAtColumn, loadExtensions, createInteractiveTuiReference, Text;
+let ToolExecutionComponent, CompactionSummaryMessageComponent, getOsc8LinkAtColumn, loadExtensions, createInteractiveTuiReference, Text, editDefinition;
 if (sdkPath) {
 	const sdk = await import(pathToFileURL(sdkPath).href);
 	({ ToolExecutionComponent, CompactionSummaryMessageComponent } = sdk);
+	editDefinition = sdk.createEditToolDefinition(process.cwd());
 	sdk.initTheme("dark");
 	const tui = await import(pathToFileURL(createRequire(sdkPath).resolve("@earendil-works/pi-tui")).href);
 	({ getOsc8LinkAtColumn, Text } = tui);
@@ -92,13 +93,24 @@ test("external links still open after many tool redraws through Pi's TUI proxy",
 	toggle(renderer, summary);
 });
 
-test("external links survive session reset, shutdown, and extension reload", sdkRequired, async (t) => {
+for (const name of ["bash", "edit"]) test(`${name} links survive session reset, shutdown, and extension reload`, sdkRequired, async (t) => {
 	const emit = await loadExtension(t);
 	const opened = [];
 	const renderer = { mode: "fullscreen", openUrl: (url) => opened.push(url), requestRender() {} };
 	const ui = createInteractiveTuiReference(() => renderer);
-	const component = tool(ui);
-	component.render(80);
+	const component = name === "edit"
+		? new ToolExecutionComponent("edit", "edit-reload", { path: "README.md" }, {}, editDefinition, ui, process.cwd())
+		: tool(ui);
+	if (name === "edit") component.updateResult({
+		content: [{ type: "text", text: "Successfully replaced 1 block(s) in README.md." }],
+		details: { diff: "-1 before\n+1 after one\n+2 after two", firstChangedLine: 1 },
+		isError: false,
+	});
+	const baseline = component.render(80);
+	if (name === "edit") {
+		assert.ok(!stripVTControlCharacters(baseline.join("\n")).includes("after one"));
+		assert.ok(baseline.join("\n").includes("\x1b[48;2;34;39;31m"));
+	}
 
 	emit("session_start");
 	// No tool render is needed for native links to work after a reset.
@@ -110,7 +122,10 @@ test("external links survive session reset, shutdown, and extension reload", sdk
 	component.render(80);
 
 	await loadExtension(t);
+	component.setExpanded(false);
+	assert.deepEqual(component.render(80), baseline, "reload does not stack framing or change compact content");
 	const internalUrl = toggle(renderer, component);
+	if (name === "edit") assert.match(stripVTControlCharacters(component.render(80).join("\n")), /after one/);
 	renderer.openUrl("https://example.com/reloaded");
 	// A late shutdown from the previous instance must not detach the new owner.
 	emit("session_shutdown");

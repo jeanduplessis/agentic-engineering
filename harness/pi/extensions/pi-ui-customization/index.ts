@@ -1,10 +1,11 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
 	CompactionSummaryMessageComponent,
+	createEditToolDefinition,
 	ToolExecutionComponent,
 	UserMessageComponent,
 } from "@earendil-works/pi-coding-agent";
-import { stripTerminalSequences, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { installLinkHover } from "./link-hover.ts";
 import { isSkillReadPath, replaceBackgroundAnsi } from "./skill-read.ts";
 import { isTerminalImageLine, mapNonImageLines } from "./terminal-image-lines.ts";
@@ -17,17 +18,6 @@ type TuiLike = {
 	[key: symbol]: unknown;
 };
 
-type ToolResult = {
-	content: Array<{
-		type: string;
-		text?: string;
-		data?: string;
-		mimeType?: string;
-	}>;
-	details?: unknown;
-	isError: boolean;
-};
-
 type ExpandableComponent = {
 	expanded: boolean;
 	setExpanded(expanded: boolean): void;
@@ -36,12 +26,15 @@ type ExpandableComponent = {
 type ToolExecutionInternals = ExpandableComponent & {
 	toolName: string;
 	toolCallId: string;
-	toolDefinition?: { renderShell?: "default" | "self" };
-	resultRendererComponent?: { render(width: number): string[] };
+	toolDefinition?: {
+		renderShell?: "default" | "self";
+		renderCall?: unknown;
+		renderResult?: unknown;
+	};
 	args?: unknown;
 	ui: TuiLike;
 	isPartial: boolean;
-	result?: ToolResult;
+	result?: { isError: boolean };
 };
 
 type ToolTarget = {
@@ -61,6 +54,9 @@ type UrlHandlerState = {
 const ORIGINAL_RENDER = Symbol.for("pi.pi-ui-customization.original-render");
 const CONTROLLER = Symbol.for("pi.pi-ui-customization.controller");
 const URL_HANDLER_STATE = Symbol.for("pi.pi-ui-customization.url-handler-state");
+// Renderer functions are shared across builtin definitions; do not classify custom
+// edit overrides by name alone or strip their renderer-owned safety/detail rows.
+const BUILTIN_EDIT_RENDERERS = createEditToolDefinition(process.cwd());
 const INTERNAL_URL_PREFIX = "pi://tool-output-expand/";
 const EXPAND_HINT = "to expand";
 const CLICK_HINT = "or click";
@@ -193,8 +189,13 @@ class PiUiCustomizationController {
 	}
 
 	decorate(component: ToolExecutionInternals, lines: string[], width: number): string[] {
-		// Self-owned shells retain every safety/detail row and their own framing.
-		if (component.toolDefinition?.renderShell === "self") {
+		// Builtin edit owns a Box but renders the full diff even when collapsed.
+		// All other self-owned shells retain their safety/detail rows and framing.
+		const definition = component.toolDefinition;
+		const builtinEdit = component.toolName === "edit" &&
+			definition?.renderCall === BUILTIN_EDIT_RENDERERS.renderCall &&
+			definition?.renderResult === BUILTIN_EDIT_RENDERERS.renderResult;
+		if (definition?.renderShell === "self" && !builtinEdit) {
 			return this.decorateExpandable(component, lines);
 		}
 		const skillRead = this.isSkillRead(component);
@@ -202,13 +203,14 @@ class PiUiCustomizationController {
 		const decision = decideToolCollapse({
 			expanded: component.expanded,
 		});
-		const displayLines = decision.compact ? this.compactCollapsedLines(categoryLines) : categoryLines;
+		const titleOnly = builtinEdit && !component.isPartial && component.result?.isError === false;
+		const displayLines = decision.compact ? this.compactCollapsedLines(categoryLines, titleOnly) : categoryLines;
 		if (this.tui?.mode !== "fullscreen" || (!component.expanded && !decision.clickable)) {
 			return categoryLines;
 		}
 
 		let target: ToolTarget | undefined;
-		const decorated = mapNonImageLines(displayLines, (line) => {
+		return mapNonImageLines(displayLines, (line) => {
 			target ??= this.getTarget(component);
 			const visibleLine = component.expanded ? line : this.stripExpansionHint(line);
 			const paddedLine = this.padLineToWidth(visibleLine, width);
@@ -218,39 +220,6 @@ class PiUiCustomizationController {
 			// the block clickable to toggle its expanded state.
 			return this.wrapOutsideHyperlinks(borderedLine, target.url);
 		});
-		const preview = this.collapsedReadPreview(component, width);
-		if (preview) {
-			const background = skillRead ? SKILL_BACKGROUND : TOOL_BACKGROUND;
-			const row = this.addLeftBorder(
-				this.padLineToWidth(`${background} ${preview}\x1b[49m`, width),
-				skillRead ? SKILL_GUTTER : TOOL_GUTTER, width,
-			);
-			const lastContent = decorated.findLastIndex((line) => stripTerminalSequences(line).trim().length > 0);
-			// Insert after native content but before bottom padding. Do not run output
-			// through expansion-hint stripping: those words may be literal file text.
-			decorated.splice(lastContent + 1, 0, this.wrapOutsideHyperlinks(row, this.getTarget(component).url));
-		}
-		return decorated;
-	}
-
-	private collapsedReadPreview(component: ToolExecutionInternals, width: number): string | undefined {
-		const result = component.result;
-		const theme = this.uiContext?.theme;
-		if (component.toolName !== "read" || component.expanded || component.isPartial || !result ||
-			result.isError || result.content.some((item) => item.type === "image") || !theme || width < 4) return;
-
-		// Native read currently returns an empty result slot while collapsed. Leave
-		// any existing renderer-owned body (and unknown/fallback slots) alone.
-		const slot = component.resultRendererComponent;
-		if (!slot || slot.render(Math.max(1, width - 2)).length > 0) return;
-		for (const item of result.content) {
-			if (item.type !== "text" || !item.text) continue;
-			const text = stripTerminalSequences(item.text).replace(/\t/g, " ")
-				.replace(/[\x00-\x09\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "");
-			const line = text.split("\n").find((line) => line.trim().length > 0);
-			if (line) return theme.fg("toolOutput", truncateToWidth(line.trim(), width - 3, "…"));
-		}
-		return;
 	}
 
 	private recolorToolBackground(lines: string[], toAnsi: string): string[] {
@@ -277,7 +246,7 @@ class PiUiCustomizationController {
 		return !!path && isSkillReadPath(path);
 	}
 
-	private compactCollapsedLines(lines: string[]): string[] {
+	private compactCollapsedLines(lines: string[], titleOnly = false): string[] {
 		const firstContentIndex = lines.findIndex((line) => this.plainText(line).trim().length > 0);
 		if (firstContentIndex === -1) return lines;
 
@@ -296,18 +265,20 @@ class PiUiCustomizationController {
 			keep.add(index);
 		}
 
-		let lastOutputIndex: number | undefined;
-		for (let index = firstContentIndex + 1; index < lines.length; index++) {
-			const text = this.plainText(lines[index]!).trim();
-			if (!text || this.hasExpansionHint(text) || this.isOutputMetadata(text)) continue;
-			lastOutputIndex = index;
-		}
-		if (lastOutputIndex !== undefined) keep.add(lastOutputIndex);
+		if (!titleOnly) {
+			let lastOutputIndex: number | undefined;
+			for (let index = firstContentIndex + 1; index < lines.length; index++) {
+				const text = this.plainText(lines[index]!).trim();
+				if (!text || this.hasExpansionHint(text) || this.isOutputMetadata(text)) continue;
+				lastOutputIndex = index;
+			}
+			if (lastOutputIndex !== undefined) keep.add(lastOutputIndex);
 
-		for (let index = firstContentIndex + 1; index < lines.length; index++) {
-			const text = this.plainText(lines[index]!).trim();
-			if (this.hasExpansionHint(text) || this.isOutputMetadata(text)) {
-				keep.add(index);
+			for (let index = firstContentIndex + 1; index < lines.length; index++) {
+				const text = this.plainText(lines[index]!).trim();
+				if (this.hasExpansionHint(text) || this.isOutputMetadata(text)) {
+					keep.add(index);
+				}
 			}
 		}
 

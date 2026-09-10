@@ -21,16 +21,22 @@ try {
 }
 const sdkRequired = { skip: !sdkPath && "Pi SDK is not installed" };
 let ToolExecutionComponent, nativeRender, setCapabilities, loaded, theme, Text, visibleWidth, builtins;
+let CustomEditor, InteractiveMode, keybindings, getEditorTheme, TuiAltScreen;
 if (sdkPath) {
 	const sdk = await import(pathToFileURL(sdkPath).href);
-	({ ToolExecutionComponent } = sdk);
+	({ ToolExecutionComponent, CustomEditor, InteractiveMode } = sdk);
 	const tui = await import(pathToFileURL(createRequire(sdkPath).resolve("@earendil-works/pi-tui")).href);
-	({ setCapabilities, Text, visibleWidth } = tui);
+	({ setCapabilities, Text, visibleWidth, TuiAltScreen } = tui);
 	const { KeybindingsManager } = await import(new URL("./core/keybindings.js", pathToFileURL(sdkPath)).href);
-	tui.setKeybindings(new KeybindingsManager());
-	builtins = { bash: sdk.createBashToolDefinition(process.cwd()), read: sdk.createReadToolDefinition(process.cwd()) };
+	keybindings = new KeybindingsManager();
+	tui.setKeybindings(keybindings);
+	builtins = {
+		bash: sdk.createBashToolDefinition(process.cwd()),
+		read: sdk.createReadToolDefinition(process.cwd()),
+		edit: sdk.createEditToolDefinition(process.cwd()),
+	};
 	sdk.initTheme("dark");
-	({ theme } = await import(new URL("./modes/interactive/theme/theme.js", pathToFileURL(sdkPath)).href));
+	({ theme, getEditorTheme } = await import(new URL("./modes/interactive/theme/theme.js", pathToFileURL(sdkPath)).href));
 	nativeRender = ToolExecutionComponent.prototype.render;
 	const { loadExtensions } = await import(new URL("./core/extensions/loader.js", pathToFileURL(sdkPath)).href);
 	loaded = await loadExtensions([fileURLToPath(new URL("../index.ts", import.meta.url))], process.cwd());
@@ -39,7 +45,7 @@ if (sdkPath) {
 	after(() => loaded.runtime.invalidate());
 }
 
-function harness(t, { mode = "fullscreen", images = null } = {}) {
+function harness(t, { mode = "fullscreen", images = null, cwd = process.cwd() } = {}) {
 	setCapabilities({ images, trueColor: true, hyperlinks: true });
 	const extension = loaded.extensions[0];
 	for (const handler of extension.handlers.get("session_start") ?? []) handler({}, { ui: { theme } });
@@ -53,7 +59,7 @@ function harness(t, { mode = "fullscreen", images = null } = {}) {
 	return {
 		ui, opened,
 		tool: (name = "bash", args = {}, definition = builtins[name]) => new ToolExecutionComponent(
-			name, "streaming-layout-test", args, { imageWidthCells: 6 }, definition, ui, process.cwd(),
+			name, "streaming-layout-test", args, { imageWidthCells: 6 }, definition, ui, cwd,
 		),
 		click(lines) {
 			const link = lines.join("\n").match(/\x1b\]8;;(pi:\/\/tool-output-expand\/\d+)\x07/);
@@ -162,6 +168,113 @@ for (const protocol of ["kitty", "iterm2"]) {
 	});
 }
 
+test("builtin self-shell edit is title-only when collapsed and expands its real diff by click or native API", sdkRequired, async (t) => {
+	const directory = await mkdtemp(join(tmpdir(), "pi-edit-collapse-"));
+	const { tool, click, ui, opened } = harness(t, { cwd: directory });
+	t.after(() => rm(directory, { recursive: true, force: true }));
+	const path = join(directory, "README.md");
+	const oldText = "before one\nbefore two\nbefore three";
+	const newText = "after one\nafter two (to expand or click)\nafter three";
+	await writeFile(path, `${oldText}\n`);
+	const args = { path: "README.md", edits: [{ oldText, newText }] };
+	const result = { ...await builtins.edit.execute("edit-collapse", { ...args, path }), isError: false };
+	const original = structuredClone(result);
+	assert.equal(builtins.edit.renderShell, "self", "exercise the builtin self-shell path, not a fallback fixture");
+	assert.match(result.details.diff, /after two/);
+	const component = tool("edit", args);
+	const other = tool("edit", args);
+	component.updateResult(result);
+	other.updateResult(result);
+	const app = Object.assign(Object.create(InteractiveMode.prototype), {
+		toolOutputExpanded: false,
+		loadedResourcesContainer: { children: [] },
+		chatContainer: { children: [component, other] },
+		showStatus() {},
+	});
+	const editor = new CustomEditor(ui, getEditorTheme(), keybindings);
+	// Same binding as InteractiveMode.setupKeyHandlers, with no session or model.
+	editor.onAction("app.tools.expand", () => app.toggleToolOutputExpansion());
+	for (const width of [80, 140]) {
+		const native = nativeRender.call(component, width);
+		const collapsed = component.render(width);
+		assert.equal(component.expanded, false);
+		assert.ok(collapsed.length < native.length, "native edit ignores expanded; extension must compact the diff");
+		const content = plain(collapsed).filter(Boolean);
+		assert.deepEqual(content, ["edit README.md"], "no diff preview, including literal expansion-hint text");
+		assert.equal(plain(collapsed).at(-1), "", "retain bottom padding");
+		assert.ok(collapsed.some((line) => line.includes("\x1b[48;2;34;39;31m")), "compact gutter is present");
+		assert.ok(collapsed.every((line) => visibleWidth(line) <= width));
+		other.render(width);
+		click(collapsed);
+		assert.equal(component.expanded, true);
+		assert.equal(other.expanded, false);
+		assert.deepEqual(plain(component.render(width)), plain(nativeRender.call(component, width)));
+		assert.match(plain(component.render(width)).join("\n"), /before two/);
+		click(component.render(width));
+		assert.deepEqual(component.render(width), collapsed);
+		const url = collapsed.join("\n").match(/\x1b\]8;;(file:\/\/[^\x07]+)\x07/)?.[1];
+		assert.ok(url, "native edit path link survives");
+		ui.openUrl(url);
+		assert.equal(opened.at(-1), url);
+		assert.equal(component.expanded, false);
+		editor.handleInput("\x0f"); // Ctrl+O through native editor and app expansion methods.
+		assert.equal(component.expanded, true);
+		assert.equal(other.expanded, true);
+		assert.deepEqual(plain(component.render(width)), plain(nativeRender.call(component, width)));
+		editor.handleInput("\x0f");
+		assert.equal(other.expanded, false);
+		assert.deepEqual(component.render(width), collapsed);
+	}
+	let onInput;
+	const terminal = {
+		columns: 80, rows: 30, kittyProtocolActive: false,
+		start(input) { onInput = input; }, stop() {}, write() {},
+		hideCursor() {}, showCursor() {}, moveBy() {}, clearLine() {}, clearFromCursor() {}, clearScreen() {}, setTitle() {},
+	};
+	const renderer = new TuiAltScreen(terminal, false, undefined, {
+		mouse: true, copyOnSelect: false, openUrl: (url) => ui.openUrl(url),
+	});
+	renderer.addChild(component);
+	renderer.addChild(other);
+	renderer.setFocus(editor);
+	renderer.start();
+	t.after(() => renderer.stop({ preserveScreen: true }));
+	renderer.renderNow();
+	const headerRow = plain(component.render(80)).findIndex((line) => line.startsWith("edit "));
+	for (const expanded of [true, false]) {
+		// Physical SGR click on the gutter, where the compact card differs from native geometry.
+		onInput(`\x1b[<0;1;${headerRow + 1}M`);
+		onInput(`\x1b[<0;1;${headerRow + 1}m`);
+		assert.equal(component.expanded, expanded, "physical click toggles exactly once");
+		assert.equal(other.expanded, false);
+		renderer.renderNow();
+	}
+	onInput("\x0f");
+	assert.equal(component.expanded, true);
+	assert.equal(other.expanded, true);
+	onInput("\x0f");
+	assert.equal(component.expanded, false);
+	assert.equal(other.expanded, false);
+	assert.deepEqual(result, original, "rendering does not rewrite result content or diff details");
+});
+
+test("edit errors and partial results stay visible while regular mode keeps the native diff", sdkRequired, (t) => {
+	const { tool } = harness(t);
+	const args = { path: "sample.txt" };
+	const component = tool("edit", args);
+	component.updateResult({ content: [{ type: "text", text: "Edit failed: target not found" }], isError: true });
+	assert.ok(plain(component.render(80)).includes("Edit failed: target not found"));
+	const result = { content: [], details: { diff: "-1 before\n+1 after" }, isError: false };
+	component.updateResult(result, true);
+	assert.match(plain(component.render(80)).join("\n"), /after/, "partial diff is not treated as completed success");
+	component.updateResult(result);
+	assert.deepEqual(plain(component.render(80)).filter(Boolean), ["edit sample.txt"]);
+	const regular = harness(t, { mode: "regular" }).tool("edit", args);
+	regular.updateResult(result);
+	assert.deepEqual(plain(regular.render(80)), plain(nativeRender.call(regular, 80)));
+	assert.match(plain(regular.render(80)).join("\n"), /before/);
+});
+
 const stripLinks = (line) => line.replace(/\x1b\]8;[^\x07\x1b]*(?:\x07|\x1b\\)/g, "");
 const replyRoute = 'subagent_supervisor({"action":"reply","replyTo":"sample-question-03","message":"<explicit answer>"})';
 
@@ -191,12 +304,12 @@ function selfShellDefinition() {
 	};
 }
 
-for (const mode of ["fullscreen", "regular"]) {
-	test(`self-shell safety, literal reply and slate-blue framing survive ${mode} expansion`, sdkRequired, (t) => {
+for (const name of ["subagent", "edit"]) for (const mode of ["fullscreen", "regular"]) {
+	test(`${name} self-shell safety, literal reply and slate-blue framing survive ${mode} expansion`, sdkRequired, (t) => {
 		const { tool, click, ui, opened } = harness(t, { mode });
 		for (const width of [80, 140]) {
-			const component = tool("subagent", {}, selfShellDefinition());
-			const other = tool("subagent", {}, selfShellDefinition());
+			const component = tool(name, {}, selfShellDefinition());
+			const other = tool(name, {}, selfShellDefinition());
 			const result = { content: [{ type: "text", text: "unchanged diagnostic" }], isError: true };
 			const original = structuredClone(result);
 			component.updateResult(result);
@@ -302,13 +415,13 @@ for (const protocol of ["kitty", "iterm2"]) {
 	});
 }
 
-// These are the exact completed text results from the restored-session visual
-// fixture. Use the real built-in definition: native read hides its result slot.
-test("native read and skill-read collapsed cards show one preview and expand raw output once", sdkRequired, (t) => {
+// Use the real built-in definition: native read hides its result slot.
+// A SKILL.md.bak file stays an ordinary read, even when it starts with frontmatter.
+test("ordinary read collapsed cards show only the title and expand raw output once", sdkRequired, (t) => {
 	const { tool, click, ui, opened } = harness(t);
 	for (const [path, firstLine] of [
 		["src/sample/labels.ts", 'export const fleetLabel = "Fleet";'],
-		["skills/sample/source-review/SKILL.md", "Use source locations. Keep quoted output unchanged."],
+		["skills/sample/source-review/SKILL.md.bak", "---"],
 	]) {
 		const component = tool("read", { path });
 		for (const text of [firstLine, `\n${firstLine}\nAdditional raw output\n`]) {
@@ -319,14 +432,11 @@ test("native read and skill-read collapsed cards show one preview and expand raw
 				const native = nativeRender.call(component, width);
 				assert.ok(!plain(native).includes(firstLine), "native collapsed read really lacks a result preview");
 				const collapsed = component.render(width);
-				assert.equal(plain(collapsed).filter((line) => line === firstLine).length, 1);
-				assert.ok(!plain(collapsed).includes("Additional raw output"), "preview is exactly one output line");
-				assert.equal(collapsed.length, native.length + 1, "retain native padding around the added row");
-				const preview = collapsed.find((line) => stripVTControlCharacters(line).trim() === firstLine);
-				const skill = path.endsWith("SKILL.md");
-				assert.ok(preview.includes(skill ? "\x1b[48;2;45;40;56m" : "\x1b[48;2;40;49;38m"));
-				assert.ok(preview.includes(skill ? "\x1b[48;2;36;32;46m" : "\x1b[48;2;34;39;31m"));
-				click([preview]);
+				assert.deepEqual(plain(collapsed).filter(Boolean), [`read ${path}`]);
+				assert.equal(collapsed.length, native.length, "retain native padding without adding a preview row");
+				assert.ok(collapsed.join("\n").includes("\x1b[48;2;40;49;38m"));
+				assert.ok(collapsed.join("\n").includes("\x1b[48;2;34;39;31m"));
+				click(collapsed);
 				assert.equal(component.expanded, true);
 				assert.deepEqual(plain(component.render(width)), plain(nativeRender.call(component, width)));
 				assert.equal(plain(component.render(width)).filter((line) => line === firstLine).length, 1);
@@ -334,35 +444,63 @@ test("native read and skill-read collapsed cards show one preview and expand raw
 				assert.deepEqual(component.render(width), collapsed);
 				// The ordinary read title's original file URL still opens instead of toggling.
 				const url = collapsed.join("\n").match(/\x1b\]8;;(file:\/\/[^\x07]+)\x07/)?.[1];
-				if (!skill) {
-					assert.ok(url);
-					ui.openUrl(url);
-					assert.equal(opened.at(-1), url);
-					assert.equal(component.expanded, false);
-				}
+				assert.ok(url);
+				ui.openUrl(url);
+				assert.equal(opened.at(-1), url);
+				assert.equal(component.expanded, false);
 				component.setExpanded(true); // Same native boundary used by Ctrl+O.
 				assert.deepEqual(plain(component.render(width)), plain(nativeRender.call(component, width)));
 				component.setExpanded(false);
 			}
-			assert.deepEqual(result, original, "preview never changes stored results");
+			assert.deepEqual(result, original, "rendering never changes stored results");
 		}
 	}
 });
 
-test("native read preview strips terminal controls, bounds Unicode, and leaves excluded states native", sdkRequired, (t) => {
+test("collapsed skill reads show only the title and expand unchanged content", sdkRequired, (t) => {
+	const { tool, click } = harness(t);
+	for (const args of [
+		{ path: "skills/sample/source-review/SKILL.md" },
+		{ file_path: "skills/sample/source-review/SKILL.md" },
+	]) {
+		const component = tool("read", args);
+		for (const text of ["---\nname: source-review\n---\nUse source locations.", "Use source locations."]) {
+			const result = { content: [{ type: "text", text }], isError: false };
+			component.updateResult(result);
+			const original = structuredClone(result);
+			for (const width of [80, 140]) {
+				const collapsed = component.render(width);
+				assert.deepEqual(plain(collapsed).filter(Boolean), ["[skill] source-review"]);
+				assert.ok(collapsed.join("\n").includes("\x1b[48;2;45;40;56m"));
+				assert.ok(collapsed.join("\n").includes("\x1b[48;2;36;32;46m"));
+				click(collapsed);
+				assert.equal(component.expanded, true);
+				assert.deepEqual(plain(component.render(width)), plain(nativeRender.call(component, width)));
+				assert.ok(plain(component.render(width)).includes("Use source locations."));
+				click(component.render(width));
+				assert.deepEqual(component.render(width), collapsed);
+				component.setExpanded(true); // Same native boundary used by Ctrl+O.
+				assert.deepEqual(plain(component.render(width)), plain(nativeRender.call(component, width)));
+				component.setExpanded(false);
+				assert.deepEqual(component.render(width), collapsed);
+			}
+			assert.deepEqual(result, original);
+		}
+	}
+});
+
+test("collapsed reads omit file content and preserve pending, error, empty and image states", sdkRequired, (t) => {
 	const { tool } = harness(t);
-	const component = tool("read", { path: "fixtures/output.txt" });
+	const component = tool("read", { path: "output.txt" });
 	const attack = '\x1b[2J\x1b]52;c;YXR0YWNr\x07\x1b]8;;https://example.com/untrusted\x07Read (to expand or click)\x1b]8;;\x07\r\x08\x00\x9b\u202e';
 	const text = `\n\t${attack} ${"界🙂".repeat(100)}\nMUST NOT PREVIEW SECOND LINE`;
 	component.updateResult({ content: [{ type: "text", text }], isError: false });
 	for (const width of [20, 80, 140]) {
 		const lines = component.render(width);
-		const preview = lines.find((line) => stripVTControlCharacters(line).trim().startsWith("Read"));
-		assert.ok(preview);
+		assert.deepEqual(plain(lines).filter(Boolean), plain(nativeRender.call(component, width)).filter(Boolean));
+		assert.ok(!plain(lines).some((line) => line.startsWith("Read")), "no synthetic file-content preview");
 		assert.ok(lines.every((line) => visibleWidth(line) <= width));
-		assert.match(stripVTControlCharacters(preview), /…/);
-		if (width >= 80) assert.match(stripVTControlCharacters(preview), /Read \(to expand or click\)/, "literal output is not treated as a key hint");
-		assert.doesNotMatch(preview, /\x1b\[2J|\x1b\]52|example.com\/untrusted|[\r\x08\x00\x9b\u202e]/);
+		assert.doesNotMatch(lines.join("\n"), /\x1b\[2J|\x1b\]52|example.com\/untrusted|[\r\x08\x00\x9b\u202e]/);
 		assert.ok(!plain(lines).some((line) => line.includes("SECOND LINE")));
 	}
 	for (const { content, isError = false, partial = false } of [
@@ -375,7 +513,7 @@ test("native read preview strips terminal controls, bounds Unicode, and leaves e
 		component.updateResult({ content, isError }, partial);
 		assert.deepEqual(plain(component.render(80)).filter(Boolean), plain(nativeRender.call(component, 80)).filter(Boolean), "no synthetic pending/error/empty/image preview; existing blank-row compaction remains");
 	}
-	// Regular mode keeps the native presentation, not the fullscreen card preview.
+	// Regular mode also keeps the native presentation.
 	const regular = harness(t, { mode: "regular" }).tool("read", { path: "skills/sample/SKILL.md" });
 	regular.updateResult({ content: [{ type: "text", text: "native hidden body" }], isError: false });
 	assert.deepEqual(plain(regular.render(80)), plain(nativeRender.call(regular, 80)));
