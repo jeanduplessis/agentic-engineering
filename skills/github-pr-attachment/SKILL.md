@@ -9,8 +9,7 @@ description: Upload a local review artifact as a GitHub pull-request attachment 
 Publish an existing local artifact to an existing pull request. This skill owns upload, visibility review, body placement, and
 post-publication verification. It does not create, edit, record, transcode, or validate the artifact's substantive content.
 
-For video creation and validation, use `video-evidence` first. For broader PR creation, pushing, title changes, or description
-rewrites, use `pr-create`.
+For video creation and validation, use `video-evidence` first. This skill does not create pull requests, push, change titles, or rewrite descriptions.
 
 ## Required input
 

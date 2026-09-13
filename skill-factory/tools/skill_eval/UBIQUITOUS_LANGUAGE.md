@@ -189,7 +189,7 @@
 
 ## Example dialogue
 
-- **Dev:** For `custom-command`, should I add another per-skill script or use the **Central Runner**?
+- **Dev:** For `context`, should I add another per-skill script or use the **Central Runner**?
 
   **Domain expert:** Use the **Central Runner**. Put the prompts and checks in **Skill-local Eval Data**, then
   declare them through the **Eval Manifest**.

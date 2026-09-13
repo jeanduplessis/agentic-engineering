@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Archived unused skills to `archive/skills/` (`ait-cli`, `code-quality`, `code-review-workflow`, `epic-implement`, `epic-orchestrate`, `pr-create`, `tdd`, `to-epic`, `to-issues`, `to-prd`, `to-tasks`) and moved their dependent Pi commands (`code-review`, `epic-orchestrate`, `pr-create-update`, `to-epic`, `to-issues`) to `archive/commands/`. Removed the matching `~/.agents/skills` symlinks. Moved `custom-command` to `skill-factory/tools/skill_eval/tests/fixtures/custom-command` because the skill-eval tests use it as their vertical-slice fixture, repointed those tests and their documentation, updated the command inventory test, and removed the now-stale `pr-create` reference from `github-pr-attachment`. Live `skills/` and `harness/pi/commands/` inventories no longer include the archived resources.
+
 - Removed the diff preview from successful collapsed `pi-ui-customization` edit cards. Click and keyboard expansion still reveal the native diff; errors, partial results, and custom self-owned renderers are unchanged.
 
 - Removed the one-line file-content preview from collapsed `pi-ui-customization` read cards. Expanded output, errors, and images keep their existing behavior.

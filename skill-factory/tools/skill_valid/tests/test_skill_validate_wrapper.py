@@ -75,7 +75,7 @@ class SkillValidateWrapperTests(unittest.TestCase):
             env = {key: value for key, value in os.environ.items()
                    if not key.startswith(("SKILL_VALID_", "SKILL_EVAL_"))}
             env.update(overrides)
-            result = subprocess.run([str(WRAPPER), "skills/custom-command", *args],
+            result = subprocess.run([str(WRAPPER), "skills/context", *args],
                                     cwd=ROOT, env=env, text=True, capture_output=True)
             self.assertEqual(result.returncode, 2)
             self.assertIn("invalid choice", result.stderr)

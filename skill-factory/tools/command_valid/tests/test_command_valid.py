@@ -348,22 +348,17 @@ class CommandValidTests(unittest.TestCase):
 class CanonicalCommandInventoryTests(unittest.TestCase):
     EXPECTED_COMMANDS = sorted(
         {
-            "code-review",
-            "epic-orchestrate",
             "flesh-out",
             "idea-challenger",
             "optimize-for-llm",
             "pr-analyze",
             "pr-audit",
-            "pr-create-update",
             "pr-review-analyze",
             "session-retro",
             "skill-validate",
             "spec-audit",
             "spec-gen",
             "spec-reverse-gen",
-            "to-epic",
-            "to-issues",
             "wat",
         }
     )

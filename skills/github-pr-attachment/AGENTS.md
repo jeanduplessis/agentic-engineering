@@ -41,6 +41,6 @@ Do not run live harness or model-backed evals without explicit approval.
 
 - Keep commands compatible with the current agent-browser workflow; retain the instruction to load `agent-browser skills get core --full` before browser work.
 - Recheck GitHub's official attachment documentation before changing supported formats, codec advice, visibility, or size-limit guidance.
-- Coordinate with `pr-create` rather than absorbing broader PR creation, push, title, or description-rewrite behavior.
+- Keep broader PR creation, push, title, or description-rewrite behavior outside this skill.
 - Preserve compatibility with the artifact output contract in `../video-evidence/SKILL.md` without requiring video-specific fields.
 - Update deterministic evals whenever confirmation, mutation, visibility, or verification behavior changes.

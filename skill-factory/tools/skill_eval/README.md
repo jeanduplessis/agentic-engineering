@@ -11,20 +11,20 @@ but they are synthetic and must not be treated as skill-quality benchmarks.
 
 ## Quick usage
 
-Run the custom-command workflow suite without live Pi enabled. Because the manifest defaults to the real Pi
+Run the context workflow suite without live Pi enabled. Because the manifest defaults to the real Pi
 harness, these runs should be honestly skipped rather than faked:
 
 ```bash
-PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow \
-  --results /tmp/custom-command-real-validation \
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/context/evals/manifest.json workflow \
+  --results /tmp/context-real-validation \
   --require-real
 ```
 
 Run a live evaluation through manifest-selected real harness:
 
 ```bash
-PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow \
-  --results /tmp/custom-command-real \
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/context/evals/manifest.json workflow \
+  --results /tmp/context-real \
   --require-real \
   --allow-live
 ```
@@ -42,9 +42,9 @@ Promote confirmed real failures into regression cases:
 
 ```bash
 PYTHONPATH=skill-factory python3 -m tools.skill_eval promote-regressions \
-  skills/custom-command/evals/manifest.json \
-  --results /tmp/custom-command-real \
-  --output skills/custom-command/evals/manifest.json \
+  skills/context/evals/manifest.json \
+  --results /tmp/context-real \
+  --output skills/context/evals/manifest.json \
   --source-bead agents-1cs.7
 ```
 
@@ -259,7 +259,7 @@ Regression suites run through the same case runner as workflow suites. After tri
 
 - Keep generic framework behavior in `tools/skill_eval/*`.
 
-- Put domain-specific grading in the skill's eval directory, e.g. `skills/custom-command/evals/grader.py`.
+- Put domain-specific grading in the skill's eval directory, e.g. `skills/context/evals/grader.py`.
 
 - Prefer deterministic checks. LLM judge metadata is represented, but judge execution is intentionally not implemented yet.
 

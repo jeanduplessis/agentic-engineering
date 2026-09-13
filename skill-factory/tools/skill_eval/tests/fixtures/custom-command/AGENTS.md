@@ -1,5 +1,10 @@
 # AGENTS.md — custom-command skill maintenance
 
+## Fixture status
+
+This skill is a repo-owned test fixture for `tools.skill_eval`, not a live installable skill. It lives at
+`skill-factory/tools/skill_eval/tests/fixtures/custom-command/` and is no longer linked into `~/.agents/skills`.
+
 ## Purpose
 
 Maintain `SKILL.md` as command-authoring guidance. Distinguish this repository's Pi-owned source from Pi project/global one-offs.
@@ -21,8 +26,8 @@ Run deterministic checks from repo root:
 
 ```sh
 PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
-PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/custom-command/evals/manifest.json workflow --results /tmp/custom-command-eval --require-real
-PYTHONPATH=skill-factory python3 -m tools.llm_optimal_check skills/custom-command/SKILL.md
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skill-factory/tools/skill_eval/tests/fixtures/custom-command/evals/manifest.json workflow --results /tmp/custom-command-eval --require-real
+PYTHONPATH=skill-factory python3 -m tools.llm_optimal_check skill-factory/tools/skill_eval/tests/fixtures/custom-command/SKILL.md
 ```
 
 No-live `--require-real` run must skip honestly. Run live harness eval only with explicit approval.
@@ -31,7 +36,7 @@ provide a failing-test fixture for the negative case so it measures selection on
 
 ## Change guidelines
 
-- Change files only within `skills/custom-command/` unless user expands scope.
+- Change files only within `skill-factory/tools/skill_eval/tests/fixtures/custom-command/` unless user expands scope.
 - Keep Pi scope and discovery explicit; do not imply that bare Pi applies extension-only metadata.
 - Update `evals/evals.json` and `evals/grader.py` together when changing command-output contract.
 - Keep `evals/manifest.json` aligned with skill name and eval assets.

@@ -778,7 +778,7 @@ def main(
     stdout = stdout or sys.stdout
     stderr = stderr or sys.stderr
     parser = argparse.ArgumentParser(description="Validate one repo-local skill through skill_valid gates.")
-    parser.add_argument("target", type=Path, help="Repo-local skill directory, e.g. skills/custom-command")
+    parser.add_argument("target", type=Path, help="Repo-local skill directory, e.g. skills/my-skill")
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help="Repository root; defaults to current directory")
     parser.add_argument("--allow-live", action="store_true", help="Explicitly allow live harness/model calls")
     parser.add_argument("--allow-live-pi", action="store_true", help="Deprecated alias for --allow-live")

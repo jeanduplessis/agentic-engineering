@@ -68,7 +68,7 @@ and explicit about whether results are synthetic or real.
 
 - `sandbox.py`: isolated per-run fixture workspaces.
 
-- `tools/skill_eval/tests/test_skill_eval.py`: framework and custom-command vertical-slice coverage (`tools.skill_eval.tests.test_skill_eval`).
+- `tools/skill_eval/tests/test_skill_eval.py`: framework and fixture-based vertical-slice coverage (`tools.skill_eval.tests.test_skill_eval`).
 
 - `README.md`: user-facing overview, commands, and trust criteria.
 
