@@ -8,7 +8,8 @@ login behavior from Kilo while leaving footer rendering to the local
 
 - Does not call `setFooter()`.
 - Publishes the current balance through the `kilo-credits` status key for
-  `custom-footer` to read.
+  `custom-footer` to read. OAuth credentials take precedence; an API key is
+  the fallback.
 - Formats the balance as plain credit text such as `$573.60`, without an emoji
   prefix.
 - Marks a missing off/none thinking variant as unsupported so Pi does not send
@@ -33,7 +34,8 @@ To access the full model catalog, sign in with your Kilo account:
 This opens a browser for device authorization. If the account belongs to
 organizations, Pi lets you choose which Kilo account to use.
 
-You can also set `KILO_API_KEY` directly. Set `KILO_ORG_ID` or
+You can also set `KILO_API_KEY` directly or save a Kilo API key with `/login`.
+API-key auth lists the full model catalog at startup; restart Pi after adding a key. Set `KILO_ORG_ID` or
 `KILOCODE_ORGANIZATION_ID` to select an organization account.
 
 ## License and attribution

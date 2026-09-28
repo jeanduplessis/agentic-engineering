@@ -18,7 +18,11 @@ import type {
   OAuthCredentials,
   OAuthLoginCallbacks,
 } from "@earendil-works/pi-ai";
-import type { ExtensionAPI, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+  ProviderModelConfig,
+} from "@earendil-works/pi-coding-agent";
 import { getKiloThinkingLevelMap } from "./thinking-map.ts";
 
 // =============================================================================
@@ -54,6 +58,30 @@ function readStoredKiloCredentials(): OAuthCredentials | undefined {
     const cred = auth.kilo;
     if (cred?.type !== "oauth" || !cred.access) return undefined;
     return cred;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Resolve a Kilo API key from KILO_API_KEY or an `api_key` entry in auth.json.
+ * Shell-command keys (`!cmd`) are not executed here; they fall back to free models.
+ */
+function readKiloApiKey(): string | undefined {
+  const envKey = process.env.KILO_API_KEY?.trim();
+  if (envKey) return envKey;
+  try {
+    const authPath = join(getAgentDir(), "auth.json");
+    if (!existsSync(authPath)) return undefined;
+    const auth = JSON.parse(readFileSync(authPath, "utf8")) as {
+      kilo?: { type?: string; key?: string };
+    };
+    const cred = auth.kilo;
+    if (cred?.type !== "api_key" || typeof cred.key !== "string") return undefined;
+    const key = cred.key.trim();
+    if (!key || key.startsWith("!")) return undefined;
+    if (key.startsWith("$")) return process.env[key.slice(1)]?.trim() || undefined;
+    return key;
   } catch {
     return undefined;
   }
@@ -183,6 +211,31 @@ function formatCredits(balance: number): string {
     return `$${(balance / 1000).toFixed(1)}k`;
   } else {
     return `$${balance.toFixed(2)}`;
+  }
+}
+
+/**
+ * Publish the balance to the `kilo-credits` status for custom-footer.
+ * OAuth credentials take precedence; API-key auth is the fallback.
+ */
+async function publishKiloBalance(ctx: ExtensionContext, reason: string): Promise<void> {
+  if (!ctx.hasUI) return;
+  const cred = readStoredKiloCredentials();
+  const token = cred?.access ?? readKiloApiKey();
+  if (!token) {
+    ctx.ui.setStatus("kilo-credits", undefined);
+    return;
+  }
+  try {
+    const balance = await fetchKiloBalance(token, getEffectiveOrganizationId(cred));
+    if (balance !== null) {
+      ctx.ui.setStatus("kilo-credits", ctx.ui.theme.fg("accent", formatCredits(balance)));
+    }
+  } catch (error) {
+    console.warn(
+      `[kilo] Failed to fetch balance ${reason}:`,
+      error instanceof Error ? error.message : error,
+    );
   }
 }
 
@@ -543,6 +596,7 @@ function makeProviderConfig(organizationId?: string) {
 export default async function (pi: ExtensionAPI) {
   const storedCredentials = readStoredKiloCredentials();
   const startupOrganizationId = getEffectiveOrganizationId(storedCredentials);
+  const apiKey = storedCredentials?.access ? undefined : readKiloApiKey();
 
   // Fetch models at load time so the provider is immediately usable for
   // --list-models, --model selection, and print mode before session_start fires.
@@ -555,6 +609,12 @@ export default async function (pi: ExtensionAPI) {
         organizationId: startupOrganizationId,
       });
       freeModels = cachedAllModels.length > 0 ? cachedAllModels : [];
+    } else if (apiKey) {
+      // API-key auth has no OAuth modifyModels hook, so register the full list directly.
+      freeModels = await fetchKiloModels({
+        token: apiKey,
+        organizationId: startupOrganizationId,
+      });
     } else {
       freeModels = await fetchKiloModels({ freeOnly: true });
     }
@@ -635,9 +695,9 @@ export default async function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     const cred = readStoredKiloCredentials();
 
-    // Clear credits if not logged in
+    // API-key auth has no OAuth model refresh; publish the balance only.
     if (cred?.type !== "oauth") {
-      ctx.ui.setStatus("kilo-credits", undefined);
+      await publishKiloBalance(ctx, "at session start");
       return;
     }
 
@@ -662,74 +722,18 @@ export default async function (pi: ExtensionAPI) {
       });
     }
 
-    // Publish the credits balance when an interactive UI is available.
-    if (ctx.hasUI) {
-      try {
-        const balance = await fetchKiloBalance(cred.access, getEffectiveOrganizationId(cred));
-        if (balance !== null) {
-          const theme = ctx.ui.theme;
-          ctx.ui.setStatus(
-            "kilo-credits",
-            theme.fg("accent", formatCredits(balance)),
-          );
-        }
-      } catch (error) {
-        console.warn(
-          "[kilo] Failed to fetch balance:",
-          error instanceof Error ? error.message : error,
-        );
-      }
-    }
+    await publishKiloBalance(ctx, "at session start");
   });
 
   // Update the credits status when the selected model is a Kilo model
   pi.on("model_select", async (event, ctx) => {
     if (event.model?.provider !== "kilo") return;
-
-    const cred = readStoredKiloCredentials();
-    if (cred?.type !== "oauth") return;
-
-    if (!ctx.hasUI) return;
-
-    try {
-      const balance = await fetchKiloBalance(cred.access, getEffectiveOrganizationId(cred));
-      if (balance !== null) {
-        const theme = ctx.ui.theme;
-        ctx.ui.setStatus(
-          "kilo-credits",
-          theme.fg("accent", formatCredits(balance)),
-        );
-      }
-    } catch (error) {
-      console.warn(
-        "[kilo] Failed to fetch balance on model select:",
-        error instanceof Error ? error.message : error,
-      );
-    }
+    await publishKiloBalance(ctx, "on model select");
   });
 
   // Refresh the credits status after each turn
   pi.on("turn_end", async (_event, ctx) => {
-    const cred = readStoredKiloCredentials();
-    if (cred?.type !== "oauth") return;
-
-    if (!ctx.hasUI) return;
-
-    try {
-      const balance = await fetchKiloBalance(cred.access, getEffectiveOrganizationId(cred));
-      if (balance !== null) {
-        const theme = ctx.ui.theme;
-        ctx.ui.setStatus(
-          "kilo-credits",
-          theme.fg("accent", formatCredits(balance)),
-        );
-      }
-    } catch (error) {
-      console.warn(
-        "[kilo] Failed to fetch balance on turn end:",
-        error instanceof Error ? error.message : error,
-      );
-    }
+    await publishKiloBalance(ctx, "on turn end");
   });
 
   // On first use of a Kilo model without login, print ToS notice.
