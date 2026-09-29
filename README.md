@@ -35,6 +35,8 @@ The repository-owned [`compaction-model`](harness/pi/extensions/compaction-model
 
 The [`prompt-stash`](harness/pi/extensions/prompt-stash/README.md) extension uses **Cmd+Shift+S** to set aside a draft and restore it after the next interactive chat submission. Select it in setup; your terminal must forward the Command shortcut. Drafts stay in memory and are discarded on reload, session changes, or exit.
 
+The [`code-search`](harness/pi/extensions/code-search/README.md) extension adds a `code_search` tool backed by jg (jevgrep) semantic search. It also sends one non-blocking nudge per prompt toward using it before `rg`/`grep`/`find`. It requires `jg` and `jg login`, and it sends the query and selected source snippets to the hosted Jevgrep service. Subagents get it only when their tool allowlists include it; see its README.
+
 The experimental [`entire-graph`](harness/pi/extensions/entire-graph/README.md) extension exposes local graph search and change-impact tools. It requires an external graph binary and remains opt-in; see its [spike results](harness/pi/extensions/entire-graph/SPIKE.md) for the measured working-tree latency.
 
 This repository's skills remain under `skills/`. They are written for Pi. Install or link them through Pi's documented discovery mechanism; installation paths are separate from this source checkout.

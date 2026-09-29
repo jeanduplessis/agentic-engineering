@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added the opt-in `code-search` Pi extension. Its `code_search` tool runs jg (jevgrep) semantic search at the workspace root with shell-free argv. Every path is confined with `realpath`, and hidden, git-ignored, out-of-workspace, home-root, and filesystem-root scopes are rejected. The tool does not expose `--all` or budget flags. No-match results say absence is unproven. A missing binary or login disables the tool for the runtime, with fallback advice. Prompt guidelines and one non-blocking hint per prompt on the first `rg`/`grep`/`find` result steer discovery to `code_search`. Search output is not otherwise changed. Added offline tests with a fake runner, a stub executable, temporary git repositories, and Pi's real loader. Subagent wiring is documented but not automated.
+
 - Raised the `cache-miss-gate` minimum context-window threshold from 50k tokens to 100k tokens. The gate no longer appears for sessions below 100k context even when a cache miss is predicted.
 
 - Fixed the `kilo-pi-provider` extension so API-key auth (`KILO_API_KEY` or a `kilo` `api_key` entry in `auth.json`) lists paid models, not only free models. Shell-command keys (`!cmd`) still fall back to the free list at startup. API-key auth now also publishes the `kilo-credits` balance for `custom-footer`; OAuth credentials take precedence.
