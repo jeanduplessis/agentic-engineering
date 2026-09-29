@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Raised the `cache-miss-gate` minimum context-window threshold from 50k tokens to 100k tokens. The gate no longer appears for sessions below 100k context even when a cache miss is predicted.
+
 - Fixed the `kilo-pi-provider` extension so API-key auth (`KILO_API_KEY` or a `kilo` `api_key` entry in `auth.json`) lists paid models, not only free models. Shell-command keys (`!cmd`) still fall back to the free list at startup. API-key auth now also publishes the `kilo-credits` balance for `custom-footer`; OAuth credentials take precedence.
 
 - Archived unused skills to `archive/skills/` (`ait-cli`, `code-quality`, `code-review-workflow`, `epic-implement`, `epic-orchestrate`, `pr-create`, `tdd`, `to-epic`, `to-issues`, `to-prd`, `to-tasks`) and moved their dependent Pi commands (`code-review`, `epic-orchestrate`, `pr-create-update`, `to-epic`, `to-issues`) to `archive/commands/`. Removed the matching `~/.agents/skills` symlinks. Moved `custom-command` to `skill-factory/tools/skill_eval/tests/fixtures/custom-command` because the skill-eval tests use it as their vertical-slice fixture, repointed those tests and their documentation, updated the command inventory test, and removed the now-stale `pr-create` reference from `github-pr-attachment`. Live `skills/` and `harness/pi/commands/` inventories no longer include the archived resources.

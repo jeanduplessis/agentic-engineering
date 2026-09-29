@@ -8,7 +8,7 @@ import { Box, Text } from "@earendil-works/pi-tui";
 
 const OPTIONS = {
 	/** Do not interrupt smaller prompts, even when their cache may have expired. */
-	minContextTokens: 50_000,
+	minContextTokens: 100_000,
 	/** Typical upper end of OpenAI's legacy in-memory inactivity window. */
 	legacyOpenAiTtlMs: 10 * 60 * 1000,
 	/** Minimum cache lifetime for GPT-5.6 and later model families. */
