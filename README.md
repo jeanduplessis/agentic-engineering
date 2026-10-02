@@ -41,6 +41,8 @@ The experimental [`entire-graph`](harness/pi/extensions/entire-graph/README.md) 
 
 This repository's skills remain under `skills/`. They are written for Pi. Install or link them through Pi's documented discovery mechanism; installation paths are separate from this source checkout.
 
+The writing skill is [`user-facing-writing`](skills/user-facing-writing/SKILL.md). Version 4.0.0 renames `human-writing` without changing its scope: durable human-facing prose, not ordinary chat or agent-facing instructions. For symlink installs, select `user-facing-writing` through `./setup.sh`, then remove stale `human-writing` links from the selected install locations. Setup leaves old installs untouched.
+
 Use this repository as a local Pi package:
 
 ```sh

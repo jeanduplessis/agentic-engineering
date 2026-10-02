@@ -1,18 +1,28 @@
-# AGENTS.md — human-writing skill maintenance
+# AGENTS.md — user-facing-writing skill maintenance
 
 ## Purpose
 
-Maintain `SKILL.md` as automatic writing guidance for durable, human-facing prose. It is not a humanization command,
-an authorship detector, or a general assistant-response style guide.
+Maintain `SKILL.md` as automatic guidance for clear, simple English in durable, human-facing prose. Preserve meaning
+first, improve readability second, and keep the author's style where it remains clear. The goal is to help the reader,
+not disguise AI authorship. This is not a humanization command, an authorship detector, or a general assistant-response
+style guide.
 
 ## How the skill works
 
 The description selects artifact creation and revision, including drafts delivered in chat for use elsewhere.
 Ordinary conversation, progress updates, code/data transformations, and agent-facing instructions are excluded.
-The body preserves meaning and evidence, matches the writer and audience, and treats stylistic patterns as contextual
-editing hints. The primary task owns tools, delivery, and reporting; the skill adds no invocation workflow.
-Copy-ready output contains only the artifact. Editorial commentary is allowed when requested, outside the artifact;
+The body favors an early main point, familiar words, direct verbs, consistent terms, and readable sentences without
+sacrificing technical precision, evidence, or voice. Concrete padding patterns are contextual editing hints, not bans.
+Keep useful standard warnings, related ideas, rhythm, and clear passages rather than applying rules mechanically.
+
+The primary task owns tools, delivery, and reporting; the skill adds no invocation workflow. Scope and delivery rules
+keep assistant acknowledgments, offers to help, and unsolicited edit notes out of copy-ready output. Preserve greetings,
+sign-offs, and requests that belong in a letter or email. Editorial notes are allowed when requested, outside the artifact;
 unchanged text is returned verbatim rather than accompanied by a no-change explanation.
+
+Examples demonstrate filler removal without losing limits or obligations, plain explanations of technical terms,
+hedge consolidation without changing uncertainty, relevant-note selection for current-state documentation, and leaving
+clear voice alone. The bridge example keeps both the estimated decade and the missing exact year explicit.
 
 `user-invocable: false` is an optional harness hint. The description and body carry the complete behavior when
 that field is ignored. Keep automatic model discovery enabled in Pi.
@@ -23,7 +33,8 @@ that field is ignored. Keep automatic model discovery enabled in Pi.
 voice preservation, copy-ready delivery, and migration history. Its regression suite owns the confirmed current-state
 README failure and two Opus editorial-commentary failures, without duplicating those cases in workflow.
 `evals/evidence/readme-history.json` and `evals/evidence/editorial-notes.json` retain the real responses, failed checks,
-input skill hashes, and traced confirmation that the models read the skill.
+input skill hashes, and traced confirmation that the models read the skill. These are historical failures, not evidence
+that the current revision reproduces or fixes them.
 
 Prompts request ordinary writing tasks rather than invoking the skill as a command. The founding-period fixture
 explicitly marks the decade as an unverified estimate; preserving uncertainty about the exact date alone is insufficient.
@@ -46,15 +57,15 @@ and label any regrading of saved outputs separately. Do not present regrading as
 From the repository root:
 
 ```sh
-./skill-factory/tools/skill_valid/skill_validate.sh skills/human-writing
+./skill-factory/tools/skill_valid/skill_validate.sh skills/user-facing-writing
 PYTHONPATH=skill-factory python3 -m unittest tools.skill_eval.tests.test_skill_eval -v
-PYTHONPATH=skill-factory python3 -m unittest discover -s skills/human-writing/evals -p 'test_*.py' -v
-PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/human-writing/evals/manifest.json workflow \
-  --results /tmp/human-writing-eval/workflow --require-real
-PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/human-writing/evals/manifest.json regression \
-  --results /tmp/human-writing-eval/regression --require-real
-PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/human-writing/evals/manifest.json trigger \
-  --configuration discovery --results /tmp/human-writing-trigger-new-run --require-real
+PYTHONPATH=skill-factory python3 -m unittest discover -s skills/user-facing-writing/evals -p 'test_*.py' -v
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/user-facing-writing/evals/manifest.json workflow \
+  --results /tmp/user-facing-writing-eval/workflow --require-real
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/user-facing-writing/evals/manifest.json regression \
+  --results /tmp/user-facing-writing-eval/regression --require-real
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/user-facing-writing/evals/manifest.json trigger \
+  --configuration discovery --results /tmp/user-facing-writing-trigger-new-run --require-real
 ```
 
 Use a new/empty trigger results directory each time; the runner preserves frozen inputs and refuses to overwrite evidence.
@@ -63,7 +74,7 @@ workflow regressions is rejected; retain the trace and add a natural trigger cas
 
 The suite commands should skip real runs without live opt-in. Run live harness/model evaluations only with explicit
 approval; skipped runs and synthetic checks are not evidence of skill effectiveness. The optimization check may
-flag the intentional filler phrase in the first Before example (TC001); retain that teaching example rather than
+flag intentional teaching phrases such as "due to the fact that" (TC001). Retain useful examples rather than
 optimizing to clear the warning.
 
 ## Change guidelines
@@ -72,8 +83,10 @@ optimizing to clear the warning.
 - Keep facts, uncertainty, obligations, exhaustive scope, technical meaning, and exact non-prose content ahead of style.
 - Distinguish selecting relevant notes for a new artifact from preserving substantive claims during a phrasing pass.
 - Accept equivalent dates, technical-term hyphenation, and evidence-gap phrasing in checks; do not weaken factual constraints.
-- Do not add blanket word/punctuation bans, detector targets, or instructions to manufacture personality.
-- Examples must preserve the supplied information. For no-change examples, show the unchanged text as the output,
+- Keep plain-language rules conditional on meaning and readability. Avoid mechanical substitutions, choppy sentences,
+  blanket word/punctuation bans, detector targets, and instructions to manufacture personality.
+- Examples must preserve supplied facts, uncertainty, limits, obligations, and attribution. Demonstrate the intended edit
+  without unrelated changes to hedge strength or speaker. For no-change examples, show the unchanged text as the output,
   not an editorial explanation that a model might append to the artifact.
 - Coordinate `SKILL.md` and `evals/manifest.json` when scope or behavior changes. Prefer built-in checks over new tooling.
 

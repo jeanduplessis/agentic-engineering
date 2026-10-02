@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill": {
-    "name": "human-writing",
+    "name": "user-facing-writing",
     "path": "../SKILL.md"
   },
   "suites": [
@@ -19,7 +19,7 @@
             {"id": "export-feature", "type": "regex", "pattern": "(?i)CSV export|export.{0,30}CSV"},
             {"id": "shortcut-feature", "type": "regex", "pattern": "(?i)keyboard shortcuts"},
             {"id": "no-example-fabrications", "type": "regex", "pattern": "(?i)\\A(?!.*\\b(?:offline|beta|faster)\\b).+\\Z"},
-            {"id": "no-editorial-workflow-output", "type": "regex", "pattern": "(?i)\\A(?!.*(?:AI[- ]tell score|patterns (?:found|removed)|human-writing|draft rewrite)).+\\Z"}
+            {"id": "no-editorial-workflow-output", "type": "regex", "pattern": "(?i)\\A(?!.*(?:AI[- ]tell score|patterns (?:found|removed)|user-facing-writing|draft rewrite)).+\\Z"}
           ]
         },
         {
@@ -162,19 +162,19 @@
           "id": "positive-human-documentation",
           "prompt": "Write a README section explaining API key rotation from these facts: Operators select Rotate key in Settings. The old key remains valid for 15 minutes. Return only the section.",
           "should_trigger": true,
-          "expected_skill": "human-writing"
+          "expected_skill": "user-facing-writing"
         },
         {
           "id": "positive-email-delivered-in-chat",
           "prompt": "Draft an email I can send to customers: Desk will be unavailable for maintenance on 2026-09-10 from 01:00 to 02:00 UTC. Sign off with The Desk team.",
           "should_trigger": true,
-          "expected_skill": "human-writing"
+          "expected_skill": "user-facing-writing"
         },
         {
           "id": "positive-pr-description-revision",
           "prompt": "Rewrite this PR description for the engineers who will review it: It is important to note that this change caps ResponseCache at 200 entries and evicts the least recently used entry when full. Tests cover the limit and eviction order.",
           "should_trigger": true,
-          "expected_skill": "human-writing"
+          "expected_skill": "user-facing-writing"
         },
         {
           "id": "negative-ordinary-explanation",

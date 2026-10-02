@@ -11,7 +11,7 @@ _Refactor authentication middleware_                  ~/project • main
 𐘱100k 78%                                          openai/gpt-5.6-sol • high
 ↑12k ↓8k ⚛︎5k ▦196k/87% ⇢42t/s $15.78                            $573.60
 ────────────────────────────────────────────────────────────────────────────
-◈ human-writing • testing-principles
+◈ user-facing-writing • testing-principles
 ────────────────────────────────────────────────────────────────────────────
   Model                                                Steps      Cost
 ➤ openai/gpt-5.6-sol                                     10    $12.50
@@ -151,7 +151,7 @@ After the quota row, list skills whose instructions are represented in Pi's acti
 
 ```text
 ────────────────────────────────────────────────────────────────────────────
-◈ human-writing • testing-principles
+◈ user-facing-writing • testing-principles
 ```
 
 Place a dim `─` divider immediately above the skills row, spanning the full footer content width inside the existing side padding, like the model section's divider. Show it only when skills are listed, even if the model table is absent. Keep the separate divider above the model table.

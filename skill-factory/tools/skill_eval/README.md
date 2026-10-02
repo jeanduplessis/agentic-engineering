@@ -154,8 +154,8 @@ negative cases use null or omit it. Response checks and custom graders belong in
 
 ```sh
 # No model calls: validate the contract, snapshot inputs, and record skipped runs.
-PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/human-writing/evals/manifest.json trigger \
-  --configuration discovery --results /tmp/human-writing-trigger-check --require-real
+PYTHONPATH=skill-factory python3 -m tools.skill_eval skills/user-facing-writing/evals/manifest.json trigger \
+  --configuration discovery --results /tmp/user-facing-writing-trigger-check --require-real
 # Add --allow-live only after approving the case/configuration budget; use a fresh results path.
 ```
 

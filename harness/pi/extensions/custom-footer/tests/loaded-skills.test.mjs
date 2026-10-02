@@ -149,15 +149,15 @@ test("reports explicit and successfully read skills once in first-load order", s
 	const cwd = "/workspace/project";
 	const catalog = [
 		{ name: "testing-principles", filePath: "/skills/testing-principles/SKILL.md" },
-		{ name: "human-writing", filePath: `${cwd}/skills/human-writing/SKILL.md` },
+		{ name: "user-facing-writing", filePath: `${cwd}/skills/user-facing-writing/SKILL.md` },
 	];
-	const explicit = `${skillBlock("human-writing")}\n\nDraft the release notes`;
+	const explicit = `${skillBlock("user-facing-writing")}\n\nDraft the release notes`;
 	const entries = [
 		user([{ type: "text", text: explicit }]),
 		toolCall("read-success", "/skills/testing-principles/SKILL.md"), toolResult("read-success"),
-		toolCall("read-duplicate", "@skills/human-writing/SKILL.md"), toolResult("read-duplicate"),
+		toolCall("read-duplicate", "@skills/user-facing-writing/SKILL.md"), toolResult("read-duplicate"),
 	];
-	assert.deepEqual(collectLoadedSkillNames(entries, catalog, cwd), ["human-writing", "testing-principles"]);
+	assert.deepEqual(collectLoadedSkillNames(entries, catalog, cwd), ["user-facing-writing", "testing-principles"]);
 	assert.equal(explicitSkillName(skillBlock("known")), "known");
 	assert.equal(explicitSkillName(`${skillBlock("known")}\n\nDo the work`), "known");
 });

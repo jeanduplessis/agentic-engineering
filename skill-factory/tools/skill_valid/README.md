@@ -49,7 +49,7 @@ Pass `--include-trigger` to validate the `trigger` suite's natural-discovery con
 provider/model/thinking overrides also apply to these profiles. Without live opt-in, no processes run.
 
 ```sh
-./skill-factory/tools/skill_valid/skill_validate.sh skills/human-writing --include-trigger
+./skill-factory/tools/skill_valid/skill_validate.sh skills/user-facing-writing --include-trigger
 # Add --allow-live --harness pi only after approving the additional live run budget.
 ```
 

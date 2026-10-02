@@ -24,7 +24,13 @@ def passes_check(suite_name, case_id, check_id, response):
     return grade_response(response, [check])["passed"]
 
 
-class HumanWritingCheckTests(unittest.TestCase):
+class UserFacingWritingCheckTests(unittest.TestCase):
+    def test_release_note_rejects_skill_commentary(self):
+        checks = case_checks("workflow", "release-note-from-supplied-facts")
+        note = "Desk 2.4 adds CSV export and keyboard shortcuts."
+        self.assertTrue(grade_response(note, checks)["passed"])
+        self.assertFalse(grade_response(note + "\n\nEdited with user-facing-writing.", checks)["passed"])
+
     def test_effective_date_accepts_equivalent_formats_but_not_changed_dates(self):
         for text, expected in [
             ("As of 2026-06-10, the archive holds records.", True),
