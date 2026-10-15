@@ -73,7 +73,7 @@ function harness(t, { mode = "fullscreen", images = null, cwd = process.cwd() } 
 
 const plain = (lines) => lines.map((line) => stripVTControlCharacters(line).trim());
 
-test("collapsed streaming commands do not grow and shrink at trailing newlines", sdkRequired, (t) => {
+test("collapsed streaming commands show only the first command line and do not change height", sdkRequired, (t) => {
 	const { tool } = harness(t);
 	for (const width of [40, 80, 120]) {
 		const component = tool();
@@ -82,14 +82,11 @@ test("collapsed streaming commands do not grow and shrink at trailing newlines",
 			const command = `${header}\n${tail}`;
 			component.updateArgs({ command });
 			const baseline = plain(component.render(width));
-			assert.ok(baseline.some((line) => line.includes("console.log") || line.includes("xxx")));
-			for (const suffix of ["\n", "\n\n", "\n  ", "\n  \n\n"]) {
+			assert.ok(baseline.some((line) => line.includes("node")));
+			assert.ok(!baseline.some((line) => line.includes("console.log") || line.includes("xxx")));
+			for (const suffix of ["\n", "\n\n", "\n  ", "\n  \n\n", "\nnext"]) {
 				component.updateArgs({ command: command + suffix });
 				assert.deepEqual(plain(component.render(width)), baseline, `width ${width}, suffix ${JSON.stringify(suffix)}`);
-				component.updateArgs({ command: command + suffix + "next" });
-				const next = plain(component.render(width));
-				assert.equal(next.length, baseline.length);
-				assert.ok(next.includes("next"), "preview follows the latest nonblank line");
 			}
 		}
 	}
@@ -107,12 +104,15 @@ test("click and native expansion preserve complete command and result lines", sd
 	assert.deepEqual(component.render(80), collapsed);
 
 	component.setArgsComplete();
+	component.markExecutionStarted();
 	component.updateResult({ content: [{ type: "text", text: "output one\noutput two\noutput three" }], isError: false }, true);
-	assert.ok(plain(component.render(80)).includes("output three"));
+	assert.ok(!plain(component.render(80)).some((line) => line.includes("output")), "streamed output stays hidden");
 	component.updateResult({ content: [{ type: "text", text: "output one\noutput two\noutput three" }], isError: false });
 	const resultCollapsed = component.render(80);
-	assert.ok(plain(resultCollapsed).includes("output three"));
-	assert.ok(!plain(resultCollapsed).includes("output two"));
+	assert.ok(!plain(resultCollapsed).some((line) => line.includes("output")), "collapsed result shows no output");
+	const timing = (lines) => plain(lines).filter((line) => /^(?:Took|Elapsed) \d/.test(line));
+	assert.equal(timing(resultCollapsed).length, 1, "timing stays visible");
+	assert.deepEqual(timing(resultCollapsed), timing(nativeRender.call(component, 80)));
 	// Ctrl+O uses this same native expansion API.
 	component.setExpanded(true);
 	assert.deepEqual(plain(component.render(80)), plain(nativeRender.call(component, 80)));
@@ -258,15 +258,18 @@ test("builtin self-shell edit is title-only when collapsed and expands its real 
 	assert.deepEqual(result, original, "rendering does not rewrite result content or diff details");
 });
 
-test("edit errors and partial results stay visible while regular mode keeps the native diff", sdkRequired, (t) => {
+test("collapsed edit errors and partial results are title-only while regular mode keeps the native diff", sdkRequired, (t) => {
 	const { tool } = harness(t);
 	const args = { path: "sample.txt" };
 	const component = tool("edit", args);
 	component.updateResult({ content: [{ type: "text", text: "Edit failed: target not found" }], isError: true });
-	assert.ok(plain(component.render(80)).includes("Edit failed: target not found"));
+	assert.ok(!plain(component.render(80)).includes("Edit failed: target not found"));
+	component.setExpanded(true);
+	assert.ok(plain(component.render(80)).includes("Edit failed: target not found"), "expansion reveals the error");
+	component.setExpanded(false);
 	const result = { content: [], details: { diff: "-1 before\n+1 after" }, isError: false };
 	component.updateResult(result, true);
-	assert.match(plain(component.render(80)).join("\n"), /after/, "partial diff is not treated as completed success");
+	assert.doesNotMatch(plain(component.render(80)).join("\n"), /after/, "partial diff stays hidden");
 	component.updateResult(result);
 	assert.deepEqual(plain(component.render(80)).filter(Boolean), ["edit sample.txt"]);
 	const regular = harness(t, { mode: "regular" }).tool("edit", args);
@@ -371,7 +374,9 @@ for (const mode of ["fullscreen", "regular"]) {
 					component.setExpanded(expanded);
 					const decorated = component.render(width);
 					const native = nativeRender.call(component, width);
-					assert.deepEqual(plain(decorated), plain(native), "status words and output stay native");
+					const hidesOutput = mode === "fullscreen" && !expanded;
+					const expected = plain(native).filter((line) => !hidesOutput || !line.endsWith(" output"));
+					assert.deepEqual(plain(decorated), expected, "status words stay native; collapsed fullscreen hides output");
 					assert.ok(plain(decorated).includes(state));
 					assert.ok(decorated.some((line) => line.includes(category.background)));
 					for (const color of ["toolPendingBg", "toolSuccessBg", "toolErrorBg"]) {
@@ -511,7 +516,8 @@ test("collapsed reads omit file content and preserve pending, error, empty and i
 		{ content: [{ type: "text", text: "image companion text" }, { type: "image", mimeType: "image/png" }] },
 	]) {
 		component.updateResult({ content, isError }, partial);
-		assert.deepEqual(plain(component.render(80)).filter(Boolean), plain(nativeRender.call(component, 80)).filter(Boolean), "no synthetic pending/error/empty/image preview; existing blank-row compaction remains");
+		const expected = plain(nativeRender.call(component, 80)).filter((line) => line && !line.startsWith("ENOENT"));
+		assert.deepEqual(plain(component.render(80)).filter(Boolean), expected, "no synthetic pending/empty/image preview; collapsed errors stay hidden");
 	}
 	// Regular mode also keeps the native presentation.
 	const regular = harness(t, { mode: "regular" }).tool("read", { path: "skills/sample/SKILL.md" });

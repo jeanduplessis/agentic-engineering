@@ -203,8 +203,7 @@ class PiUiCustomizationController {
 		const decision = decideToolCollapse({
 			expanded: component.expanded,
 		});
-		const titleOnly = builtinEdit && !component.isPartial && component.result?.isError === false;
-		const displayLines = decision.compact ? this.compactCollapsedLines(categoryLines, titleOnly) : categoryLines;
+		const displayLines = decision.compact ? this.compactCollapsedLines(categoryLines) : categoryLines;
 		if (this.tui?.mode !== "fullscreen" || (!component.expanded && !decision.clickable)) {
 			return categoryLines;
 		}
@@ -246,7 +245,9 @@ class PiUiCustomizationController {
 		return !!path && isSkillReadPath(path);
 	}
 
-	private compactCollapsedLines(lines: string[], titleOnly = false): string[] {
+	// Collapsed cards show only the call title and timing rows; tool output,
+	// errors and truncation notices stay behind expansion.
+	private compactCollapsedLines(lines: string[]): string[] {
 		const firstContentIndex = lines.findIndex((line) => this.plainText(line).trim().length > 0);
 		if (firstContentIndex === -1) return lines;
 
@@ -265,21 +266,8 @@ class PiUiCustomizationController {
 			keep.add(index);
 		}
 
-		if (!titleOnly) {
-			let lastOutputIndex: number | undefined;
-			for (let index = firstContentIndex + 1; index < lines.length; index++) {
-				const text = this.plainText(lines[index]!).trim();
-				if (!text || this.hasExpansionHint(text) || this.isOutputMetadata(text)) continue;
-				lastOutputIndex = index;
-			}
-			if (lastOutputIndex !== undefined) keep.add(lastOutputIndex);
-
-			for (let index = firstContentIndex + 1; index < lines.length; index++) {
-				const text = this.plainText(lines[index]!).trim();
-				if (this.hasExpansionHint(text) || this.isOutputMetadata(text)) {
-					keep.add(index);
-				}
-			}
+		for (let index = firstContentIndex + 1; index < lines.length; index++) {
+			if (this.isTiming(this.plainText(lines[index]!).trim())) keep.add(index);
 		}
 
 		// Keep one bottom-padding row, not trailing newlines from streaming
@@ -496,14 +484,8 @@ class PiUiCustomizationController {
 		return line.replace(ANSI_SEQUENCE_GLOBAL, "");
 	}
 
-	private isOutputMetadata(text: string): boolean {
-		return (
-			text.startsWith("[Full output:") ||
-			text.startsWith("[Truncated:") ||
-			text.startsWith("[First line") ||
-			text.startsWith("Took ") ||
-			text.startsWith("Elapsed ")
-		);
+	private isTiming(text: string): boolean {
+		return /^(?:Took|Elapsed) \d/.test(text);
 	}
 
 	private padLineToWidth(line: string, width: number): string {

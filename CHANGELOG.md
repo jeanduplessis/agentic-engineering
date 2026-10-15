@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Removed tool output from collapsed `pi-ui-customization` tool cards. Collapsed cards now show only the first line of the tool call and the `Took`/`Elapsed` timing row; output, errors, and truncation notices appear only after click or `Ctrl+O` expansion. Image reads and custom self-owned renderers are unchanged. Updated offline SDK regression tests.
+
 - Renamed `human-writing` to `user-facing-writing` v4.0.0. The skill now emphasizes clear, simple English while preserving meaning, uncertainty, obligations, and the author's voice. Consolidated copy-ready delivery rules and added concrete padding and uncertainty examples. Updated eval discovery names, documentation, and footer fixtures; retained historical regression evidence. This is a breaking name/path change: existing symlink installs must select `user-facing-writing` through `./setup.sh` and remove stale `human-writing` links separately.
 
 - Removed the `kilo-pi-provider` Terms of Service notice ("By using Kilo, you agree to the Terms of Service") that showed on the first Kilo prompt of a session without OAuth login. No notice shows for any auth type now.
