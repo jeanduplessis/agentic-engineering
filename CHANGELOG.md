@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed `gs` failing to start after Homebrew removed `openssl@3` (`dyld: Library not loaded: libssl.3.dylib`). `gs` now builds a vendored libgit2 without the HTTPS/SSH transports, which a local read-only status tool does not need. The binary no longer links Homebrew `libgit2` or OpenSSL. Reinstall with `cargo install --path tools/gs`.
+
 - Removed tool output from collapsed `pi-ui-customization` tool cards. Collapsed cards now show only the first line of the tool call and the `Took`/`Elapsed` timing row; output, errors, and truncation notices appear only after click or `Ctrl+O` expansion. Image reads and custom self-owned renderers are unchanged. Updated offline SDK regression tests.
 
 - Renamed `human-writing` to `user-facing-writing` v4.0.0. The skill now emphasizes clear, simple English while preserving meaning, uncertainty, obligations, and the author's voice. Consolidated copy-ready delivery rules and added concrete padding and uncertainty examples. Updated eval discovery names, documentation, and footer fixtures; retained historical regression evidence. This is a breaking name/path change: existing symlink installs must select `user-facing-writing` through `./setup.sh` and remove stale `human-writing` links separately.

@@ -7,7 +7,7 @@ license = "MIT"
 
 [dependencies]
 clap = { version = "4.5.51", features = ["derive"] }
-git2 = "0.20.2"
+git2 = { version = "0.20.2", default-features = false, features = ["vendored-libgit2"] }
 thiserror = "2.0.17"
 
 [dev-dependencies]
