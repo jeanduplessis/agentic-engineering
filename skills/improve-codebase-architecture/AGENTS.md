@@ -30,6 +30,7 @@ PYTHONPATH=skill-factory python3 -m tools.llm_optimal_check skills/improve-codeb
 
 - Keep `SKILL.md` compact and directly executable; move detailed guidance to `LANGUAGE.md`, `DEEPENING.md`, `INTERFACE-DESIGN.md`, `CONTEXT-FORMAT.md`, or `ADR-FORMAT.md`.
 - Keep all `SKILL.md` resource links inside `skills/improve-codebase-architecture/` so the skill packages portably.
+- Keep subagent use harness-neutral: name no harness-specific tool or call syntax, and keep the in-session fallback in `SKILL.md` and `INTERFACE-DESIGN.md`.
 - Update `evals/manifest.json`, `evals/grader.py`, or `evals/fixtures/shallow-order-app` when the workflow prompt, required vocabulary, candidate shape, or read-only contract changes.
 - Keep eval checks deterministic and focused on visible behavior: domain-aware candidate framing, required architecture vocabulary, no premature interface proposal, and no workspace edits.
 - Preserve repo-wide skill conventions in `skills/AGENTS.md` unless that shared contract changes.

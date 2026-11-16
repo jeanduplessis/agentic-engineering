@@ -6,7 +6,7 @@ This directory holds the canonical source of every Pi extension in this reposito
 
 ## Installation contract
 
-- `./setup.sh` discovers a subdirectory as an extension when it contains `index.ts`, `index.js`, or `package.json`. Keep one of those at the extension root.
+- `ae` (`tools/ae/src/repo.rs`, run by `./setup.sh`) discovers a subdirectory as an extension when it contains `index.ts`, `index.js`, or `package.json`. Keep one of those at the extension root.
 - Selection is explicit and per-extension. Do not make an extension install by default.
 - Installation is a symlink from `~/.pi/agent/extensions/<name>` to this directory. Do not add copy or build steps to activation.
 - Enabling an extension in Pi `settings.json` is user configuration, not a repository concern.
@@ -30,4 +30,4 @@ An extension with npm dependencies declares them in its own `package.json` and n
 
 ## Change guidelines
 
-When changing an extension's entry point, discovery shape, config paths, or dependencies, update that extension's `README.md` and `AGENTS.md`, the root `README.md` if the install contract changes, `setup.sh` discovery if the entry shape changes, and the root `CHANGELOG.md`.
+When changing an extension's entry point, discovery shape, config paths, or dependencies, update that extension's `README.md` and `AGENTS.md`, the root `README.md` if the install contract changes, `ae` discovery in `tools/ae/src/repo.rs` if the entry shape changes, and the root `CHANGELOG.md`.

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "pr-review-analyze",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "required-skill-unavailable",
+          "prompt": "/skill:pr-review-analyze https://github.com/example/repo/pull/1",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            },
+            {
+              "id": "names-required-skill",
+              "type": "required_content",
+              "value": "gh-pr-review"
+            },
+            {
+              "id": "reports-unavailable",
+              "type": "regex",
+              "pattern": "(?i)(unavailable|not available|missing|not (installed|loaded|found))"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}

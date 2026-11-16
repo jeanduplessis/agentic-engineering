@@ -6,7 +6,7 @@ The extension calls Pi's exported `compact()` with its existing preparation. Pi 
 
 ## Enable
 
-Run `./setup.sh` from the repository root. Choose **Harness → Pi → compaction-model** and confirm linking. Setup creates:
+Run `./setup.sh` from the repository root, tick `compaction-model` on the **Pi** tab, and confirm the plan. Or run `ae add -p extensions/compaction-model`. It creates:
 
 ```text
 ~/.pi/agent/extensions/compaction-model → <checkout>/harness/pi/extensions/compaction-model

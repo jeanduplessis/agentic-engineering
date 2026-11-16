@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "session-retro",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "pasted-summary-candidates",
+          "prompt": "/skill:session-retro Session summary: The user asked for a new --dry-run CLI flag. The agent ran `npm test` three times; each run failed with `jest: command not found` because the repository uses `pnpm vitest`, which AGENTS.md documents. The user corrected the agent twice: \"we call them workspaces, not projects\". The agent skipped `pnpm lint`, which AGENTS.md requires before committing, and CI failed on lint. The change merged after fixes.",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            },
+            {
+              "id": "candidate-updates-section",
+              "type": "required_content",
+              "value": "## Candidate updates"
+            },
+            {
+              "id": "next-action-section",
+              "type": "required_content",
+              "value": "## Next action"
+            },
+            {
+              "id": "placement-field",
+              "type": "regex",
+              "pattern": "Placement:"
+            },
+            {
+              "id": "draft-instruction-field",
+              "type": "regex",
+              "pattern": "Draft instruction:"
+            },
+            {
+              "id": "evidence-category",
+              "type": "regex",
+              "pattern": "\\[(tool-use|validation|terminology)\\]"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}

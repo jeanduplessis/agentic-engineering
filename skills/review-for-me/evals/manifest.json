@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "review-for-me",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "approval-gate-and-posting-mode",
+          "prompt": "You have reviewed PR #57 in acme/widgets at head 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b, and the user has read your findings. They reply: 'Looks right. Draft the inline comments and post them once I'm happy.' Do not run commands or contact GitHub. Describe step by step what you do from here until the review is posted, including exactly what you show the user and what you ask them.",
+          "checks": [
+            {
+              "id": "renders-drafts",
+              "type": "required_content",
+              "value": "review_payload.py"
+            },
+            {
+              "id": "shows-full-drafts-before-posting",
+              "type": "regex",
+              "pattern": "(?i)(show|present).{0,120}(render|draft)"
+            },
+            {
+              "id": "waits-for-approval",
+              "type": "regex",
+              "pattern": "(?i)approv.{0,160}(before|then|until).{0,80}post|(only|never|not|don't|won't).{0,40}post.{0,120}(approv)"
+            },
+            {
+              "id": "asks-posting-mode",
+              "type": "regex",
+              "pattern": "(?i)request changes"
+            },
+            {
+              "id": "offers-approve",
+              "type": "regex",
+              "pattern": "(?i)\\bapprove\\b"
+            },
+            {
+              "id": "single-review",
+              "type": "regex",
+              "pattern": "(?i)(one|single) review"
+            },
+            {
+              "id": "disclosure",
+              "type": "required_content",
+              "value": "[!NOTE]"
+            },
+            {
+              "id": "head-sha-recheck",
+              "type": "regex",
+              "pattern": "(?i)(head|sha|commit).{0,60}(moved|changed|unchanged|re-?check)"
+            }
+          ]
+        },
+        {
+          "id": "curious-evidence-backed-comment",
+          "prompt": "Verified finding: in `src/cache.py`, added line 42 reads `if age > ttl:`, so cache entries are served one second past their TTL. You confirmed it by running `python -c \"from cache import Cache; c = Cache(ttl=1); c.put('k', 1); c.advance(1.0); print(c.get('k'))\"`, which printed `1` instead of `None`. Write only the inline comment you would draft for the user to approve. Do not post anything.",
+          "checks": [
+            {
+              "id": "asks-a-question",
+              "type": "regex",
+              "pattern": "\\?"
+            },
+            {
+              "id": "includes-evidence",
+              "type": "regex",
+              "pattern": "(?i)python -c|printed|c\\.advance|`1`"
+            },
+            {
+              "id": "no-thanks",
+              "type": "forbidden_content",
+              "value": "Thanks"
+            },
+            {
+              "id": "no-flat-assertion",
+              "type": "forbidden_content",
+              "value": "This is wrong"
+            }
+          ]
+        },
+        {
+          "id": "rerender-after-edits",
+          "prompt": "You showed the user 9 rendered draft comments for PR #57 in acme/widgets, with digest 3f2a91c0b7de. They reply: 'Drop 4 and make 7 less blunt.' Do not run commands or contact GitHub. What do you do next, and when do you post?",
+          "checks": [
+            {
+              "id": "renders-again",
+              "type": "regex",
+              "pattern": "(?i)re-?render|render.{0,40}again|run.{0,40}render"
+            },
+            {
+              "id": "shows-complete-set",
+              "type": "regex",
+              "pattern": "(?i)(full|complete|entire|whole|all).{0,60}(set|drafts|comments|render)"
+            },
+            {
+              "id": "renumbers",
+              "type": "regex",
+              "pattern": "(?i)renumber"
+            },
+            {
+              "id": "posts-only-after-new-approval",
+              "type": "regex",
+              "pattern": "(?i)approv.{0,160}(before|then|until).{0,80}post|(only|never|not|don't|won't).{0,40}post.{0,160}approv"
+            }
+          ]
+        },
+        {
+          "id": "own-pr-comment-only",
+          "prompt": "The user wrote PR #12 in acme/widgets themselves. You reviewed it, they approved your rendered drafts, and they say: 'Post it as an approval.' Do not run commands or contact GitHub. What do you do?",
+          "checks": [
+            {
+              "id": "explains-restriction",
+              "type": "regex",
+              "pattern": "(?i)(own|your|authored|wrote).{0,80}(PR|pull request).{0,160}(only|cannot|can't|not allowed|doesn't allow|does not allow)|(cannot|can't).{0,40}approve.{0,80}(own|your)"
+            },
+            {
+              "id": "offers-comment",
+              "type": "regex",
+              "pattern": "(?i)\\bcomment\\b"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 240
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 240
+    }
+  }
+}

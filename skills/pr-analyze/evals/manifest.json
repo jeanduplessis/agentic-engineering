@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "pr-analyze",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "missing-pr-target",
+          "prompt": "/skill:pr-analyze",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            },
+            {
+              "id": "asks-for-pr-target",
+              "type": "regex",
+              "pattern": "(?i)\\b(PR|pull request)\\b[^\\n]{0,80}\\b(URL|number|link)\\b"
+            },
+            {
+              "id": "asks-question",
+              "type": "regex",
+              "pattern": "\\?"
+            },
+            {
+              "id": "no-findings-report",
+              "type": "forbidden_content",
+              "value": "Files reviewed"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}

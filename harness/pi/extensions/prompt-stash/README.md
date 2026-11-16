@@ -4,7 +4,7 @@ Temporarily set aside a chat draft so you can ask another question.
 
 ## Enable
 
-Run `./setup.sh` from the repository root. Select **Harness → extensions → prompt-stash**, then run `/reload` in Pi. Selection is opt-in. No build or `npm install` is needed.
+Run `./setup.sh` from the repository root and tick `prompt-stash` on the **Pi** tab (or run `ae add -p extensions/prompt-stash`), then run `/reload` in Pi. Selection is opt-in. No build or `npm install` is needed.
 
 ## Use
 

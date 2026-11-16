@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "council-review",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "default-members",
+          "prompt": "Council: should our team adopt trunk-based development instead of GitFlow? Do not call any tools or start any delegates. List the three council members you would start, with the exact delegate_task target (providerInstanceId, model, and options) for each.",
+          "checks": [
+            {
+              "id": "claude-personal-instance",
+              "type": "required_content",
+              "value": "claudeAgent_claude_personal"
+            },
+            {
+              "id": "opus-model",
+              "type": "required_content",
+              "value": "claude-opus-5-5"
+            },
+            {
+              "id": "sol-model",
+              "type": "required_content",
+              "value": "gpt-6.1-sol"
+            },
+            {
+              "id": "grok-model",
+              "type": "required_content",
+              "value": "grok-4.7"
+            },
+            {
+              "id": "claude-high-effort",
+              "type": "regex",
+              "pattern": "\"?effort\"?\\s*[:=]\\s*\"?high"
+            },
+            {
+              "id": "reasoning-effort-high",
+              "type": "regex",
+              "pattern": "reasoningEffort\"?\\s*[:=]\\s*\"?high"
+            }
+          ]
+        },
+        {
+          "id": "advice-only-brief",
+          "prompt": "Council: is rewriting our billing service from Python to Rust worth it this quarter? Context: three engineers, p99 latency is 900ms against a 300ms target, and billing errors cost $40k last year. Do not call any tools or start any delegates. Write the exact brief you would send to every council member.",
+          "checks": [
+            {
+              "id": "verdict-field",
+              "type": "required_content",
+              "value": "Verdict:"
+            },
+            {
+              "id": "confidence-field",
+              "type": "required_content",
+              "value": "Confidence:"
+            },
+            {
+              "id": "score-field",
+              "type": "required_content",
+              "value": "Score:"
+            },
+            {
+              "id": "web-research-allowed",
+              "type": "regex",
+              "pattern": "(?i)search the web|web search"
+            },
+            {
+              "id": "no-changes",
+              "type": "regex",
+              "pattern": "(?i)(do not|don't|not allowed|never).{0,200}(edit|create|delete|commit)"
+            },
+            {
+              "id": "recommend-instead",
+              "type": "regex",
+              "pattern": "(?i)recommend.{0,40}instead"
+            },
+            {
+              "id": "carries-context",
+              "type": "regex",
+              "pattern": "900\\s?ms"
+            }
+          ]
+        },
+        {
+          "id": "no-substitution",
+          "prompt": "Council: should we move our public API from REST to GraphQL? orchestrator_capabilities shows the Grok provider instance as disabled. Claude Work also offers claude-opus-5-5, and Codex also offers gpt-6.1-terra. Do not call any tools. What do you do about the council members?",
+          "checks": [
+            {
+              "id": "reports-grok",
+              "type": "regex",
+              "pattern": "(?i)grok.{0,160}(unavailable|disabled|not available)"
+            },
+            {
+              "id": "refuses-substitution",
+              "type": "regex",
+              "pattern": "(?i)(not|never|won't|will not|don't|do not|no).{0,40}substitut"
+            },
+            {
+              "id": "asks-user",
+              "type": "regex",
+              "pattern": "(?i)(ask|whether|would you like|do you want|should I)"
+            }
+          ]
+        },
+        {
+          "id": "synthesis-format",
+          "prompt": "You chaired a council on the user's migration plan in docs/pnpm-migration.md. Do not call any tools. The members replied:\n\nClaude Opus 5.5: Verdict: Adopt the plan after fixing the CI cache step. Confidence: high. Score: 7/10. Concern: the plan ignores the Docker layer cache (docs/pnpm-migration.md:41).\n\nGPT-6.1 Sol: Verdict: Adopt the plan. Confidence: medium. (No score given.) Concern: phantom dependencies may surface in two legacy packages.\n\nGrok 4.7: Verdict: Do not adopt yet; the rollback step is missing. Confidence: medium. Score: 5/10. Concern: no rollback path if the lockfile conversion fails.\n\nWrite your reply to the user.",
+          "checks": [
+            {
+              "id": "council-verdict",
+              "type": "required_content",
+              "value": "Council verdict"
+            },
+            {
+              "id": "member-table",
+              "type": "regex",
+              "pattern": "\\|\\s*Member\\s*\\|"
+            },
+            {
+              "id": "no-invented-score",
+              "type": "required_content",
+              "value": "no score"
+            },
+            {
+              "id": "disagreement-section",
+              "type": "regex",
+              "pattern": "(?i)disagreement"
+            },
+            {
+              "id": "attributes-rollback",
+              "type": "regex",
+              "pattern": "(?i)(grok.{0,200}rollback|rollback.{0,200}grok)"
+            }
+          ]
+        },
+        {
+          "id": "stops-without-action",
+          "prompt": "A council review of docs/api.md has finished, and you have shown the user the synthesis. All three members recommend splitting the file into three files and renaming the auth section. The user has not replied. Do not call any tools. What do you do now?",
+          "checks": [
+            {
+              "id": "takes-no-action",
+              "type": "regex",
+              "pattern": "(?i)(not|won't|will not|don't|do not|no).{0,60}(split|edit|change|implement|apply|rename|act)"
+            },
+            {
+              "id": "leaves-decision-to-user",
+              "type": "regex",
+              "pattern": "(?i)(ask|if you want|would you like|let me know|your call|your decision|wait)"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}

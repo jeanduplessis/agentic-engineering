@@ -1,22 +1,21 @@
 ---
-description: "Analyze the review comments on a PR"
-argument-hint: "[PR URL]"
-skills:
-  - gh-pr-review
+name: pr-review-analyze
+description: Address unresolved review comments from selected automated reviewers on a GitHub pull request, then fix, reply, resolve threads, self-review, commit, and push. Runs only when the user explicitly invokes it (for example `/pr-review-analyze`), optionally with a PR URL; never acts on human comments implicitly.
+disable-model-invocation: true
 ---
 
-## Required skills
+# PR review analyze
 
-- `gh-pr-review`
+## Required skill
 
-Current harness must load and follow every skill listed above before continuing. Reuse already loaded skill context. If any required skill is unavailable, stop and report it.
+Load and follow the `gh-pr-review` skill before continuing; reuse it if already loaded. If it is unavailable, stop and report it.
 
 ## Context
 
-- GitHub PR argument: $ARGUMENTS
+- PR: the URL the user gave after the skill name.
 - Review scope: selected automated review authors only.
 
-If no PR URL is supplied, run this command to resolve the current branch's PR URL:
+If the user gave no PR URL, run this command to resolve the current branch's PR URL:
 
 ```bash
 gh pr view --json url --jq '.url'

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "pr-audit",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "missing-pr-url",
+          "prompt": "/skill:pr-audit",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            },
+            {
+              "id": "asks-for-pr-url",
+              "type": "regex",
+              "pattern": "(?i)\\b(PR|pull request)\\b[^\\n]{0,80}\\b(URL|number|link)\\b"
+            },
+            {
+              "id": "no-audit-report",
+              "type": "forbidden_content",
+              "value": "## Verdict:"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "spec-gen",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "empty"
+      },
+      "cases": [
+        {
+          "id": "not-a-git-repository",
+          "prompt": "/skill:spec-gen",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            },
+            {
+              "id": "reports-missing-git-context",
+              "type": "regex",
+              "pattern": "(?i)(not a git repo|not inside a git|git repository|feature branch|no `?main`? branch)"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}

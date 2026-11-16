@@ -351,15 +351,7 @@ class CanonicalCommandInventoryTests(unittest.TestCase):
             "flesh-out",
             "idea-challenger",
             "optimize-for-llm",
-            "pr-analyze",
-            "pr-audit",
-            "pr-review-analyze",
-            "session-retro",
             "skill-validate",
-            "spec-audit",
-            "spec-gen",
-            "spec-reverse-gen",
-            "wat",
         }
     )
 

@@ -1,6 +1,7 @@
 ---
-description: "Reverse-engineer a behavioral feature spec from existing code"
-argument-hint: "<domain or feature>"
+name: spec-reverse-gen
+description: Reverse-engineer a behavioral feature spec in `.specs/` from existing code for a named domain or feature, using RFC 2119 rules that describe what the system must do rather than how it is implemented. Runs only when the user explicitly invokes it (for example `/spec-reverse-gen`) with a domain or feature.
+disable-model-invocation: true
 ---
 
 # Reverse-Engineer Feature Spec from Existing Code
@@ -8,7 +9,7 @@ argument-hint: "<domain or feature>"
 Generate a retroactive feature or behavioral-domain spec from existing code. Describe **what** the feature
 does and **how it must behave**, not its implementation.
 
-**Domain or feature to specify:** `$ARGUMENTS`
+**Domain or feature to specify:** the text the user gave after the skill name.
 
 ## Procedure
 
@@ -16,10 +17,10 @@ Follow steps in order; do not skip any.
 
 ### 1. Validate input
 
-- If `$ARGUMENTS` is empty or blank, stop and tell the user:
-  > Requires a domain or feature description. Usage: `/spec-reverse-gen <domain>`
+- If the user gave no domain or feature text, stop and tell the user:
+  > Requires a domain or feature description. Invoke this skill again followed by the domain.
   > Examples: `authentication`, `rate limiting`, `user invitation flow`, `webhook delivery`
-- Otherwise, use `$ARGUMENTS` as the domain description throughout.
+- Otherwise, use that text as the domain description throughout.
 
 ### 2. Explore the codebase
 

@@ -22,7 +22,7 @@ PI_ENTIRE_GRAPH_BIN=/absolute/path/to/entire-graph \
   pi -e ./harness/pi/extensions/entire-graph/index.ts
 ```
 
-For persistent installation, select `entire-graph` in `./setup.sh`. Installation remains opt-in. The extension never downloads a binary, upgrades Entire, or modifies project instruction files. Leave `PI_ENTIRE_GRAPH_BIN` unset to use `entire graph` instead.
+For persistent installation, tick `entire-graph` on the **Pi** tab of `./setup.sh`, or run `ae add -p extensions/entire-graph`. Installation remains opt-in. The extension never downloads a binary, upgrades Entire, or modifies project instruction files. Leave `PI_ENTIRE_GRAPH_BIN` unset to use `entire graph` instead.
 
 ## Interface
 

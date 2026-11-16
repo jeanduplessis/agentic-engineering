@@ -51,7 +51,8 @@ Read existing documentation first:
 
 If any files don't exist, proceed silently: don't flag absence or suggest creating them upfront.
 
-Then launch `scout` through `subagent({ workflowScript })` to walk the codebase.
+Then walk the codebase. If your harness has a subagent or delegation tool, delegate the walk to one read-only exploration subagent
+and use its findings; otherwise walk it yourself in the current session.
 Don't follow rigid heuristics; explore organically and note where you experience friction:
 
 - Where does understanding one concept require bouncing between many small modules?

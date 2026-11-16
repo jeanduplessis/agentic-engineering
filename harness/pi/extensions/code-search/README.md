@@ -9,7 +9,7 @@ Adds a `code_search` tool that runs [jg (jevgrep)](https://github.com/remotehost
 ## Enable
 
 1. Install jg and sign in: `npm install -g @remotehost/jg`, then `jg login`. jg requires Node.js 22+ and ripgrep.
-2. Run `./setup.sh` from the repository root. Select **Harness → extensions → code-search**, then run `/reload` in Pi.
+2. Run `./setup.sh` from the repository root and tick `code-search` on the **Pi** tab (or run `ae add -p extensions/code-search`), then run `/reload` in Pi.
 
 If Pi cannot find `jg` on `PATH`, set `PI_JG_BIN` to the absolute path of the executable. This can happen with a per-shell Node manager such as fnm.
 

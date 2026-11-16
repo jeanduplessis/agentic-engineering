@@ -1,16 +1,19 @@
 ---
-description: "Review a completed coding session for durable agent/workflow improvements"
-argument-hint: "[file path | transcript/summary | current conversation]"
+name: session-retro
+description: Review a completed coding session (current conversation, transcript file, or pasted summary) for evidence-backed, durable improvements to agent instructions, skills, commands, and workflow docs, and propose them for approval without editing files. Runs only when the user explicitly invokes it (for example `/session-retro`).
+disable-model-invocation: true
 ---
+
+# Session retro
 
 Review the completed coding session and propose durable improvements.
 
-Context target: $ARGUMENTS
+Context target: the text the user gave after the skill name.
 
 Resolve context target:
-- No/empty argument or `current conversation`: use visible conversation/session messages.
+- No text or `current conversation`: use visible conversation/session messages.
 - File path: read it first as the transcript/summary. If multiple paths match or unclear, ask one concise clarification and stop.
-- Otherwise: treat the argument as a pasted transcript, summary, or retrospective note.
+- Otherwise: treat the text as a pasted transcript, summary, or retrospective note.
 
 Goal: find evidence-backed improvements to future coding-agent behavior and lightweight workflow/process docs.
 Output durable instruction candidates for user approval.

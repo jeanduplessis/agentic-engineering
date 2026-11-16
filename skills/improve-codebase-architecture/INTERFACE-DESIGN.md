@@ -18,7 +18,7 @@ Show this to the user, then immediately proceed to Step 2. The user reads and th
 
 ### 2. Spawn sub-agents
 
-Spawn 3+ `scout` children in parallel with `subagent({ workflowScript })` and `runs.all`. Each must produce a **radically different** interface for the deepened module.
+Spawn 3+ read-only sub-agents in parallel with your harness's subagent or delegation tool. Each must produce a **radically different** interface for the deepened module. If the harness has no such tool, draft each design yourself in the current session, one brief at a time, and do not let earlier designs shape later ones.
 
 Prompt each sub-agent with a separate technical brief: file paths, coupling details, dependency category from [DEEPENING.md](DEEPENING.md), and what sits behind the seam. The brief is independent of the user-facing problem-space explanation in Step 1. Give each agent a different design constraint:
 

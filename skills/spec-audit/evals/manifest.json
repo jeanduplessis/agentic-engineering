@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "spec-audit",
+    "path": "../SKILL.md"
+  },
+  "suites": [
+    {
+      "name": "workflow",
+      "type": "workflow",
+      "mode": "forced",
+      "fixture": {
+        "type": "copy",
+        "path": "fixtures/project"
+      },
+      "cases": [
+        {
+          "id": "audit-vague-refund-spec",
+          "prompt": "/skill:spec-audit .specs/order-refunds.md\n\nThis is a non-interactive run: present the findings, final output sections, and questions for the spec author, then stop without editing the spec.",
+          "checks": [
+            {
+              "id": "non-empty-response",
+              "type": "non_empty_response"
+            },
+            {
+              "id": "severity-field",
+              "type": "regex",
+              "pattern": "\\*\\*Severity:\\*\\*\\s*(CRITICAL|HIGH|MEDIUM|LOW)"
+            },
+            {
+              "id": "misread-field",
+              "type": "required_content",
+              "value": "**How an agent could misread it:**"
+            },
+            {
+              "id": "suggested-fix-field",
+              "type": "required_content",
+              "value": "**Suggested fix:**"
+            },
+            {
+              "id": "summary-statistics",
+              "type": "regex",
+              "pattern": "(?i)summary statistics"
+            },
+            {
+              "id": "author-questions",
+              "type": "regex",
+              "pattern": "(?i)questions for the spec author"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "configurations": {
+    "with_skill": {
+      "harness": "pi",
+      "force_skill": true,
+      "timeout_seconds": 180
+    },
+    "without_skill": {
+      "harness": "pi",
+      "force_skill": false,
+      "timeout_seconds": 180
+    }
+  }
+}

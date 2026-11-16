@@ -1,21 +1,24 @@
 ---
-description: "Review a spec to identify possible issues"
-argument-hint: "[spec path or description]"
+name: spec-audit
+description: Audit a behavioral feature spec in `.specs/` for vague language, ambiguous references, missing boundary and error cases, rule conflicts, implementation leakage, and RFC 2119 misuse, then ask the author open questions and apply an approved scope of fixes. Runs only when the user explicitly invokes it (for example `/spec-audit`), optionally with a spec path or description.
+disable-model-invocation: true
 ---
+
+# Spec audit
 
 ## Spec to audit
 
-<arguments>$ARGUMENTS</arguments>
+Use the text the user gave after the skill name:
 
-- No argument: list all specs in repo-root `.specs` and ask which one to audit.
+- No text: list all specs in repo-root `.specs` and ask which one to audit.
 - Existing file: use it as the selected spec.
-- Otherwise treat the argument as a natural-language spec description. Match filename substring first;
+- Otherwise treat the text as a natural-language spec description. Match filename substring first;
   if none match, search spec titles/headings. If ambiguous, show top candidates and ask the user to
   choose. If exactly one match exists, ask the user to confirm it before auditing.
 
 ## Your task
 
-You are a specification auditor. Audit the spec in `<arguments>` for anything that could make a
+You are a specification auditor. Audit the selected spec for anything that could make a
 coding agent misinterpret intent, assume unstated facts, or produce spec-compliant code that
 violates the author's actual intent.
 

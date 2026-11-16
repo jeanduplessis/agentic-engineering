@@ -4,12 +4,12 @@ This component owns `reviewer.md` and the strict native-child model scope. It do
 
 ## Install and check
 
-Select **Harness → subagents** in `./setup.sh`. It is one atomic selection, not an agent picker or a whole-directory link. The plan shows both effects before confirmation:
+Tick `subagents` on the **Pi** tab of `./setup.sh`, or run `ae add -p subagents`. It is one atomic selection, not an agent picker or a whole-directory link. The plan shows both effects before confirmation:
 
 - Link this checkout's `reviewer.md` into `<PI_AGENT_DIR>/agents/reviewer.md`.
 - Merge `settings-overlay.json` into `<PI_AGENT_DIR>/settings.json`, replacing only `subagents.modelScope` with `{"enforce":true,"strict":true,"allow":["inherit"]}`.
 
-All other settings and agents stay intact, including existing model pins, timeouts, concurrency, and role overrides. Incompatible pins or fallbacks will fail strict scope checks; this installer does not silently rewrite them. Cancelling any Pi picker or declining the plan changes nothing in the Pi target. Leave this component unselected to leave its installed state untouched.
+All other settings and agents stay intact, including existing model pins, timeouts, concurrency, and role overrides. Incompatible pins or fallbacks will fail strict scope checks; this installer does not silently rewrite them. Declining the plan changes nothing in the Pi target. Leave this component unselected to leave its installed state untouched.
 
 For an explicit target, use Python 3.8+ from the repository root:
 

@@ -1,6 +1,7 @@
 ---
-description: "Generate a behavioral feature spec from the current branch"
-argument-hint: "[optional context]"
+name: spec-gen
+description: Generate a retroactive behavioral feature spec in `.specs/` from the current feature branch's changes against `main`, using RFC 2119 rules that describe what the system must do rather than how it is implemented. Runs only when the user explicitly invokes it (for example `/spec-gen`), optionally with extra context.
+disable-model-invocation: true
 ---
 
 # Generate Feature Spec from Branch
@@ -8,7 +9,7 @@ argument-hint: "[optional context]"
 Analyze current branch changes against `main`; generate a retroactive feature spec.
 Describe **what** the feature does and **how it must behave**, not implementation.
 
-**Optional user context:** `$ARGUMENTS`
+**Optional user context:** the text the user gave after the skill name, if any.
 
 ## Procedure
 
@@ -17,7 +18,8 @@ Follow in order; skip none.
 ### 1. Identify the branch and gather the diff
 
 - Run `git rev-parse --abbrev-ref HEAD` for the current branch name.
-- If the branch is `main` or `master`, stop and tell the user this command must run from a feature branch.
+- If the branch is `main` or `master`, stop and tell the user this skill must run from a feature branch.
+- If the directory is not a git repository or `main` does not exist, stop and report what is missing.
 - Run `git merge-base main HEAD` for the common ancestor.
 - Run `git diff $(git merge-base main HEAD)..HEAD` for the full diff.
 - Run `git log --oneline $(git merge-base main HEAD)..HEAD` for this branch's commit history.

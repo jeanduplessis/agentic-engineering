@@ -1,6 +1,7 @@
 ---
-description: "High-level PR audit for process, hygiene, and architectural correctness"
-argument-hint: "<PR URL>"
+name: pr-audit
+description: High-level GitHub pull request audit for process quality, change hygiene, scope, blast radius, and architectural fit, scored PASS, CONCERN, or BLOCK across 12 criteria without validating code correctness. Runs only when the user explicitly invokes it (for example `/pr-audit`) with a PR URL.
+disable-model-invocation: true
 ---
 
 # PR Audit
@@ -13,8 +14,7 @@ and consistent with the codebase—not variable names or algorithm optimality.
 
 ## Target PR
 
-**PR URL:** $ARGUMENTS
-
+Use the PR URL the user gave after the skill name as `<pr>` in every command below.
 If the PR URL is absent or ambiguous, ask for one concise clarification before continuing.
 
 ## Initial context
@@ -24,13 +24,13 @@ Fetch lightweight PR metadata first. The diff is NOT included; discover it with 
 ### PR metadata
 
 ```bash
-gh pr view "$ARGUMENTS" --json title,body,author,baseRefName,headRefName,additions,deletions,changedFiles,labels,milestone
+gh pr view "<pr>" --json title,body,author,baseRefName,headRefName,additions,deletions,changedFiles,labels,milestone
 ```
 
 ### Commit count
 
 ```bash
-gh pr view "$ARGUMENTS" --json commits --jq '.commits | length'
+gh pr view "<pr>" --json commits --jq '.commits | length'
 ```
 
 ## Diff exploration workflow
@@ -40,7 +40,7 @@ Do NOT fetch the entire diff at once. Use this incremental discovery process:
 ### Step 1: Get the file list with per-file stats
 
 ```bash
-gh pr view "$ARGUMENTS" --json files --jq '.files[] | "\(.additions)+/\(.deletions)- \(.path)"'
+gh pr view "<pr>" --json files --jq '.files[] | "\(.additions)+/\(.deletions)- \(.path)"'
 ```
 
 This lists every changed file with add/delete counts. Build a mental map before reading code.
@@ -58,7 +58,7 @@ Group changed files into:
 Fetch specific file or directory diffs with:
 
 ```bash
-gh pr diff "$ARGUMENTS" -- <path>
+gh pr diff "<pr>" -- <path>
 ```
 
 Prioritize:
