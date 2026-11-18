@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Added Claude Code resources: `prompts/OUTPUT_STYLE.md` links into each Claude Code home's `output-styles/` folder. Choose it in the new **Claude** tab (`4`) or with `ae add -c output-style [-H <claude id>]`; `ae remove -c` unlinks it.
+- `status`, `status --json` (`claude`), the Claude tab and `doctor` show whether each home's `settings.json` selects the style. After linking, `ae` prints the `outputStyle` setting to add. It never edits `settings.json`.
+
 ## 0.1.0
 
 - First release. It replaces the Bash picker in `setup.sh`, which now builds `ae` and runs it.

@@ -112,6 +112,12 @@ pub struct Snapshot {
     pub pi_dir: Option<PathBuf>,
     pub pi: Vec<Entry>,
     pub subagents: Option<Subagents>,
+    /// Active Claude Code harnesses, in harness order.
+    pub claude_homes: Vec<usize>,
+    /// `claude[i][k]`: what occupies `<home of claude_homes[k]>/<item i target>`.
+    pub claude: Vec<Vec<Entry>>,
+    /// `outputStyle` from each Claude home's settings.json, by `claude_homes` position.
+    pub output_styles: Vec<Option<String>>,
     pub tools: Vec<Option<InstalledTool>>,
     #[serde(skip)]
     pub roots: Roots,
@@ -168,7 +174,18 @@ impl Snapshot {
             _ => None,
         };
 
+        let claude_homes: Vec<usize> = active.iter().copied().filter(|&h| env.harnesses[h].kind == crate::harness::Kind::Claude).collect();
+        let claude = repo
+            .claude
+            .iter()
+            .map(|item| claude_homes.iter().map(|&h| inspect(&env.harnesses[h].home.join(&item.target), &item.source, &roots)).collect())
+            .collect();
+        let output_styles = claude_homes.iter().map(|&h| output_style(&env.harnesses[h].home)).collect();
+
         let mut scan_dirs: Vec<PathBuf> = locations.iter().map(|l| l.path.clone()).collect();
+        for &h in &claude_homes {
+            scan_dirs.push(env.harnesses[h].home.join("output-styles"));
+        }
         if let Some(dir) = &pi_dir {
             for sub in ["", "prompts", "extensions", "skills", "agents"] {
                 scan_dirs.push(dir.join(sub));
@@ -188,6 +205,9 @@ impl Snapshot {
             pi_dir,
             pi,
             subagents,
+            claude_homes,
+            claude,
+            output_styles,
             tools,
             roots,
         }
@@ -229,9 +249,26 @@ impl Snapshot {
         counts
     }
 
+    /// Where harness `h` sits in `claude_homes`.
+    pub fn claude_slot(&self, h: usize) -> Option<usize> {
+        self.claude_homes.iter().position(|&home| home == h)
+    }
+
+    /// True when Claude item `i` is an output style and slot `k`'s settings select it.
+    pub fn style_active(&self, i: usize, k: usize) -> bool {
+        self.repo.claude[i].style.is_some() && self.output_styles[k] == self.repo.claude[i].style
+    }
+
     pub fn location_names(&self, l: usize) -> Vec<String> {
         self.locations[l].readers.iter().map(|&h| self.env.harnesses[h].name.clone()).collect()
     }
+}
+
+/// The `outputStyle` a Claude Code home's settings.json selects, read only.
+fn output_style(home: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(home.join("settings.json")).ok()?;
+    let json: serde_json::Value = serde_json::from_str(&text).ok()?;
+    json.get("outputStyle")?.as_str().map(str::to_string)
 }
 
 /// Symlinks into this checkout whose source no longer exists.

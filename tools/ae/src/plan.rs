@@ -18,6 +18,8 @@ pub struct Desired {
     /// Desired installed state for each Pi item that changed (not subagents).
     pub pi: BTreeMap<usize, bool>,
     pub subagents: bool,
+    /// Desired installed state for each (Claude item, harness) pair that changed.
+    pub claude: BTreeMap<(usize, usize), bool>,
     pub tools: BTreeSet<usize>,
     pub prune: bool,
 }
@@ -26,6 +28,7 @@ pub struct Desired {
 #[serde(rename_all = "kebab-case")]
 pub enum Section {
     Skills,
+    Claude,
     Pi,
     Tools,
     Tidy,
@@ -35,6 +38,7 @@ impl Section {
     pub fn title(self) -> &'static str {
         match self {
             Section::Skills => "Skills",
+            Section::Claude => "Claude Code",
             Section::Pi => "Pi",
             Section::Tools => "Tools",
             Section::Tidy => "Tidy",
@@ -296,18 +300,32 @@ pub fn build(snap: &Snapshot, desired: &Desired, options: Options) -> Plan {
         }
     }
 
+    for (&(i, h), &want) in &desired.claude {
+        let Some(k) = snap.claude_slot(h) else { continue };
+        let item = &snap.repo.claude[i];
+        let harness = &snap.env.harnesses[h];
+        let dest = harness.home.join(&item.target);
+        let source = item.source.clone();
+        let Some((op, needs_approval)) = link_op(&snap.claude[i][k], want, source, dest) else { continue };
+        push(
+            &mut plan,
+            Step {
+                section: Section::Claude,
+                name: item.id.clone(),
+                readers: vec![harness.name.clone()],
+                op,
+                approved: !needs_approval || options.replace,
+                needs_approval,
+            },
+        );
+    }
+
     if let Some(pi_dir) = &snap.pi_dir {
         for (&i, &want) in &desired.pi {
             let item = &snap.repo.pi[i];
             let dest = pi_dir.join(&item.target);
             let source = item.source.clone();
-            let (op, needs_approval) = match (&snap.pi[i], want) {
-                (Entry::Missing, true) => (Op::Link { source, dest }, false),
-                (Entry::Foreign { what }, true) => (Op::Replace { source, dest, existing: what.clone() }, true),
-                (Entry::OtherAeLink { target }, true) => (Op::Relink { source, dest, previous: target.clone() }, false),
-                (Entry::Linked, false) => (Op::Unlink { dest, reason: Reason::Deselected }, false),
-                _ => continue,
-            };
+            let Some((op, needs_approval)) = link_op(&snap.pi[i], want, source, dest) else { continue };
             let step = Step {
                 section: Section::Pi,
                 name: item.id.clone(),
@@ -407,8 +425,31 @@ pub fn build(snap: &Snapshot, desired: &Desired, options: Options) -> Plan {
     plan
 }
 
+/// The step that takes one install path from `entry` to `want`, and whether it
+/// needs approval. `None` when it is already there.
+fn link_op(entry: &Entry, want: bool, source: PathBuf, dest: PathBuf) -> Option<(Op, bool)> {
+    Some(match (entry, want) {
+        (Entry::Missing, true) => (Op::Link { source, dest }, false),
+        (Entry::Foreign { what }, true) => (Op::Replace { source, dest, existing: what.clone() }, true),
+        (Entry::OtherAeLink { target }, true) => (Op::Relink { source, dest, previous: target.clone() }, false),
+        (Entry::Linked, false) => (Op::Unlink { dest, reason: Reason::Deselected }, false),
+        _ => return None,
+    })
+}
+
 fn readers_of_dir(snap: &Snapshot, path: &std::path::Path) -> Vec<String> {
-    path.parent().and_then(|parent| location(snap, parent)).map(|l| snap.location_names(l)).unwrap_or_else(|| vec!["Pi".into()])
+    let parent = path.parent();
+    if let Some(l) = parent.and_then(|parent| location(snap, parent)) {
+        return snap.location_names(l);
+    }
+    let claude: Vec<String> = snap
+        .claude_homes
+        .iter()
+        .map(|&h| &snap.env.harnesses[h])
+        .filter(|harness| parent.and_then(|p| p.parent()) == Some(harness.home.as_path()))
+        .map(|harness| harness.name.clone())
+        .collect();
+    if claude.is_empty() { vec!["Pi".into()] } else { claude }
 }
 
 /// AE links whose every reader also loads the skill through another AE link.

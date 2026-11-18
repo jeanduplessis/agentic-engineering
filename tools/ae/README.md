@@ -48,9 +48,15 @@ Ties go to a folder the harness calls its own, not a shared one.
 
 Shared folders tie harnesses together. `~/.claude/skills` is both the default Claude Code home's folder and a folder Grok and Kilo read, so giving a skill to that Claude harness gives it to Grok and Kilo too. The grid shows ◐ on those cells, and you can't remove a skill from Grok alone while Claude still loads it from there. With Claude selected, Codex and Pi get their own links, because a link in `~/.agents/skills` would make Grok and Kilo load it twice.
 
+## Claude Code output style
+
+`prompts/OUTPUT_STYLE.md` is a Claude Code output style. `ae` links it into each selected Claude Code home as `output-styles/<slug of its name>.md`, for example `~/.claude/output-styles/agentic-engineering.md`. Its frontmatter sets `keep-coding-instructions: true`, so it adds to Claude Code's system prompt rather than replacing the coding instructions.
+
+A linked style is available, not active. Claude Code uses it only when that home's `settings.json` has `"outputStyle": "<its name>"`, which applies to every new session from that home, T3 Code threads included. `ae` never edits `settings.json`. It reads `outputStyle` to show in `status`, the Claude tab and `doctor` whether each home selects the style, and prints the setting to add after linking. Only one output style is active per home, so selecting this one replaces any other.
+
 ## Interactive installer
 
-`ae` with no arguments, in a terminal. There are three tabs: **Skills** (a skills × harnesses grid), **Pi** (resources linked into the Pi agent dir) and **Tools** (`cargo install --path`). Toggling things only queues changes. Nothing on disk changes until you press enter, review the plan and confirm.
+`ae` with no arguments, in a terminal. There are four tabs: **Skills** (a skills × harnesses grid), **Pi** (resources linked into the Pi agent dir), **Tools** (`cargo install --path`) and **Claude** (Claude Code resources × Claude Code homes). Toggling things only queues changes. Nothing on disk changes until you press enter, review the plan and confirm.
 
 | Key | Action |
 | --- | --- |
@@ -58,7 +64,7 @@ Shared folders tie harnesses together. `~/.claude/skills` is both the default Cl
 | `space` | toggle the highlighted cell, Pi item or tool |
 | `a` / `A` | toggle the whole row / column |
 | `/` | filter skills by name or description |
-| `tab`, `1` `2` `3` | switch tabs |
+| `tab`, `1` `2` `3` `4` | switch tabs |
 | `p` | queue removal of stale and redundant links |
 | `r` / `R` | reset this row / every pending change |
 | `enter` | review the plan; `space` there approves or skips each conflict |
@@ -87,11 +93,14 @@ ae add -s premortem,wat -H claude-personal,codex
 ae remove -s premortem -H codex
 ae add -p APPEND_SYSTEM.md -p extensions/prompt-stash
 ae add -p extensions/all -n                 # preview every Pi extension
+ae add -c output-style                      # every Claude Code home
+ae remove -c output-style -H claude-personal
 ae add -t gs,gw                             # build and install tools
 ae prune -n
 ```
 
 - `-s` takes skill names or `all`. `-H` takes a harness id from `ae status` (e.g. `claude-work`, `codex`), its label (`CW`), its kind (`claude`, matching every Claude instance) or `all`.
+- `-c` takes `output-style` or `all`. Without `-H` it changes every detected Claude Code home; with `-H` it changes the Claude Code homes named there.
 - `-p` takes `APPEND_SYSTEM.md`, `docs`, `subagents`, `commands/<file>`, `extensions/<name>`, `skills/<name>`, `<group>/all` or `all`. The `subagents` component runs `harness/pi/subagents/install.py`, which merges only `subagents.modelScope` and links `agents/reviewer.md`.
 - Unknown names fail with a "did you mean" suggestion. Every change prints the plan and asks first, and conflicts are a separate question. `-n` stops after the plan. `-y` skips both questions; conflicts are then skipped unless `--replace` is given.
 - `--json` works with `status`, `doctor`, and `add`, `remove` and `prune` when given with `-n` or `-y`.

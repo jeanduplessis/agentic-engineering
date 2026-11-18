@@ -172,3 +172,24 @@ fn row_toggle_uses_fewest_folders_without_double_loading() {
     );
     let _ = Path::new("");
 }
+
+#[test]
+fn claude_tab_queues_the_output_style_per_home() {
+    let fixture = fixture();
+    let style = fixture.root.join("prompts/OUTPUT_STYLE.md");
+    std::fs::create_dir_all(style.parent().unwrap()).unwrap();
+    std::fs::write(&style, "---\nname: Agentic Engineering\ndescription: Terse.\n---\nBody\n").unwrap();
+    let mut app = app(&fixture);
+    press(&mut app, KeyCode::Char('4'));
+    let text = screen(&app, 120, 30);
+    assert!(text.contains("Claude Code resources") && text.contains("output-style"), "{text}");
+    assert!(text.contains("Claude Work") && text.contains("Claude Personal"), "{text}");
+    assert!(text.contains("\"outputStyle\": \"Agentic Engineering\""), "activation hint:\n{text}");
+    press(&mut app, KeyCode::Down);
+    press(&mut app, KeyCode::Char(' '));
+    assert_eq!(app.claude, BTreeMap::from([((0, harness(&app, "claude-personal")), true)]));
+    press(&mut app, KeyCode::Enter);
+    assert_eq!(app.screen, Screen::Review);
+    let text = screen(&app, 120, 30);
+    assert!(text.contains("Claude Code") && text.contains("agentic-engineering.md"), "{text}");
+}

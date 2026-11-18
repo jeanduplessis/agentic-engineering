@@ -62,12 +62,26 @@ pub struct PiItem {
     pub description: Option<String>,
 }
 
+/// A file linked into every selected Claude Code home, such as the output style.
+#[derive(Clone, Debug, Serialize)]
+pub struct ClaudeItem {
+    /// Selector used on the command line, e.g. `output-style`.
+    pub id: String,
+    pub source: PathBuf,
+    /// Destination relative to a Claude Code home.
+    pub target: PathBuf,
+    pub description: Option<String>,
+    /// The `outputStyle` setting value that turns an output style on.
+    pub style: Option<String>,
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct Repo {
     pub root: PathBuf,
     pub skills: Vec<Skill>,
     pub tools: Vec<Tool>,
     pub pi: Vec<PiItem>,
+    pub claude: Vec<ClaudeItem>,
 }
 
 impl Repo {
@@ -77,6 +91,7 @@ impl Repo {
             skills: discover_skills(&root.join("skills")),
             tools: discover_tools(&root.join("tools")),
             pi: discover_pi(&root.join("harness/pi")),
+            claude: discover_claude(&root.join("prompts")),
         }
     }
 }
@@ -152,6 +167,24 @@ fn discover_tools(dir: &Path) -> Vec<Tool> {
             }
         })
         .collect()
+}
+
+/// `prompts/OUTPUT_STYLE.md` becomes a Claude Code output style, linked as
+/// `output-styles/<slug of its name>.md`. Claude Code names the style from its
+/// frontmatter `name`, so that is also the `outputStyle` value.
+fn discover_claude(dir: &Path) -> Vec<ClaudeItem> {
+    let source = dir.join("OUTPUT_STYLE.md");
+    let Ok(text) = fs::read_to_string(&source) else { return Vec::new() };
+    let fields = frontmatter(&text);
+    let style = fields.get("name").cloned().unwrap_or_else(|| "OUTPUT_STYLE".into());
+    let file = format!("{}.md", crate::harness::slug(&style));
+    vec![ClaudeItem {
+        id: "output-style".into(),
+        target: Path::new("output-styles").join(file),
+        description: fields.get("description").cloned(),
+        style: Some(style),
+        source,
+    }]
 }
 
 /// Pi discovers extensions as a directory exposing index.ts/index.js or a

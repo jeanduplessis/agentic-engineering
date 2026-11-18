@@ -146,6 +146,25 @@ pub fn status(snap: &Snapshot, issues: &[Issue], paint: Paint) -> String {
         ));
     }
 
+    if !snap.repo.claude.is_empty() && !snap.claude_homes.is_empty() {
+        out.push('\n');
+        out.push_str(&format!("{}\n", paint.bold("Claude Code")));
+        let id_width = snap.repo.claude.iter().map(|c| c.id.chars().count()).max().unwrap_or(4) + 2;
+        let name_width = snap.claude_homes.iter().map(|&h| env.harnesses[h].name.chars().count()).max().unwrap_or(4) + 2;
+        for (i, item) in snap.repo.claude.iter().enumerate() {
+            for (k, &h) in snap.claude_homes.iter().enumerate() {
+                let state = match &snap.claude[i][k] {
+                    Entry::Linked if item.style.is_none() || snap.style_active(i, k) => format!("{} linked", paint.green(GLYPH_ON)),
+                    Entry::Linked => format!("{} linked, not selected in settings.json", paint.green(GLYPH_ON)),
+                    Entry::Foreign { what } => format!("{} {} is in the way", paint.yellow(GLYPH_FOREIGN), what.describe()),
+                    _ => format!("{} not linked", paint.dim(GLYPH_OFF)),
+                };
+                let id = if k == 0 { item.id.as_str() } else { "" };
+                out.push_str(&format!("  {}{}{state}\n", pad(id, id_width), pad(&env.harnesses[h].name, name_width)));
+            }
+        }
+    }
+
     if let Some(pi_dir) = &snap.pi_dir
         && !snap.repo.pi.is_empty()
     {
@@ -301,7 +320,7 @@ pub fn describe_step(snap: &Snapshot, op: &Op) -> String {
 
 pub fn plan_text(snap: &Snapshot, plan: &Plan, paint: Paint) -> String {
     let mut out = String::new();
-    for section in [Section::Skills, Section::Pi, Section::Tools, Section::Tidy] {
+    for section in [Section::Skills, Section::Claude, Section::Pi, Section::Tools, Section::Tidy] {
         let steps: Vec<_> = plan.steps.iter().filter(|step| step.section == section).collect();
         if steps.is_empty() {
             continue;
@@ -363,7 +382,7 @@ pub fn outcome_line(snap: &Snapshot, plan: &Plan, index: usize, outcome: &Outcom
 pub fn restart_hint(plan: &Plan) -> Option<String> {
     let mut names: Vec<String> = Vec::new();
     for (_, step) in plan.approved() {
-        if matches!(step.section, Section::Skills | Section::Pi | Section::Tidy) {
+        if matches!(step.section, Section::Skills | Section::Claude | Section::Pi | Section::Tidy) {
             for reader in &step.readers {
                 if !names.contains(reader) {
                     names.push(reader.clone());
@@ -372,4 +391,30 @@ pub fn restart_hint(plan: &Plan) -> Option<String> {
         }
     }
     (!names.is_empty()).then(|| format!("Start a new session in {} (or a new T3 Code thread) to load the changes.", join(&names)))
+}
+
+/// How to turn on each output style the plan links but settings.json does not
+/// select. Æ never edits settings.json itself.
+pub fn activation_hints(snap: &Snapshot, plan: &Plan) -> Vec<String> {
+    let mut out = Vec::new();
+    for (_, step) in plan.approved() {
+        let (Op::Link { dest, .. } | Op::Replace { dest, .. } | Op::Relink { dest, .. }) = &step.op else { continue };
+        if step.section != Section::Claude {
+            continue;
+        }
+        let Some(i) = snap.repo.claude.iter().position(|item| item.id == step.name) else { continue };
+        let Some(style) = &snap.repo.claude[i].style else { continue };
+        for (k, &h) in snap.claude_homes.iter().enumerate() {
+            let harness = &snap.env.harnesses[h];
+            if *dest == harness.home.join(&snap.repo.claude[i].target) && !snap.style_active(i, k) {
+                out.push(style_hint(snap, h, style));
+            }
+        }
+    }
+    out
+}
+
+pub fn style_hint(snap: &Snapshot, h: usize, style: &str) -> String {
+    let harness = &snap.env.harnesses[h];
+    format!("To use it in {}, set \"outputStyle\": \"{style}\" in {}.", harness.name, snap.env.tilde(&harness.home.join("settings.json")))
 }

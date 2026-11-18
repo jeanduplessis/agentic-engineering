@@ -25,10 +25,11 @@ pub enum Tab {
     Skills,
     Pi,
     Tools,
+    Claude,
 }
 
 impl Tab {
-    const ALL: [Tab; 3] = [Tab::Skills, Tab::Pi, Tab::Tools];
+    const ALL: [Tab; 4] = [Tab::Skills, Tab::Pi, Tab::Tools, Tab::Claude];
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -78,6 +79,9 @@ pub struct App {
     pub pi_row: usize,
     pub pi: BTreeMap<usize, bool>,
     pub subagents: bool,
+    pub claude_row: usize,
+    /// Pending (Claude item, harness) changes: true adds, false removes.
+    pub claude: BTreeMap<(usize, usize), bool>,
     pub tool_row: usize,
     pub tools: BTreeSet<usize>,
     pub prune: bool,
@@ -113,6 +117,8 @@ impl App {
             pi_row: 0,
             pi: BTreeMap::new(),
             subagents: false,
+            claude_row: 0,
+            claude: BTreeMap::new(),
             tool_row: 0,
             tools: BTreeSet::new(),
             prune: false,
@@ -163,13 +169,14 @@ impl App {
             skills: self.skills.clone(),
             pi: self.pi.clone(),
             subagents: self.subagents,
+            claude: self.claude.clone(),
             tools: self.tools.clone(),
             prune: self.prune,
         }
     }
 
     pub fn pending(&self) -> usize {
-        self.skills.len() + self.pi.len() + usize::from(self.subagents) + self.tools.len() + usize::from(self.prune)
+        self.skills.len() + self.claude.len() + self.pi.len() + usize::from(self.subagents) + self.tools.len() + usize::from(self.prune)
     }
 
     pub fn pending_plan(&self) -> Plan {
@@ -301,6 +308,19 @@ impl App {
         self.message = None;
     }
 
+    /// Claude tab rows: each Claude item for each active Claude Code home.
+    pub fn claude_rows(&self) -> Vec<(usize, usize)> {
+        (0..self.snap.repo.claude.len()).flat_map(|i| self.snap.claude_homes.iter().map(move |&h| (i, h))).collect()
+    }
+
+    pub fn toggle_claude(&mut self, i: usize, h: usize) {
+        let Some(k) = self.snap.claude_slot(h) else { return };
+        if self.claude.remove(&(i, h)).is_none() {
+            self.claude.insert((i, h), self.snap.claude[i][k] != Entry::Linked);
+        }
+        self.message = None;
+    }
+
     pub fn toggle_tool(&mut self, t: usize) {
         if !self.tools.remove(&t) {
             self.tools.insert(t);
@@ -407,6 +427,9 @@ impl App {
             if let Some(hint) = output::restart_hint(&self.plan) {
                 self.log.push(paint.dim(hint));
             }
+            for hint in output::activation_hints(&self.snap, &self.plan) {
+                self.log.push(paint.yellow(hint));
+            }
         }
     }
 
@@ -421,6 +444,7 @@ impl App {
         self.skills.clear();
         self.pi.clear();
         self.subagents = false;
+        self.claude.clear();
         self.tools.clear();
         self.prune = false;
         self.applying = None;
@@ -528,6 +552,7 @@ impl App {
             KeyCode::Char('1') => self.tab = Tab::Skills,
             KeyCode::Char('2') => self.tab = Tab::Pi,
             KeyCode::Char('3') => self.tab = Tab::Tools,
+            KeyCode::Char('4') => self.tab = Tab::Claude,
             KeyCode::Enter => self.start_review(),
             KeyCode::Char('p') => {
                 let tidy = !self.snap.stale.is_empty() || !plan::redundant(&self.snap).is_empty();
@@ -542,14 +567,14 @@ impl App {
                 self.skills.clear();
                 self.pi.clear();
                 self.subagents = false;
+                self.claude.clear();
                 self.tools.clear();
                 self.prune = false;
                 self.say("Cleared every pending change.", Tone::Info);
             }
             _ => match self.tab {
                 Tab::Skills => self.skills_key(key.code, shift),
-                Tab::Pi => self.list_key(key.code, true),
-                Tab::Tools => self.list_key(key.code, false),
+                Tab::Pi | Tab::Tools | Tab::Claude => self.list_key(key.code),
             },
         }
     }
@@ -606,9 +631,13 @@ impl App {
         }
     }
 
-    fn list_key(&mut self, code: KeyCode, pi: bool) {
-        let len = if pi { self.snap.repo.pi.len() } else { self.snap.repo.tools.len() };
-        let cursor = if pi { &mut self.pi_row } else { &mut self.tool_row };
+    fn list_key(&mut self, code: KeyCode) {
+        let claude_rows = self.claude_rows();
+        let (len, cursor) = match self.tab {
+            Tab::Pi => (self.snap.repo.pi.len(), &mut self.pi_row),
+            Tab::Claude => (claude_rows.len(), &mut self.claude_row),
+            _ => (self.snap.repo.tools.len(), &mut self.tool_row),
+        };
         match code {
             KeyCode::Up | KeyCode::Char('k') => *cursor = cursor.saturating_sub(1),
             KeyCode::Down | KeyCode::Char('j') => *cursor = (*cursor + 1).min(len.saturating_sub(1)),
@@ -617,10 +646,14 @@ impl App {
             KeyCode::Char(' ') | KeyCode::Char('x') => {
                 let index = *cursor;
                 if index < len {
-                    if pi { self.toggle_pi(index) } else { self.toggle_tool(index) }
+                    match self.tab {
+                        Tab::Pi => self.toggle_pi(index),
+                        Tab::Claude => self.toggle_claude(claude_rows[index].0, claude_rows[index].1),
+                        _ => self.toggle_tool(index),
+                    }
                 }
             }
-            KeyCode::Char('a') if !pi => {
+            KeyCode::Char('a') if self.tab == Tab::Tools => {
                 if self.tools.len() == len {
                     self.tools.clear();
                 } else {

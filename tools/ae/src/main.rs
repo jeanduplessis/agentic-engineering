@@ -32,6 +32,7 @@ Examples:
   ae add -s premortem,wat -H claude-personal,codex
   ae remove -s premortem -H codex       stop Codex loading a skill
   ae add -p APPEND_SYSTEM.md -p extensions/prompt-stash
+  ae add -c output-style                link the output style into every Claude Code home
   ae add -t gs,gw                       build and install tools with cargo
   ae doctor                             verify by asking Grok, Kilo, and Codex
   ae prune -n                           preview removal of stale or redundant links
@@ -73,7 +74,7 @@ enum Cmd {
         #[arg(long, env = "AE_NO_PROBE", value_parser = clap::builder::FalseyValueParser::new())]
         no_probe: bool,
     },
-    /// Install skills for harnesses, Pi resources, or tools
+    /// Install skills for harnesses, Claude Code resources, Pi resources, or tools
     Add {
         #[command(flatten)]
         selection: Selection,
@@ -86,7 +87,7 @@ enum Cmd {
         #[command(flatten)]
         apply: ApplyFlags,
     },
-    /// Remove links into this checkout for skills or Pi resources
+    /// Remove links into this checkout for skills, Claude Code resources, or Pi resources
     Remove {
         #[command(flatten)]
         selection: Selection,
@@ -110,6 +111,9 @@ struct Selection {
     /// Harnesses to change them for (ids such as claude-personal, or `all`)
     #[arg(short = 'H', long = "harness", value_delimiter = ',', value_name = "ID")]
     harnesses: Vec<String>,
+    /// Claude Code resources (output-style, or `all`); every Claude Code home unless --harness names some
+    #[arg(short, long = "claude", value_delimiter = ',', value_name = "ITEM")]
+    claude: Vec<String>,
     /// Pi resources (APPEND_SYSTEM.md, docs, subagents, commands/<file>, extensions/<name>, `<group>/all`, or `all`)
     #[arg(short, long = "pi", value_delimiter = ',', value_name = "ITEM")]
     pi: Vec<String>,
@@ -250,16 +254,17 @@ fn change(
     let skills = resolve_names("skill", &selection.skills, probe_repo.skills.iter().map(|s| s.name.as_str()))?;
     let tools = resolve_names("tool", tools, probe_repo.tools.iter().map(|t| t.name.as_str()))?;
     let pi = resolve_pi(&probe_repo, &selection.pi)?;
+    let claude = resolve_names("Claude Code resource", &selection.claude, probe_repo.claude.iter().map(|c| c.id.as_str()))?;
     if !skills.is_empty() && harnesses.is_empty() {
         bail!("choose which harnesses get the skills with --harness <id>, or --harness all (see `ae status` for ids)");
     }
-    if skills.is_empty() && !harnesses.is_empty() {
-        bail!("choose skills with --skill <name>, or --skill all");
+    if skills.is_empty() && claude.is_empty() && !harnesses.is_empty() {
+        bail!("choose skills with --skill <name> or Claude Code resources with --claude <item>");
     }
-    let requested = !selection.skills.is_empty() || !selection.pi.is_empty() || !tools.is_empty();
+    let requested = !selection.skills.is_empty() || !selection.claude.is_empty() || !selection.pi.is_empty() || !tools.is_empty();
     if !prune && !requested && selection.harnesses.is_empty() {
         bail!(
-            "nothing selected; pass --skill and --harness, --pi{}, or run ae for the interactive installer",
+            "nothing selected; pass --skill and --harness, --claude, --pi{}, or run ae for the interactive installer",
             if adding { ", --tool" } else { "" }
         );
     }
@@ -285,7 +290,21 @@ fn change(
         harnesses.iter().copied().collect()
     };
 
+    let claude_targets: Vec<usize> = if selection.harnesses.is_empty() {
+        snap.claude_homes.clone()
+    } else {
+        targets.iter().copied().filter(|&h| snap.env.harnesses[h].kind == harness::Kind::Claude).collect()
+    };
+    if !claude.is_empty() && claude_targets.is_empty() {
+        bail!("no Claude Code home to change; name one with --harness <id> (see `ae status` for ids)");
+    }
+
     let mut desired = Desired { prune, ..Desired::default() };
+    for &i in &claude {
+        for &h in &claude_targets {
+            desired.claude.insert((i, h), adding);
+        }
+    }
     for &s in &skills {
         let mut wanted = snap.visible(s);
         if adding {
@@ -458,6 +477,9 @@ fn execute(snap: &Snapshot, plan: &Plan, json: bool, paint: Paint) -> Result<boo
         if let Some(hint) = output::restart_hint(plan) {
             println!("{}", paint.dim(hint));
         }
+        for hint in output::activation_hints(snap, plan) {
+            println!("{}", paint.yellow(hint));
+        }
     }
     Ok(failed)
 }
@@ -611,6 +633,17 @@ fn status_json(snap: &Snapshot, issues: &[doctor::Issue]) -> serde_json::Value {
                 },
             })).collect::<Vec<_>>(),
         },
+        "claude": snap.repo.claude.iter().enumerate().map(|(i, item)| serde_json::json!({
+            "id": item.id,
+            "target": item.target,
+            "style": item.style,
+            "homes": snap.claude_homes.iter().enumerate().map(|(k, &h)| serde_json::json!({
+                "harness": snap.env.harnesses[h].id,
+                "path": snap.env.harnesses[h].home.join(&item.target),
+                "state": snap.claude[i][k],
+                "active": snap.style_active(i, k),
+            })).collect::<Vec<_>>(),
+        })).collect::<Vec<_>>(),
         "tools": snap.repo.tools.iter().enumerate().map(|(t, tool)| serde_json::json!({
             "name": tool.name,
             "version": tool.version,

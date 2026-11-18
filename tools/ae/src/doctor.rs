@@ -68,6 +68,29 @@ pub fn issues(snap: &Snapshot) -> Vec<Issue> {
             }
         }
     }
+    for (i, item) in snap.repo.claude.iter().enumerate() {
+        for (k, &h) in snap.claude_homes.iter().enumerate() {
+            let harness = &snap.env.harnesses[h];
+            let path = snap.env.tilde(&harness.home.join(&item.target));
+            match &snap.claude[i][k] {
+                Entry::Linked => {
+                    if let Some(style) = &item.style
+                        && !snap.style_active(i, k)
+                    {
+                        out.push(Issue {
+                            level: Level::Info,
+                            message: format!("{} has the {style} output style, but its settings.json does not select it", harness.name),
+                            fix: Some(crate::output::style_hint(snap, h, style)),
+                        });
+                    }
+                }
+                Entry::Foreign { what } => {
+                    out.push(Issue { level: Level::Info, message: format!("{path} is {} not managed by Æ", what.describe()), fix: None })
+                }
+                _ => {}
+            }
+        }
+    }
     if let Some(subagents) = &snap.subagents
         && subagents.state == SubagentState::Invalid
     {

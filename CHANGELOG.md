@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added the `prompts/OUTPUT_STYLE.md` Claude Code output style ("Agentic Engineering"). It asks for terse, simple English, an opening TL;DR of the outcome, no list of evidence unless asked, decisions with a recommendation each, and a closing proposal for the next step. It also carries over the useful rules of the built-in Concise style: short answers to simple questions, formatting only when it adds structure, and full errors, security warnings and destructive-action confirmations. It keeps Claude Code's coding instructions. `ae` now links it into Claude Code homes from a new **Claude** tab or with `ae add -c output-style`, and reports whether each home's `settings.json` selects it. Turn it on per home with `"outputStyle": "Agentic Engineering"`; `ae` does not edit settings.
+
 - Replaced the Bash setup pickers with [`ae`](tools/ae/README.md), a Rust installer for every harness I use: Claude Code (one per T3 Code instance, such as work and personal), Codex, Grok, Pi and Kilo. `./setup.sh` now builds `ae` with cargo and runs it, passing arguments through.
   - The interactive installer has a skills × harnesses grid that starts from what's installed, plus Pi and Tools tabs, filtering, plan review with per-conflict approval, live progress with a cargo build bar, and a summary.
   - Every action has a command and flags too: `ae status`, `doctor`, `add`, `remove`, `prune` and `completions`, with `--dry-run`, `--yes`, `--replace` and `--json`.

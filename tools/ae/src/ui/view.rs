@@ -34,6 +34,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
             Tab::Skills => draw_skills(frame, app, body),
             Tab::Pi => draw_pi(frame, app, body),
             Tab::Tools => draw_tools(frame, app, body),
+            Tab::Claude => draw_claude(frame, app, body),
         },
         Screen::Review => draw_review(frame, app, body),
         Screen::Applying | Screen::Done => draw_applying(frame, app, body),
@@ -112,15 +113,20 @@ fn draw_tabs(frame: &mut Frame, app: &App, area: Rect) {
     let count_skills = app.snap.repo.skills.len();
     let count_pi = app.snap.repo.pi.len();
     let count_tools = app.snap.repo.tools.len();
+    let count_claude = app.snap.repo.claude.len();
     let pending = |tab: Tab| match tab {
         Tab::Skills => app.skills.len(),
         Tab::Pi => app.pi.len() + usize::from(app.subagents),
         Tab::Tools => app.tools.len(),
+        Tab::Claude => app.claude.len(),
     };
     let mut spans = vec![Span::raw(" ")];
-    for (key, tab, name, count) in
-        [("1", Tab::Skills, "Skills", count_skills), ("2", Tab::Pi, "Pi", count_pi), ("3", Tab::Tools, "Tools", count_tools)]
-    {
+    for (key, tab, name, count) in [
+        ("1", Tab::Skills, "Skills", count_skills),
+        ("2", Tab::Pi, "Pi", count_pi),
+        ("3", Tab::Tools, "Tools", count_tools),
+        ("4", Tab::Claude, "Claude", count_claude),
+    ] {
         let active = app.tab == tab && app.screen == Screen::Browse;
         let style = if active { t.accent().add_modifier(Modifier::BOLD | Modifier::UNDERLINED) } else { t.text() };
         spans.push(Span::styled(format!("{key} "), t.muted()));
@@ -450,8 +456,13 @@ fn pi_glyph(app: &App, i: usize) -> (&'static str, Style) {
             _ => ("?", t.muted()),
         };
     }
-    let entry = &app.snap.pi[i];
-    match (entry, app.pi.get(&i)) {
+    link_glyph(app, &app.snap.pi[i], app.pi.get(&i).copied())
+}
+
+/// The glyph for one linkable path, given its pending change (true adds).
+fn link_glyph(app: &App, entry: &Entry, pending: Option<bool>) -> (&'static str, Style) {
+    let t = &app.theme;
+    match (entry, pending) {
         (Entry::Linked, Some(false)) => ("−", t.red().add_modifier(Modifier::BOLD)),
         (Entry::Linked, _) => ("●", t.green()),
         (Entry::Foreign { .. }, Some(true)) => ("!", t.yellow().add_modifier(Modifier::BOLD)),
@@ -459,6 +470,73 @@ fn pi_glyph(app: &App, i: usize) -> (&'static str, Style) {
         (_, Some(true)) => ("+", t.green().add_modifier(Modifier::BOLD)),
         _ => ("·", t.muted()),
     }
+}
+
+const CLAUDE_COLUMNS: [u16; 3] = [3, 14, 18];
+
+fn draw_claude(frame: &mut Frame, app: &App, area: Rect) {
+    let t = &app.theme;
+    let env = &app.snap.env;
+    let rows = app.claude_rows();
+    if rows.is_empty() {
+        let text = if app.snap.repo.claude.is_empty() {
+            "This checkout has no Claude Code resources (prompts/OUTPUT_STYLE.md)."
+        } else {
+            "No Claude Code home was detected."
+        };
+        frame.render_widget(Paragraph::new(Span::styled(text, t.muted())).block(panel(app, "Claude Code", true)), area);
+        return;
+    }
+    let [list, detail] = Layout::vertical([Constraint::Min(4), Constraint::Length(6)]).areas(area);
+    let path_width = last_column(list, &CLAUDE_COLUMNS);
+    let table_rows: Vec<Row> = rows
+        .iter()
+        .enumerate()
+        .map(|(r, &(i, h))| {
+            let item = &app.snap.repo.claude[i];
+            let k = app.snap.claude_slot(h).unwrap_or_default();
+            let (glyph, style) = link_glyph(app, &app.snap.claude[i][k], app.claude.get(&(i, h)).copied());
+            Row::new(vec![
+                Cell::from(Span::styled(format!(" {glyph} "), style)),
+                Cell::from(Span::styled(item.id.clone(), if r == app.claude_row { t.bold() } else { t.text() })),
+                Cell::from(Span::styled(env.harnesses[h].name.clone(), t.text())),
+                Cell::from(Span::styled(fit(&env.tilde(&env.harnesses[h].home.join(&item.target)), path_width), t.teal())),
+            ])
+        })
+        .collect();
+    let table = Table::new(table_rows, CLAUDE_COLUMNS.iter().map(|&w| Constraint::Length(w)).chain([Constraint::Min(10)]))
+        .header(Row::new(vec!["", "Item", "Harness", "Link"]).style(t.bold()))
+        .row_highlight_style(t.cursor())
+        .block(panel(app, "Claude Code resources × homes", true));
+    let selected = app.claude_row.min(rows.len() - 1);
+    let mut state = TableState::default().with_selected(Some(selected));
+    frame.render_stateful_widget(table, list, &mut state);
+
+    let (i, h) = rows[selected];
+    let item = &app.snap.repo.claude[i];
+    let k = app.snap.claude_slot(h).unwrap_or_default();
+    let mut lines = vec![Line::from(vec![
+        Span::styled(item.id.clone(), t.bold()),
+        Span::raw("  "),
+        Span::styled(format!("prompts/{}", item.source.file_name().unwrap_or_default().to_string_lossy()), t.teal()),
+    ])];
+    if let Some(description) = &item.description {
+        lines.push(Line::from(Span::styled(description.clone(), t.muted())));
+    }
+    if let Entry::Foreign { what } = &app.snap.claude[i][k] {
+        lines.push(Line::from(Span::styled(
+            format!("Currently {}; adding it backs that up first, after you approve.", what.describe()),
+            t.yellow(),
+        )));
+    } else if let Some(style) = &item.style {
+        let line = if app.snap.style_active(i, k) {
+            Span::styled(format!("{} selects the {style} output style.", env.harnesses[h].name), t.green())
+        } else {
+            Span::styled(crate::output::style_hint(&app.snap, h, style), t.yellow())
+        };
+        lines.push(Line::from(line));
+    }
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }).block(panel(app, "Details", false)), detail);
 }
 
 const PI_COLUMNS: [u16; 3] = [12, 3, 28];
@@ -614,7 +692,7 @@ fn draw_review(frame: &mut Frame, app: &App, area: Rect) {
         Line::from(spans)
     };
     lines.push(summary);
-    for section in [Section::Skills, Section::Pi, Section::Tools, Section::Tidy] {
+    for section in [Section::Skills, Section::Claude, Section::Pi, Section::Tools, Section::Tidy] {
         let steps: Vec<usize> = (0..plan.steps.len()).filter(|&i| plan.steps[i].section == section).collect();
         if steps.is_empty() {
             continue;
@@ -804,7 +882,7 @@ fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
             ("a", "row"),
             ("A", "column"),
             ("/", "filter"),
-            ("tab", "Pi · Tools"),
+            ("tab", "Pi · Tools · Claude"),
             ("enter", "review"),
             ("?", "help"),
             ("q", "quit"),
@@ -818,7 +896,7 @@ fn draw_footer(frame: &mut Frame, app: &App, area: Rect) {
             ("?", "help"),
             ("q", "quit"),
         ],
-        (Screen::Browse, Tab::Pi) => {
+        (Screen::Browse, Tab::Pi | Tab::Claude) => {
             &[("↑↓", "move"), ("space", "toggle"), ("tab", "switch"), ("enter", "review"), ("?", "help"), ("q", "quit")]
         }
         (Screen::Review, _) => &[("↑↓", "move"), ("space", "approve/skip conflict"), ("enter", "apply"), ("esc", "back")],
@@ -862,10 +940,10 @@ fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
     let mut lines = vec![
         Line::from(Span::styled("Keys", t.bold())),
         key("↑ ↓ ← →", "move (or h j k l)"),
-        key("space", "toggle the highlighted skill, Pi item, or tool"),
+        key("space", "toggle the highlighted skill, Pi item, tool, or Claude item"),
         key("a / A", "toggle the whole row / the whole column"),
         key("/", "filter skills by name or description"),
-        key("tab, 1 2 3", "switch between Skills, Pi, and Tools"),
+        key("tab, 1-4", "switch between Skills, Pi, Tools, and Claude"),
         key("p", "remove stale and redundant links"),
         key("r / R", "reset this row / every pending change"),
         key("enter", "review the plan; nothing changes before you confirm"),

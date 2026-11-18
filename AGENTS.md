@@ -7,7 +7,7 @@ This repository is a local agent-resource package. T3 Code orchestrates the user
 - `skills/` — Agent Skills for every harness. Read `skills/AGENTS.md` before changing a skill.
 - `harness/pi/` — Pi-owned resources: `APPEND_SYSTEM.md` is the canonical root-agent policy, `commands/` contains Pi prompt templates, `docs/` contains Pi-owned plans and runbooks, and `extensions/` contains the canonical sources of this repository's Pi extensions. `ae` links the root policy into the Pi agent directory only when selected; edit the repository source. Read the closest `AGENTS.md` before changing an extension.
 - `harness/pi/subagents/` — owned reviewer definition, strict same-parent-model settings overlay, stdlib installer, and bounded review eval fixture. It is an atomic setup component, not a whole-directory install. Do not edit installed agents or the `pi-subagents` package as repository source.
-- `prompts/` — system-prompt resources. `prompts/COMPRESSED_OUTPUT_MODE.md` is the current prompt resource, not a slash command.
+- `prompts/` — system-prompt resources, not slash commands. `prompts/COMPRESSED_OUTPUT_MODE.md` is a prompt resource. `prompts/OUTPUT_STYLE.md` is a Claude Code output style that `ae` links into each selected Claude Code home's `output-styles/`; its frontmatter `name` is the `outputStyle` value and the link's file name, so changing it is a breaking change for anyone who selected it.
 - `skill-factory/` — skill authoring, validation, and evaluation resources. Read its closest `AGENTS.md` before editing.
 - `tools/ae/` — `ae`, the installer that `./setup.sh` builds and runs. It owns harness detection and every install path.
 - `tools/genie/` (binary `g`), `tools/ghh/`, `tools/gs/`, and `tools/gw/` — independent tool packages.
@@ -29,6 +29,7 @@ This repository is a local agent-resource package. T3 Code orchestrates the user
   - Unselected installs and anything Æ doesn't own stay untouched.
   - Each selected harness loads one copy of a skill, taking the shared folders `~/.claude/skills` and `~/.agents/skills` into account.
   - Pi root files and directories such as `docs` are atomic choices.
+  - `ae` reads but never edits Claude Code `settings.json`; selecting the output style stays the user's step.
 - The `subagents` setup choice links only `agents/reviewer.md` and merges only `subagents.modelScope` into settings, with backups and JSON preflight. Preserve unrelated settings/agents; refuse symlinked settings. Native children use the active parent model unless the user explicitly approves an exception. Reviewer shell/test/browser capability does not authorize source fixes; Bash is not a sandbox. Verify effective project/provider overrides and selected skills before delegation.
 - Pi extension sources live only in `harness/pi/extensions/`. `ae` links selected extensions into the Pi agent directory's `extensions/`; never treat the Pi agent directory as an extension source or edit through it as if it were a copy.
 - Inspect `git status` and relevant diffs before editing. Stage exact intended paths, and verify the staged scope with `git diff --cached --name-status` before committing. Do not use broad reset commands as staging advice.

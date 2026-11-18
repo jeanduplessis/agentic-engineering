@@ -478,6 +478,58 @@ class PiTests(unittest.TestCase):
                 self.assertEqual(fixture.targets(), before)
 
 
+class ClaudeTests(unittest.TestCase):
+    STYLE = "---\nname: Agentic Engineering\ndescription: Test style.\nkeep-coding-instructions: true\n---\nBe terse.\n"
+    DEST = "output-styles/agentic-engineering.md"
+
+    def add_style(self, fixture):
+        return fixture.write(fixture.repo / "prompts/OUTPUT_STYLE.md", self.STYLE)
+
+    def test_output_style_links_into_every_claude_home_and_never_edits_settings(self):
+        with Fixture() as fixture:
+            fixture.t3()
+            source = self.add_style(fixture)
+            fixture.detect("claude-work", "claude-personal", "codex")
+            settings = fixture.write(fixture.home / ".claude/settings.json", '{"outputStyle": "Concise"}\n')
+            result = fixture.run(args=("add", "-c", "output-style", "-y"))
+            self.assertEqual(links(fixture.home), {
+                f".claude/{self.DEST}": str(source),
+                f".claude_personal/{self.DEST}": str(source),
+            })
+            self.assertIn('set "outputStyle": "Agentic Engineering" in ~/.claude/settings.json', result.stdout)
+            self.assertEqual(settings.read_text(), '{"outputStyle": "Concise"}\n')
+            doctor = fixture.run(args=("doctor", "--no-probe"))
+            self.assertIn("Claude Work has the Agentic Engineering output style", doctor.stdout)
+            fixture.write(settings, '{"outputStyle": "Agentic Engineering"}\n')
+            homes = {h["harness"]: h for h in fixture.status()["claude"][0]["homes"]}
+            self.assertEqual((homes["claude-work"]["active"], homes["claude-personal"]["active"]), (True, False))
+            self.assertIn("Nothing to do", fixture.run(args=("add", "-c", "all", "-y")).stdout)
+            fixture.run(args=("remove", "-c", "output-style", "-H", "claude-personal", "-y"))
+            self.assertEqual(links(fixture.home), {f".claude/{self.DEST}": str(source)})
+
+    def test_existing_style_file_is_backed_up_only_after_approval(self):
+        with Fixture() as fixture:
+            source = self.add_style(fixture)
+            fixture.detect("claude-work")
+            fixture.write(fixture.home / ".claude" / self.DEST, "User style\n")
+            before = fixture.targets()
+            fixture.run(args=("add", "-c", "output-style", "-y"), expected_status=1)
+            self.assertEqual(fixture.targets(), before)
+            fixture.run("y", "y", args=("add", "-c", "output-style"))
+            backups = list((fixture.home / ".claude/output-styles").glob("agentic-engineering.md.backup.*"))
+            self.assertEqual([b.read_text() for b in backups], ["User style\n"])
+            self.assertEqual(links(fixture.home), {f".claude/{self.DEST}": str(source)})
+
+    def test_non_claude_harnesses_and_unknown_items_are_usage_errors(self):
+        with Fixture() as fixture:
+            self.add_style(fixture)
+            fixture.detect("claude-work", "codex")
+            fixture.run(args=("add", "-c", "output-style", "-H", "codex", "-y"), expected_status=2)
+            result = fixture.run(args=("add", "-c", "output-styles", "-y"), expected_status=2)
+            self.assertIn("Did you mean `output-style`?", result.stderr)
+            self.assertEqual(links(fixture.home), {})
+
+
 class PruneTests(unittest.TestCase):
     def test_prune_removes_stale_and_redundant_links_only(self):
         with Fixture() as fixture:

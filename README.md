@@ -72,7 +72,7 @@ Pi commands are flat. Recursive command directories, project-local command owner
 - `harness/pi/docs/` contains Pi plans and runbooks. It is not a Pi package resource.
 - `harness/pi/extensions/` contains Pi extensions.
 - `harness/pi/subagents/` contains the owned reviewer, minimal settings overlay, installer, and review evaluation fixture. It installs as one component.
-- `prompts/` contains system-prompt resources. `prompts/COMPRESSED_OUTPUT_MODE.md` is the current repository-owned prompt resource.
+- `prompts/` contains system-prompt resources. `prompts/COMPRESSED_OUTPUT_MODE.md` is a repository-owned prompt resource. `prompts/OUTPUT_STYLE.md` is a Claude Code output style; link it with `ae add -c output-style`, then set `"outputStyle": "Agentic Engineering"` in each Claude Code home's `settings.json`.
 - `skill-factory/` contains skill authoring, validation, and evaluation resources.
 - `tools/ae/`, `tools/genie/` (binary `g`), `tools/ghh/`, `tools/gs/`, and `tools/gw/` are independent tool packages.
 - `tests/` contains offline tests for `setup.sh` and `ae`.
